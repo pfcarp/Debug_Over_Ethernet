@@ -1,13 +1,13 @@
-package projectname
+package doeth
 
 import spinal.core._
 import spinal.core.sim._
 
 object Config {
   def spinal = SpinalConfig(
-    targetDirectory = "hw/gen",
+    targetDirectory = "hw/gen/DoETH",
     defaultConfigForClockDomains = ClockDomainConfig(
-      resetActiveLevel = HIGH
+      resetActiveLevel = LOW
     ),
     onlyStdLogicVectorAtTopLevelIo = false
   )
