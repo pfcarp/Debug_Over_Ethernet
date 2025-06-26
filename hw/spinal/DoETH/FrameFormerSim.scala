@@ -3,10 +3,85 @@ package doeth
 import spinal.core._
 import spinal.core.sim._
 
+case class FrameFormerSimModule(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends FrameFormer(Input_Width, Output_Width, Max_Internal_Space) {
+  
+  def sendRandomPayload () : Unit = {
+        this.io.Subordinate.payload.randomize()
+        this.io.Subordinate.valid #= true
+        this.io.Manager.ready #= false
+
+        this.clockDomain.waitRisingEdge()
+
+        this.io.Subordinate.valid #= false
+    }
+
+    def waitForIdleAgain () : Unit = {
+        this.io.Manager.ready #= true
+        this.clockDomain.waitRisingEdge()
+        while (this.SendingFSM.stateReg.toBigInt != this.SendingFSM.Idle.stateId ){
+            this.clockDomain.waitRisingEdge()
+            //println(this.SendingFSM.stateReg.toBigInt)
+        }
+    }
+
+    def waitXcyclesAfterLeaving (wait: Int) : Unit = {
+      this.clockDomain.waitRisingEdge()
+      while(this.SendingFSM.stateNext.toBigInt != 1){
+      if(this.SendingFSM.stateNext.toBigInt != this.SendingFSM.stateReg.toBigInt){
+        this.io.Manager.ready #= false
+        for(i <- 1 to wait){
+          this.clockDomain.waitRisingEdge()
+        }
+      }
+      else{
+          this.io.Manager.ready #= true
+          this.clockDomain.waitRisingEdge()
+      }
+      }
+    }
+
+    def waitXcyclesBetweenPayload(wait: Int) : Unit = {
+      var flip = true
+
+      this.io.Manager.ready #= true
+      this.clockDomain.waitRisingEdge()
+      while(this.SendingFSM.stateNext.toBigInt != 4){
+        this.clockDomain.waitRisingEdge()
+      }
+      while(this.SendingFSM.stateNext.toBigInt == 4){
+      if(flip){
+        this.io.Manager.ready #= false
+        for(i <- 1 to wait){
+          this.clockDomain.waitRisingEdge()
+        }
+        
+      }
+      else{
+          this.io.Manager.ready #= true
+          this.clockDomain.waitRisingEdge()
+      }
+      flip = !flip
+      }
+    }
+}
+
+// object FrameFormerSimModuleVerilogGen extends App {
+//   val inputWidth = 64
+//   val outputWidth = 64
+//   val maxInternalSpace = 128
+
+//   Config.spinal.generateVerilog(FrameFormerSimModule(
+//       inputWidth,
+//       outputWidth,
+//       maxInternalSpace
+//     )
+//   )
+// }
+
 
 object FrameFormerSim extends App {
     Config.sim.compile({
-       val dut = FrameFormer(64, 64, 4)
+       val dut = FrameFormerSimModule(64, 64, 4)
         dut.SendingFSM.stateReg.simPublic()
         dut.SendingFSM.stateNext.simPublic()
         dut
@@ -60,6 +135,7 @@ object FrameFormerSim extends App {
 
         dut.io.Subordinate.valid #= false
         dut.clockDomain.waitRisingEdge(2)
+        println(dut.SendingFSM.stateReg.toBigInt)
 
         //dut.clockDomain.waitSamplingWhere(dut.SendingFSM.stateReg.toString == "Payload")
         
