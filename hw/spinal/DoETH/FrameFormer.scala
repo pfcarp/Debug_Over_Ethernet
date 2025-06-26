@@ -7,6 +7,7 @@ import spinal.lib.fsm.State
 import scala.math._
 
 import spinal.core.sim._
+import spinal.core
 
 
 
@@ -46,14 +47,19 @@ case class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: 
   * check state machine library
   * 
   */
+  // val EmptyStream = Stream (Bits(Input_Width bits))
+  // EmptyStream.payload := 0
+  // EmptyStream.valid := True
+
 
   val BufferQueue = StreamFifo(
-    dataType = Bits(Input_Width bits),
+    dataType = Bits(Output_Width bits),
+    latency = 1,
     depth = Max_Internal_Space
     )
 
 
-  BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue
+   BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue
 
   
   inputs_debug.FFSisFull := BufferQueue.io.occupancy === Max_Internal_Space
@@ -66,6 +72,10 @@ case class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: 
     val counter = Reg(UInt(8 bits)) init(0)
     io.Manager.payload := B(0).resized
     io.Manager.valid := False
+    //BufferQueue.io.pop.ready := False       
+
+    //val arbiteredStream = StreamArbiterFactory.lowerFirst.transactionLock.onArgs(BufferQueue.io.pop.haltWhen(inputs_debug.FFSisEmpty | counter === inputs_debug.PacketSize),EmptyStream)
+
     
 
     val Idle: State = new State with EntryPoint{
@@ -100,31 +110,28 @@ case class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: 
 
     val Payload: State = new State{
       whenIsActive{//I feel like there is a smarter way of doing this
-        io.Manager.valid := True
+        //io.Manager << arbiteredStream
+        //BufferQueue.io.pop.ready := False 
+        io.Manager.valid := True      
         when(counter === inputs_debug.PacketSize){
           goto(Footer)
-        }
-        
-        .elsewhen(!inputs_debug.FFSisEmpty & io.Manager.fire){
-          io.Manager.payload := BufferQueue.io.pop.payload //pop from the queue and send to the manager
-          //io.Manager.valid := True
-          // io.Manager.valid := BufferQueue.io.pop.valid
-          // BufferQueue.io.pop.ready := io.Manager.ready //ready to pop from the queue
           
-          //BufferQueue.io.pop >> io.Manager 
-          //io.Manager.ready 
-          counter:= counter + 1
         }
+        //just an otherwise statement 
+        // .elsewhen(!inputs_debug.FFSisEmpty & io.Manager.fire){
+        //   io.Manager.payload := BufferQueue.io.pop.payload //pop from the queue and send to the manager
+        //   //BufferQueue.io.pop.ready := True
+        //   counter:= counter + 1
+        // }
 
-        .elsewhen(inputs_debug.FFSisEmpty & io.Manager.fire){
-          io.Manager.payload := B(0).resized//make this the correct type
-          //io.Manager.valid := True
-          // io.Manager.valid := True
-          counter:= counter + 1
-        }        
-
-        //Mux(!FFSisEmpty, BufferQueue.io.pop >> Manager, 0 >> Manager)
-        
+        // .elsewhen(inputs_debug.FFSisEmpty & io.Manager.fire){
+        //   //BufferQueue.io.pop.ready := False
+        //   io.Manager.payload := B(0).resized//make this the correct type
+        //   counter:= counter + 1
+        // }   
+        .otherwise{
+          io.Manager.payload := Mux(inputs_debug.FFSisEmpty,B(0).resized,BufferQueue.io.pop.payload)
+        }
       }
     }
 
@@ -146,7 +153,7 @@ case class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: 
     }
   }
   
-  BufferQueue.io.pop.ready := (SendingFSM.isEntering(SendingFSM.Payload) || SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree
+  BufferQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & !inputs_debug.FFSisEmpty
   inputs_debug.FFMisReady := SendingFSM.isActive(SendingFSM.Payload) & io.Manager.isFree
 
   def sendRandomPayload () : Unit = {
@@ -161,12 +168,53 @@ case class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: 
     }
 
     def waitForIdleAgain () : Unit = {
+        this.io.Manager.ready #= true
         this.clockDomain.waitRisingEdge()
         while (this.SendingFSM.stateReg.toBigInt != this.SendingFSM.Idle.stateId ){
             this.clockDomain.waitRisingEdge()
             //println(this.SendingFSM.stateReg.toBigInt)
         }
- 
+    }
+
+    def waitXcyclesAfterLeaving (wait: Int) : Unit = {
+      this.clockDomain.waitRisingEdge()
+      while(this.SendingFSM.stateNext.toBigInt != 1){
+      if(this.SendingFSM.stateNext.toBigInt != this.SendingFSM.stateReg.toBigInt){
+        this.io.Manager.ready #= false
+        for(i <- 1 to wait){
+          this.clockDomain.waitRisingEdge()
+        }
+      }
+      else{
+          this.io.Manager.ready #= true
+          this.clockDomain.waitRisingEdge()
+      }
+      
+      }
+    }
+
+    def waitXcyclesBetweenPayload(wait: Int) : Unit = {
+      var flip = true
+
+      this.io.Manager.ready #= true
+      this.clockDomain.waitRisingEdge()
+      while(this.SendingFSM.stateNext.toBigInt != 4){
+        this.clockDomain.waitRisingEdge()
+      }
+      while(this.SendingFSM.stateNext.toBigInt == 4){
+      if(flip){
+        this.io.Manager.ready #= false
+        for(i <- 1 to wait){
+          this.clockDomain.waitRisingEdge()
+        }
+        
+      }
+      else{
+          this.io.Manager.ready #= true
+          this.clockDomain.waitRisingEdge()
+      }
+      flip = !flip
+      }
     }
 }
 

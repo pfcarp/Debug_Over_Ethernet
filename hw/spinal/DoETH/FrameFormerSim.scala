@@ -8,6 +8,7 @@ object FrameFormerSim extends App {
     Config.sim.compile({
        val dut = FrameFormer(64, 64, 4)
         dut.SendingFSM.stateReg.simPublic()
+        dut.SendingFSM.stateNext.simPublic()
         dut
     }).doSim {dut =>
 
@@ -50,6 +51,7 @@ object FrameFormerSim extends App {
         var FinishingPacket: Boolean = dut.SendingFSM.stateReg.toString == "Footer"
 
         dut.clockDomain.waitRisingEdge()
+        dut.io.Subordinate.valid #= false
 
 
         dut.io.Manager.ready #= true
@@ -88,6 +90,15 @@ object FrameFormerSim extends App {
         }
 
         dut.io.Manager.ready #= true
+        dut.waitXcyclesAfterLeaving(2)
+        dut.waitForIdleAgain()
+
+
+        for (i <- 1 to 5){
+            dut.sendRandomPayload()
+        }
+
+        dut.waitXcyclesBetweenPayload(4)
         dut.waitForIdleAgain()
         
     }
