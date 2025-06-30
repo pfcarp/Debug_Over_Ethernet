@@ -11,9 +11,9 @@
           scala
           jre8
           verilator
-	  gtkwave
+	        gtkwave
           zlib
-         (python311.withPackages (p: with p; [pycryptodome pycrypto]))
+         #(python311.withPackages (p: with p; [pycryptodome pycrypto]))
 
         ];
       };

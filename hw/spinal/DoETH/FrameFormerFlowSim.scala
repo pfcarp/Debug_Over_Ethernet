@@ -3,12 +3,12 @@ package doeth
 import spinal.core._
 import spinal.core.sim._
 
-case class FrameFormerSimModule(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends FrameFormer(Input_Width, Output_Width, Max_Internal_Space) {
+case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends FrameFormerFlow(Input_Width, Output_Width, Max_Internal_Space) {
   
   def sendRandomPayload () : Unit = {
         this.io.Subordinate.payload.randomize()
         this.io.Subordinate.valid #= true
-        this.io.Manager.ready #= false
+        // this.io.Manager.ready #= false
 
         this.clockDomain.waitRisingEdge()
 
@@ -79,9 +79,9 @@ case class FrameFormerSimModule(Input_Width: Int, Output_Width: Int, Max_Interna
 // }
 
 
-object FrameFormerSim extends App {
+object FrameFormerFlowSim extends App {
     Config.sim.compile({
-       val dut = FrameFormerSimModule(128, 64, 4)
+       val dut = FrameFormerFlowSimModule(32, 64, 4)
         dut.SendingFSM.stateReg.simPublic()
         dut.SendingFSM.stateNext.simPublic()
         dut

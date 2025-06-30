@@ -12,15 +12,10 @@ import scala.math._
 
 
 // Hardware definition
-class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends Component {
+class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends Component {
   val io = new Bundle {
     //interfaces
-    // if(Input_Width != Output_Width){
-    //   Subordinate = slave Stream (Fragment(Bits(Output_Width bits))) //is always 64or32 bits wide
-    // }else {
-    //   Subordinate = slave Stream (Bits(Input_Width bits)) //is always 64or32 bits wide 
-    // }
-    val Subordinate = slave Stream (Bits(Input_Width bits)) //is always 64or32 bits wide
+    val Subordinate = slave Flow (Bits(Input_Width bits)) //is always 64or32 bits wide
     val Manager = master Stream (Bits(Output_Width bits))//is always 64or32 bits wide
   }
   val inputs_debug = new Bundle {
@@ -64,24 +59,12 @@ class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) 
     )
 
   // if(Input_Width != Output_Width){
-  //   val chunker = Stream (Fragment(Bits(Output_Width bits)))
-  //   // chunker.valid := io.Subordinate.valid //Subordinate should feed directly into the queue    }else{
-    
-  //   // chunker.payload := io.Subordinate.
-    
-  //   chunker.toStreamOf(Bits(Input_Width bits)).queue(1) << io.Subordinate
-
-  //   //io.Subordinate.ready := BufferQueue.io.push.ready & chunker.isFirst 
-
-  //   BufferQueue.io.push << chunker.toStreamOf(Bits(Output_Width bits))
-
-
+  //   BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue    }else{
   // }else {
   //     BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue    }
   // }
-
-  // BufferQueue.io.push << io.Subordinate.fragmentTransaction(Input_Width).toStreamOf(Bits(Output_Width bits)) //Subordinate should feed directly into the queue
-  BufferQueue.io.push << io.Subordinate.queue(1).fragmentTransaction(Output_Width).toStreamOfFragment
+   BufferQueue.io.push.payload := io.Subordinate.toReg().resized //Subordinate should feed directly into the queue
+   BufferQueue.io.push.valid :=  io.Subordinate.valid
   
   inputs_debug.FFSisFull := BufferQueue.io.occupancy === Max_Internal_Space
   inputs_debug.FFSisEmpty := BufferQueue.io.occupancy === 0
@@ -114,6 +97,7 @@ class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) 
         io.Manager.payload := Cat(inputs_debug.Source(0, 16 bits),inputs_debug.Destination)
         io.Manager.valid := True
         when(io.Manager.fire){
+   
           goto (HeaderPart2)
         }
       }
@@ -187,12 +171,12 @@ class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) 
 
 
 
-object FrameFormerVerilogGen extends App {
+object FrameFormerFlowVerilogGen extends App {
   val inputWidth = 64
   val outputWidth = 64
   val maxInternalSpace = 128
 
-  Config.spinal.generateVerilog(new FrameFormer(
+  Config.spinal.generateVerilog(new FrameFormerFlow(
       inputWidth,
       outputWidth,
       maxInternalSpace
@@ -200,12 +184,12 @@ object FrameFormerVerilogGen extends App {
   )
 }
 
-object FrameFormerVHDLGen extends App {
+object FrameFormerFlowVHDLGen extends App {
   val inputWidth = 64
   val outputWidth = 64
   val maxInternalSpace = 128
 
-  Config.spinal.generateVhdl(new FrameFormer(
+  Config.spinal.generateVhdl(new FrameFormerFlow(
       inputWidth,
       outputWidth,
       maxInternalSpace
