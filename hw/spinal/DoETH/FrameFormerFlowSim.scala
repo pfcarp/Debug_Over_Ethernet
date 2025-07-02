@@ -18,7 +18,7 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
     def waitForIdleAgain () : Unit = {
         this.io.Manager.ready #= true
         this.clockDomain.waitRisingEdge()
-        while (this.SendingFSM.stateReg.toBigInt != this.SendingFSM.Idle.stateId ){
+        while (this.managerClockArea.SendingFSM.stateReg.toBigInt != this.managerClockArea.SendingFSM.Idle.stateId ){
             this.clockDomain.waitRisingEdge()
             //println(this.SendingFSM.stateReg.toBigInt)
         }
@@ -26,8 +26,8 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
 
     def waitXcyclesAfterLeaving (wait: Int) : Unit = {
       this.clockDomain.waitRisingEdge()
-      while(this.SendingFSM.stateNext.toBigInt != 1){
-      if(this.SendingFSM.stateNext.toBigInt != this.SendingFSM.stateReg.toBigInt){
+      while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 1){
+      if(this.managerClockArea.SendingFSM.stateNext.toBigInt != this.managerClockArea.SendingFSM.stateReg.toBigInt){
         this.io.Manager.ready #= false
         for(i <- 1 to wait){
           this.clockDomain.waitRisingEdge()
@@ -45,10 +45,10 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
 
       this.io.Manager.ready #= true
       this.clockDomain.waitRisingEdge()
-      while(this.SendingFSM.stateNext.toBigInt != 4){
+      while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 4){
         this.clockDomain.waitRisingEdge()
       }
-      while(this.SendingFSM.stateNext.toBigInt == 4){
+      while(this.managerClockArea.SendingFSM.stateNext.toBigInt == 4){
       if(flip){
         this.io.Manager.ready #= false
         for(i <- 1 to wait){
@@ -82,8 +82,8 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
 object FrameFormerFlowSim extends App {
     Config.sim.compile({
        val dut = FrameFormerFlowSimModule(32, 64, 4)
-        dut.SendingFSM.stateReg.simPublic()
-        dut.SendingFSM.stateNext.simPublic()
+        dut.managerClockArea.SendingFSM.stateReg.simPublic()
+        dut.managerClockArea.SendingFSM.stateNext.simPublic()
         dut
     }).doSim {dut =>
 
@@ -104,11 +104,10 @@ object FrameFormerFlowSim extends App {
         dut.inputs_debug.EndWord #= ew
         dut.inputs_debug.PacketSize #= ps
         
+        dut.clockDomain.forkStimulus(period = 5)
+        dut.ManagerDomain.forkStimulus(period = 10)
 
-        dut.clockDomain.forkStimulus(period = 10)
-
-        
-        
+        dut.SubordinateDomain.forkStimulus(period = 5)
 
         //we want to create random payload but also vary the timings of transactions to see the following scenarios
         //1. a singlepayload entering
@@ -123,7 +122,7 @@ object FrameFormerFlowSim extends App {
 
         
 
-        var FinishingPacket: Boolean = dut.SendingFSM.stateReg.toString == "Footer"
+        var FinishingPacket: Boolean = dut.managerClockArea.SendingFSM.stateReg.toString == "Footer"
 
         dut.clockDomain.waitRisingEdge()
         dut.io.Subordinate.valid #= false
@@ -135,7 +134,7 @@ object FrameFormerFlowSim extends App {
 
         dut.io.Subordinate.valid #= false
         dut.clockDomain.waitRisingEdge(2)
-        println(dut.SendingFSM.stateReg.toBigInt)
+        println(dut.managerClockArea.SendingFSM.stateReg.toBigInt)
 
         //dut.clockDomain.waitSamplingWhere(dut.SendingFSM.stateReg.toString == "Payload")
         
@@ -143,8 +142,8 @@ object FrameFormerFlowSim extends App {
         //     dut.io.Subordinate.payload.randomize()
         //     dut.io.Subordinate.valid #= true
         // }
-        
-        while (dut.SendingFSM.stateReg.toBigInt != dut.SendingFSM.Idle.stateId ){
+
+        while (dut.managerClockArea.SendingFSM.stateReg.toBigInt != dut.managerClockArea.SendingFSM.Idle.stateId ){
             dut.clockDomain.waitRisingEdge()
             // println(dut.SendingFSM.stateReg.toBigInt)
         }

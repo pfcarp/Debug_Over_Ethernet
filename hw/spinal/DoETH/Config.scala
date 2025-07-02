@@ -7,7 +7,7 @@ object Config {
   def spinal = SpinalConfig(
     targetDirectory = "hw/gen/DoETH",
     defaultConfigForClockDomains = ClockDomainConfig(
-      resetActiveLevel = LOW
+      resetActiveLevel = HIGH
     ),
     onlyStdLogicVectorAtTopLevelIo = false
   )

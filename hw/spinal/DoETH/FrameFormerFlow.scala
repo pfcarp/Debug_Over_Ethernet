@@ -6,6 +6,8 @@ import spinal.lib.fsm._
 import spinal.lib.fsm.State
 import scala.math._
 
+import VerilogBusAttributeAdder._
+
 //import spinal.core.sim._
 //import spinal.core
 
@@ -17,6 +19,10 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     //interfaces
     val Subordinate = slave Flow (Bits(Input_Width bits)) //is always 64or32 bits wide
     val Manager = master Stream (Bits(Output_Width bits))//is always 64or32 bits wide
+    val clockSub = in Bool() //clock for the subordinate interface
+    val clockMan = in Bool() //clock for the manager interface
+    val resetSub = in Bool() //reset for the subordinate interface
+    val resetMan = in Bool() //reset for the manager interface
   }
   val inputs_debug = new Bundle {
     //configurable input parameters
@@ -36,7 +42,10 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     val FFMisReady = out (Bool())
     val FFSisFull = out (Bool())
     val FFSisEmpty = out (Bool())
-    val QueueTail = out (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
+    val FFSQueueTail = out (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
+    val FFMisFull = out (Bool())
+    val FFMisEmpty = out (Bool())
+    val FFMQueueTail = out (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
 
   }
   //Stream to queue, when first item enters, put the input data then que data then end word
@@ -51,12 +60,33 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   // EmptyStream.payload := 0
   // EmptyStream.valid := True
 
-
-  val BufferQueue = StreamFifo(
-    dataType = Bits(Output_Width bits),
-    latency = 1,
-    depth = Max_Internal_Space
+  val ManagerDomain = ClockDomain(
+    clock = io.clockMan,
+    reset = io.resetMan,
+    config = ClockDomainConfig(
+      resetKind = ASYNC,
+      resetActiveLevel = HIGH
     )
+  )
+  val SubordinateDomain = ClockDomain(
+    clock = io.clockSub,
+    reset = io.resetSub,
+    clockEnable = ManagerDomain.readResetWire,
+    config = ClockDomainConfig(
+      resetKind = ASYNC,
+      resetActiveLevel = HIGH
+    )
+  )
+  SubordinateDomain.setSynchronousWith(ManagerDomain)
+
+  val BufferQueue = StreamFifoCC(
+    dataType = Bits(Output_Width bits),
+    depth = Max_Internal_Space,
+    pushClock =  SubordinateDomain,
+    popClock = ManagerDomain
+    )
+
+  val subordinateClockArea = new ClockingArea(SubordinateDomain) {
 
   // if(Input_Width != Output_Width){
   //   BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue    }else{
@@ -66,10 +96,18 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
    BufferQueue.io.push.payload := io.Subordinate.toReg().resized //Subordinate should feed directly into the queue
    BufferQueue.io.push.valid :=  io.Subordinate.valid
   
-  inputs_debug.FFSisFull := BufferQueue.io.occupancy === Max_Internal_Space
-  inputs_debug.FFSisEmpty := BufferQueue.io.occupancy === 0
+  inputs_debug.FFSisFull := BufferQueue.io.pushOccupancy === Max_Internal_Space
+  inputs_debug.FFSisEmpty := BufferQueue.io.pushOccupancy === 0
 
-  inputs_debug.QueueTail := BufferQueue.io.occupancy.resized //this is the current occupancy of the queue
+  inputs_debug.FFSQueueTail := BufferQueue.io.pushOccupancy.resized //this is the current occupancy of the queue
+
+  }
+
+val managerClockArea = new ClockingArea(ManagerDomain) {
+  inputs_debug.FFMisFull := BufferQueue.io.popOccupancy === Max_Internal_Space
+  inputs_debug.FFMisEmpty := BufferQueue.io.popOccupancy === 0
+
+  inputs_debug.FFMQueueTail := BufferQueue.io.popOccupancy.resized //this is the current occupancy of the queue
   
 
   val SendingFSM = new StateMachine{// I can already see a potential bug because it is checking if fired but the delay between states make put duplicates 
@@ -86,7 +124,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
       whenIsActive{
         // io.Manager.payload := B(0).resized
         io.Manager.valid := False
-        when(!inputs_debug.FFSisEmpty){
+        when(!inputs_debug.FFMisEmpty){
           goto(HeaderPart1) 
         }
       }
@@ -126,13 +164,13 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
         }
 
         //just an otherwise statement 
-        .elsewhen(!inputs_debug.FFSisEmpty & io.Manager.fire){
+        .elsewhen(!inputs_debug.FFMisEmpty & io.Manager.fire){
           io.Manager.payload := BufferQueue.io.pop.payload //pop from the queue and send to the manager
           //BufferQueue.io.pop.ready := True
           counter:= counter + 1
         }
 
-        .elsewhen(inputs_debug.FFSisEmpty & io.Manager.fire){
+        .elsewhen(inputs_debug.FFMisEmpty & io.Manager.fire){
           //BufferQueue.io.pop.ready := False
           io.Manager.payload := B(0).resized//make this the correct type
           counter:= counter + 1
@@ -151,7 +189,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
         when(io.Manager.fire){
           //io.Manager.valid := False
           counter:=0
-          when(inputs_debug.FFSisEmpty){
+          when(inputs_debug.FFMisEmpty){
            goto(Idle)
           } 
           .otherwise {
@@ -162,10 +200,10 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     }
   }
   
-  BufferQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & !inputs_debug.FFSisEmpty
+  BufferQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & !inputs_debug.FFMisEmpty
 
   inputs_debug.FFMisReady := SendingFSM.isActive(SendingFSM.Payload) & io.Manager.isFree
-
+}
   
 }
 
