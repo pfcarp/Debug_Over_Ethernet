@@ -12,8 +12,8 @@ lazy val doeth = (project in file("."))
     name := "DoETH", 
     Compile / scalaSource := baseDirectory.value / "hw" / "spinal",
     libraryDependencies ++= Seq(spinalCore, spinalLib, spinalIdslPlugin)
-  ).dependsOn(UltraScaleSpinalWrapper)
+  )//.dependsOn(UltraScaleSpinalWrapper)
 
-lazy val UltraScaleSpinalWrapper = RootProject(uri("/home/Patrick/ultrascale-spinal-wrapper/"))
+//lazy val UltraScaleSpinalWrapper = RootProject(uri("/home/Patrick/ultrascale-spinal-wrapper/"))
 
 fork := true
