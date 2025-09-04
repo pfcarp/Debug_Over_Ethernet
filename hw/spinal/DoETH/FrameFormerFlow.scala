@@ -18,8 +18,8 @@ import spinal.lib.bus.amba4.axis._
 class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends Component {
   val io = new Bundle {
     //interfaces
-    val Subordinate = slave Flow (Bits(Input_Width bits)) //is always 64or32 bits wide
-    val Manager = master(Axi4Stream(Axi4StreamConfig(dataWidth = Output_Width/8, useLast=true)))//is always 64or32 bits wide
+    val subordinate = slave Flow (Bits(Input_Width bits)) //is always 64or32 bits wide
+    val manager = master(Axi4Stream(Axi4StreamConfig(dataWidth = Output_Width/8, useLast=true)))//is always 64or32 bits wide
     val clockSub = in Bool() //clock for the subordinate interface
     val clockMan = in Bool() //clock for the manager interface
     val resetSub = in Bool() //reset for the subordinate interface
