@@ -173,7 +173,7 @@ object FrameFormerFlowSim extends App {
             dut.sendRandomPayload()
         }
 
-        dut.waitXcyclesBetweenPayload(4)
+        dut.waitXcyclesBetweenPayload(5)
         dut.waitForIdleAgain()
         
     }

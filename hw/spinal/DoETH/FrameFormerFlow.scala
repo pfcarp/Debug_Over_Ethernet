@@ -67,7 +67,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     reset = io.resetMan,
     config = ClockDomainConfig(
       resetKind = ASYNC,
-      resetActiveLevel = HIGH
+      resetActiveLevel = LOW
     )
   )
   val SubordinateDomain = ClockDomain(
@@ -76,17 +76,20 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     clockEnable = ManagerDomain.readResetWire,
     config = ClockDomainConfig(
       resetKind = ASYNC,
-      resetActiveLevel = HIGH
+      resetActiveLevel = LOW
     )
   )
-  SubordinateDomain.setSynchronousWith(ManagerDomain)
+  //SubordinateDomain.setSynchronousWith(ManagerDomain)
 
-  val BufferQueue = StreamFifoCC(
+  
+
+  val BufferQueue = new StreamFifoCC(
     dataType = Bits(Output_Width bits),
     depth = Max_Internal_Space,
     pushClock =  SubordinateDomain,
-    popClock = ManagerDomain
-    )
+    popClock = ManagerDomain,
+    withPopBufferedReset = true
+  )
 
   val subordinateClockArea = new ClockingArea(SubordinateDomain) {
 
@@ -95,8 +98,13 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   // }else {
   //     BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue    }
   // }
-   BufferQueue.io.push.payload := io.Subordinate.toReg().resized //Subordinate should feed directly into the queue
-   BufferQueue.io.push.valid :=  io.Subordinate.valid
+
+  //val BufferedSubordinate = 
+  
+  BufferQueue.io.push << io.Subordinate.stage().toStream.resized //Subordinate should feed directly into the queue
+  
+  //BufferQueue.io.push.payload := io.Subordinate.toReg().resized //Subordinate should feed directly into the queue
+  //BufferQueue.io.push.valid :=  io.Subordinate.valid
   
   inputs_debug.FFSisFull := BufferQueue.io.pushOccupancy === Max_Internal_Space
   inputs_debug.FFSisEmpty := BufferQueue.io.pushOccupancy === 0
@@ -114,7 +122,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
   val SendingFSM = new StateMachine{// I can already see a potential bug because it is checking if fired but the delay between states make put duplicates 
     val counter = Reg(UInt(8 bits)) init(0)
-    io.Manager.payload.data := B(0).resized
+    io.Manager.payload.data := B(1)#*Output_Width
     io.Manager.valid := False
     io.Manager.payload.last := False
     //BufferQueue.io.pop.ready := False       
@@ -177,7 +185,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
         .elsewhen(inputs_debug.FFMisEmpty & io.Manager.fire){
           //BufferQueue.io.pop.ready := False
-          io.Manager.payload.data := B(0).resized//make this the correct type
+          io.Manager.payload.data := B(1)#*Output_Width//make this the correct type
           counter:= counter + 1
         } 
 
@@ -218,7 +226,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 object FrameFormerFlowVerilogGen extends App {
   val inputWidth = 32
   val outputWidth = 64
-  val maxInternalSpace = 128
+  val maxInternalSpace = 32
 
   Config.spinal.generateVerilog({
     val FF = new FrameFormerFlow(
