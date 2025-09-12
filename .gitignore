@@ -2,6 +2,11 @@
 *.log
 *.bak
 
+# vivado
+vivado/
+*.log
+*jou
+
 # sbt specific
 .cache/
 .history/
