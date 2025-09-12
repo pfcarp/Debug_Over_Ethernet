@@ -1,176 +1,173 @@
 package doeth
 
+
 import spinal.core._
 import spinal.core.sim._
+import spinal.lib._
+import spinal.lib.fsm._
+import spinal.lib.bus.amba4.axis._
 
-case class FrameFormerSimModule(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends FrameFormer(Input_Width, Output_Width, Max_Internal_Space) {
+
+case class FrameFormerSimModule(traceWidth: Int, streamConfig: Axi4StreamConfig, depth: Int) extends Component {
   
+  val io = new Bundle {
+    val manager = new Bundle {
+      val clock =     in(Bool())
+      val reset =     in(Bool())
+      val axis  = master(Axi4Stream(streamConfig))
+      val ready =    out(Bool())
+      val full  =    out(Bool())
+      val empty =    out(Bool())
+      val tail  =    out(UInt(log2Up(depth) bits))
+    }
+    val subordinate = new Bundle {
+      val clock =    in(Bool())
+      val reset =    in(Bool())
+      val flow  = slave(Flow(Bits(traceWidth bits)))
+      val full  =   out(Bool())
+      val empty =   out(Bool())
+      val tail  =   out(UInt(log2Up(depth) bits))
+    }
+    val debug = new Bundle {
+      val destination = in(Bits(48 bits))
+      val source      = in(Bits(48 bits))
+      val linkType    = in(Bits(16 bits))
+      val startWord   = in(Bits(16 bits))
+      val endWord     = in(Bits(16 bits))
+      val packetSize  = in(UInt(16 bits))
+    }
+  }
+
+  val traceClockDomain = ClockDomain(clock = io.subordinate.clock, reset = io.subordinate.reset)
+  val streamClockDomain = ClockDomain(clock = io.manager.clock    , reset = io.manager.reset    )
+
+  val ff = FrameFormer(traceWidth, traceClockDomain, streamConfig, streamClockDomain, depth)
+  
+  io.manager.axis <> ff.io.manager.axis
+  io.manager.ready <> ff.io.manager.ready
+  io.manager.full <> ff.io.manager.full
+  io.manager.empty <> ff.io.manager.empty
+  io.manager.tail <> ff.io.manager.tail
+  
+  io.subordinate.flow <> ff.io.subordinate.flow
+  io.subordinate.full <> ff.io.subordinate.full
+  io.subordinate.empty <> ff.io.subordinate.empty
+  io.subordinate.tail <> ff.io.subordinate.tail
+
+  io.debug <> ff.io.debug
+
+
   def sendRandomPayload () : Unit = {
-        this.io.Subordinate.payload.randomize()
-        this.io.Subordinate.valid #= true
-        this.io.Manager.ready #= false
+    this.io.subordinate.flow.valid #= true
+    this.io.subordinate.flow.payload.randomize()
+    this.io.manager.axis.ready     #= false
+    traceClockDomain.waitRisingEdge()
 
-        this.clockDomain.waitRisingEdge()
+    this.io.subordinate.flow.valid #= false
+  }
 
-        this.io.Subordinate.valid #= false
-    }
+  def waitForIdleAgain () : Unit = {
+    this.io.manager.axis.ready #= true
+    traceClockDomain.waitRisingEdge()
+    
+    traceClockDomain.waitRisingEdgeWhere(ff.managerClockArea.fsm.stateReg.toBigInt == ff.managerClockArea.fsm.idle.stateId)
+  }
 
-    def waitForIdleAgain () : Unit = {
-        this.io.Manager.ready #= true
-        this.clockDomain.waitRisingEdge()
-        while (this.SendingFSM.stateReg.toBigInt != this.SendingFSM.Idle.stateId ){
-            this.clockDomain.waitRisingEdge()
-            //println(this.SendingFSM.stateReg.toBigInt)
-        }
-    }
-
-    def waitXcyclesAfterLeaving (wait: Int) : Unit = {
-      this.clockDomain.waitRisingEdge()
-      while(this.SendingFSM.stateNext.toBigInt != 1){
-      if(this.SendingFSM.stateNext.toBigInt != this.SendingFSM.stateReg.toBigInt){
-        this.io.Manager.ready #= false
-        for(i <- 1 to wait){
-          this.clockDomain.waitRisingEdge()
-        }
+  def waitXcyclesAfterLeaving (wait: Int) : Unit = {
+    traceClockDomain.waitRisingEdge()
+  
+    while(ff.managerClockArea.fsm.stateNext.toBigInt != 1) {
+      if(ff.managerClockArea.fsm.stateNext.toBigInt != ff.managerClockArea.fsm.stateReg.toBigInt) {
+        this.io.manager.axis.ready #= false
+        traceClockDomain.waitRisingEdge(wait-1)
       }
       else{
-          this.io.Manager.ready #= true
-          this.clockDomain.waitRisingEdge()
-      }
+        this.io.manager.axis.ready #= true
+        traceClockDomain.waitRisingEdge()
       }
     }
+  }
 
-    def waitXcyclesBetweenPayload(wait: Int) : Unit = {
-      var flip = true
+  def waitXcyclesBetweenPayload(wait: Int) : Unit = {
+    var flip = true
 
-      this.io.Manager.ready #= true
-      this.clockDomain.waitRisingEdge()
-      while(this.SendingFSM.stateNext.toBigInt != 4){
-        this.clockDomain.waitRisingEdge()
-      }
-      while(this.SendingFSM.stateNext.toBigInt == 4){
-      if(flip){
-        this.io.Manager.ready #= false
-        for(i <- 1 to wait){
-          this.clockDomain.waitRisingEdge()
-        }
-        
+    this.io.manager.axis.ready #= true
+    traceClockDomain.waitRisingEdge()
+
+    traceClockDomain.waitRisingEdgeWhere(ff.managerClockArea.fsm.stateNext.toBigInt == 4)
+    
+    while(ff.managerClockArea.fsm.stateNext.toBigInt == 4) {
+      if(flip) {
+        this.io.manager.axis.ready #= false
+        traceClockDomain.waitRisingEdge(wait-1)
       }
       else{
-          this.io.Manager.ready #= true
-          this.clockDomain.waitRisingEdge()
+          this.io.manager.axis.ready #= true
+          traceClockDomain.waitRisingEdge()
       }
       flip = !flip
-      }
     }
+  }
+
 }
-
-// object FrameFormerSimModuleVerilogGen extends App {
-//   val inputWidth = 64
-//   val outputWidth = 64
-//   val maxInternalSpace = 128
-
-//   Config.spinal.generateVerilog(FrameFormerSimModule(
-//       inputWidth,
-//       outputWidth,
-//       maxInternalSpace
-//     )
-//   )
-// }
 
 
 object FrameFormerSim extends App {
-    Config.sim.compile({
-       val dut = FrameFormerSimModule(128, 64, 4)
-        dut.SendingFSM.stateReg.simPublic()
-        dut.SendingFSM.stateNext.simPublic()
-        dut
-    }).doSim {dut =>
+  Config.sim.compile({
+    val dut = FrameFormerSimModule(32, Axi4StreamConfig(64), 4)
+    dut.ff.managerClockArea.fsm.stateReg.simPublic()
+    dut.ff.managerClockArea.fsm.stateNext.simPublic()
+    dut
+  }).doSim { dut =>
 
-
-        //abcdef
-        val dest = BigInt("DEADBEEFCAFE", 16)
-        val source = BigInt("ABADFACEBEAD", 16)
-        val lt = 0x1337
-        val sw = 0xBAAB
-        val ew = 0xBEEB
-        val ps = 4
-
-
-        dut.inputs_debug.Destination #= dest
-        dut.inputs_debug.Source #= source
-        dut.inputs_debug.LinkType #= lt
-        dut.inputs_debug.StartWord #= sw
-        dut.inputs_debug.EndWord #= ew
-        dut.inputs_debug.PacketSize #= ps
+        dut.io.debug.destination #= BigInt("DEADBEEFCAFE", 16)
+        dut.io.debug.source      #= BigInt("ABADFACEBEAD", 16)
+        dut.io.debug.linkType    #= BigInt(        "1337", 16)
+        dut.io.debug.startWord   #= BigInt(        "BAAB", 16)
+        dut.io.debug.endWord     #= BigInt(        "BEEB", 16)
+        dut.io.debug.packetSize  #= 4
         
-
-        dut.clockDomain.forkStimulus(period = 10)
-
-        
-        
-
         //we want to create random payload but also vary the timings of transactions to see the following scenarios
         //1. a singlepayload entering
         //2. multiple entries entering when empty
         //3. multiple entries entering when full
         //4. variations of downstream being ready in between states
         //5. sending and recieving
-        dut.io.Subordinate.payload.randomize()
-        dut.io.Subordinate.valid #= true
-        dut.io.Manager.ready #= false
-
-
-        
-
-        var FinishingPacket: Boolean = dut.SendingFSM.stateReg.toString == "Footer"
-
-        dut.clockDomain.waitRisingEdge()
-        dut.io.Subordinate.valid #= false
-
-
-        dut.io.Manager.ready #= true
-
+        dut.io.subordinate.flow.valid #= true
+        dut.io.subordinate.flow.payload.randomize()
+        dut.io.manager.axis.ready     #= false
         dut.clockDomain.waitRisingEdge()
 
-        dut.io.Subordinate.valid #= false
+        dut.io.subordinate.flow.valid #= false
+        dut.io.manager.axis.ready     #= true
+        dut.clockDomain.waitRisingEdge()
+
+        dut.io.subordinate.flow.valid #= false
         dut.clockDomain.waitRisingEdge(2)
-        println(dut.SendingFSM.stateReg.toBigInt)
 
-        //dut.clockDomain.waitSamplingWhere(dut.SendingFSM.stateReg.toString == "Payload")
-        
-        // if(FinishingPacket){
-        //     dut.io.Subordinate.payload.randomize()
-        //     dut.io.Subordinate.valid #= true
-        // }
-        
-        while (dut.SendingFSM.stateReg.toBigInt != dut.SendingFSM.Idle.stateId ){
-            dut.clockDomain.waitRisingEdge()
-            // println(dut.SendingFSM.stateReg.toBigInt)
+        dut.clockDomain.waitRisingEdgeWhere(dut.ff.managerClockArea.fsm.stateReg.toBigInt == dut.ff.managerClockArea.fsm.idle.stateId)
+
+        if (!dut.io.manager.axis.valid.toBoolean) {
+            dut.io.manager.axis.ready #= false
         }
 
-        if(dut.io.Manager.valid==false){
-            dut.io.Manager.ready #= false
-        }
-
-        for (i <- 1 to 5){
+        for (i <- 1 to 5) {
             dut.sendRandomPayload()
         }
-        println("Hello")
 
-        dut.io.Manager.ready #= true
+        dut.io.manager.axis.ready #= true
         dut.waitForIdleAgain()
 
-        for (i <- 1 to 5){
+        for (i <- 1 to 5) {
             dut.sendRandomPayload()
         }
 
-        dut.io.Manager.ready #= true
+        dut.io.manager.axis.ready #= true
         dut.waitXcyclesAfterLeaving(2)
         dut.waitForIdleAgain()
 
 
-        for (i <- 1 to 5){
+        for (i <- 1 to 5) {
             dut.sendRandomPayload()
         }
 
@@ -178,16 +175,5 @@ object FrameFormerSim extends App {
         dut.waitForIdleAgain()
         
     }
-
-    // def SendRandomPayload(dut: FrameFormer) : Unit = {
-    //     dut.io.Subordinate.payload.randomize()
-    //     dut.io.Subordinate.valid #= true
-    //     dut.io.Manager.ready #= false
-
-    //     dut.clockDomain.waitRisingEdge()
-
-    //     dut.io.Subordinate.valid #= false
- 
-    // }
 
 }

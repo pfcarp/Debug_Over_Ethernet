@@ -1,49 +1,61 @@
 package doeth
 
+
+import scala.math._
+
 import spinal.core._
 import spinal.lib._
 import spinal.lib.fsm._
-import spinal.lib.fsm.State
-import scala.math._
+import spinal.lib.bus.amba4.axis._
 
-//import spinal.core.sim._
-//import spinal.core
 
-//https://www2.lauterbach.com/pdf/app_xilinx_zynq.pdf
+object FrameFormer {
 
-// Hardware definition
-class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends Component {
+  def apply(traceWidth: Int, traceClockDomain: ClockDomain, streamConfig: Axi4StreamConfig, streamClockDomain: ClockDomain, depth: Int): FrameFormer = {
+    new FrameFormer(traceWidth, traceClockDomain, streamConfig, streamClockDomain, depth)
+  }
+
+  /*
+  def apply(traceWidth: Int, traceClockDomain: ClockDomain, streamWidth: Int, streamClockDomain: ClockDomain, depth: Int): FrameFormer = {
+    new FrameFormer(traceWidth, traceClockDomain, Axi4StreamConfig(streamWidth*8), streamClockDomain, depth)
+  }
+  */
+
+}
+
+
+class FrameFormer(traceWidth: Int, traceClockDomain: ClockDomain, streamConfig: Axi4StreamConfig, streamClockDomain: ClockDomain, depth: Int) extends Component {
+  
+  // traceWidth should always be 32 or 64 bits
+  assert(
+    assertion = (Seq(32, 64).contains(traceWidth)),
+    message   = f"Trace bus width should be either 32 or 64 bits wide."
+  )
+
   val io = new Bundle {
-    //interfaces
-    // if(Input_Width != Output_Width){
-    //   Subordinate = slave Stream (Fragment(Bits(Output_Width bits))) //is always 64or32 bits wide
-    // }else {
-    //   Subordinate = slave Stream (Bits(Input_Width bits)) //is always 64or32 bits wide 
-    // }
-    val Subordinate = slave Stream (Bits(Input_Width bits)) //is always 64or32 bits wide
-    val Manager = master Stream (Bits(Output_Width bits))//is always 64or32 bits wide
+    val manager = new Bundle {
+      val axis  = master(Axi4Stream(streamConfig))
+      val ready =   out(Bool())
+      val full  =   out(Bool())
+      val empty =   out(Bool())
+      val tail  =   out(UInt(log2Up(depth) bits))
+    }
+    val subordinate = new Bundle {
+      val flow  = slave(Flow(Bits(traceWidth bits)))
+      val full  =   out(Bool())
+      val empty =   out(Bool())
+      val tail  =   out(UInt(log2Up(depth) bits))
+    }
+    val debug = new Bundle {
+      val destination = in(Bits(48 bits))
+      val source      = in(Bits(48 bits))
+      val linkType    = in(Bits(16 bits))
+      val startWord   = in(Bits(16 bits))
+      val endWord     = in(Bits(16 bits))
+      val packetSize  = in(UInt(16 bits))
+    }
   }
-  val inputs_debug = new Bundle {
-    //configurable input parameters
-    val Destination = in (Bits(48 bits))
-    val Source = in (Bits(48 bits))
-    val LinkType = in (Bits(16 bits))
-    val StartWord = in (Bits(16 bits))
-    val EndWord = in (Bits(16 bits))
-    val PacketSize = in (UInt(16 bits))
-    
-    //timers in respect to queue size
-    // val PacketThreshold = in (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
-    // val TimerThreshold = in (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
-    // val AdditionalPacketGap = in (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
 
-    //debug
-    val FFMisReady = out (Bool())
-    val FFSisFull = out (Bool())
-    val FFSisEmpty = out (Bool())
-    val QueueTail = out (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
-
-  }
   //Stream to queue, when first item enters, put the input data then que data then end word
   
   /*things to keep in mind: 
@@ -52,163 +64,116 @@ class FrameFormer(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) 
   * check state machine library
   * 
   */
-  // val EmptyStream = Stream (Bits(Input_Width bits))
-  // EmptyStream.payload := 0
-  // EmptyStream.valid := True
 
+  traceClockDomain.setSynchronousWith(streamClockDomain)
 
-  val BufferQueue = StreamFifo(
-    dataType = Bits(Output_Width bits),
-    latency = 1,
-    depth = Max_Internal_Space
-    )
+  io.manager.axis.keep := 0
+  io.manager.axis.user := 0
 
-  // if(Input_Width != Output_Width){
-  //   val chunker = Stream (Fragment(Bits(Output_Width bits)))
-  //   // chunker.valid := io.Subordinate.valid //Subordinate should feed directly into the queue    }else{
-    
-  //   // chunker.payload := io.Subordinate.
-    
-  //   chunker.toStreamOf(Bits(Input_Width bits)).queue(1) << io.Subordinate
+  val queue = StreamFifoCC(
+    dataType  = Bits(streamConfig.dataWidth*8 bits),
+    depth     = depth,
+    pushClock = traceClockDomain,
+    popClock  = streamClockDomain
+  )
 
-  //   //io.Subordinate.ready := BufferQueue.io.push.ready & chunker.isFirst 
+  val subordinateClockArea = new ClockingArea(traceClockDomain) {
 
-  //   BufferQueue.io.push << chunker.toStreamOf(Bits(Output_Width bits))
-
-
-  // }else {
-  //     BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue    }
-  // }
-
-  // BufferQueue.io.push << io.Subordinate.fragmentTransaction(Input_Width).toStreamOf(Bits(Output_Width bits)) //Subordinate should feed directly into the queue
-  BufferQueue.io.push << io.Subordinate.queue(1).fragmentTransaction(Output_Width).toStreamOfFragment
+    queue.io.push.valid   := io.subordinate.flow.valid
+    queue.io.push.payload := io.subordinate.flow.toReg().resized //Subordinate should feed directly into the queue
   
-  inputs_debug.FFSisFull := BufferQueue.io.occupancy === Max_Internal_Space
-  inputs_debug.FFSisEmpty := BufferQueue.io.occupancy === 0
+    io.subordinate.full  := queue.io.pushOccupancy === depth
+    io.subordinate.empty := queue.io.pushOccupancy === 0
+    io.subordinate.tail  := queue.io.pushOccupancy.resized //this is the current occupancy of the queue
 
-  inputs_debug.QueueTail := BufferQueue.io.occupancy.resized //this is the current occupancy of the queue
+  }
+
+  val managerClockArea = new ClockingArea(streamClockDomain) {
+
+    io.manager.full  := queue.io.popOccupancy === depth
+    io.manager.empty := queue.io.popOccupancy === 0
+    io.manager.tail  := queue.io.popOccupancy.resized //this is the current occupancy of the queue
   
+    val fsm = new StateMachine {
 
-  val SendingFSM = new StateMachine{// I can already see a potential bug because it is checking if fired but the delay between states make put duplicates 
-    val counter = Reg(UInt(8 bits)) init(0)
-    io.Manager.payload := B(0).resized
-    io.Manager.valid := False
-    //BufferQueue.io.pop.ready := False       
+      // I can already see a potential bug because it is checking if fired but the delay between states make put duplicates 
+      val counter = Counter(8 bits) init(0)
 
-    //val arbiteredStream = StreamArbiterFactory.lowerFirst.transactionLock.onArgs(BufferQueue.io.pop.haltWhen(inputs_debug.FFSisEmpty | counter === inputs_debug.PacketSize),EmptyStream)
+      io.manager.axis.valid        := False
+      io.manager.axis.payload.data := B(0).resized
+      io.manager.axis.payload.last := False
 
-    
-
-    val Idle: State = new State with EntryPoint{
-      whenIsActive{
-        // io.Manager.payload := B(0).resized
-        io.Manager.valid := False
-        when(!inputs_debug.FFSisEmpty){
-          goto(HeaderPart1) 
-        }
-      }
-    }
-
-    val HeaderPart1: State = new State{
-      whenIsActive{
-        io.Manager.payload := Cat(inputs_debug.Source(0, 16 bits),inputs_debug.Destination)
-        io.Manager.valid := True
-        when(io.Manager.fire){
-          goto (HeaderPart2)
-        }
-      }
-    }
-
-    val HeaderPart2: State = new State{
-      whenIsActive{
-        io.Manager.payload := Cat(inputs_debug.StartWord,inputs_debug.LinkType,inputs_debug.Source(16, 32 bits))
-        io.Manager.valid := True
-        when(io.Manager.fire){
-          goto(Payload)
-        }
-      }
-    }
-
-
-    //Denis paraphrasing: make a separate state for loading zeros to the payload with a toggle
-    val Payload: State = new State{
-      whenIsActive{//I feel like there is a smarter way of doing this
-        //io.Manager << arbiteredStream
-        //BufferQueue.io.pop.ready := False 
-        io.Manager.valid := True      
-        when(counter === inputs_debug.PacketSize){
-          goto(Footer)
-          
-        }
-
-        //just an otherwise statement 
-        .elsewhen(!inputs_debug.FFSisEmpty & io.Manager.fire){
-          io.Manager.payload := BufferQueue.io.pop.payload //pop from the queue and send to the manager
-          //BufferQueue.io.pop.ready := True
-          counter:= counter + 1
-        }
-
-        .elsewhen(inputs_debug.FFSisEmpty & io.Manager.fire){
-          //BufferQueue.io.pop.ready := False
-          io.Manager.payload := B(0).resized//make this the correct type
-          counter:= counter + 1
-        } 
-
-        // .otherwise{
-        //   io.Manager.payload := Mux(inputs_debug.FFSisEmpty,B(0).resized,BufferQueue.io.pop.payload)
-        // }
-      }
-    }
-
-    val Footer: State = new State{
-      whenIsActive{
-        io.Manager.payload:= inputs_debug.EndWord.resized
-        io.Manager.valid := True
-        when(io.Manager.fire){
-          //io.Manager.valid := False
-          counter:=0
-          when(inputs_debug.FFSisEmpty){
-           goto(Idle)
-          } 
-          .otherwise {
-            goto(HeaderPart1)
+      val idle: State = new State with EntryPoint {
+        whenIsActive {
+          io.manager.axis.valid        := False
+          io.manager.axis.payload.last := False
+          when (!io.manager.empty) {
+            goto(headerPart1) 
           }
         }
       }
+
+      val headerPart1: State = new State {
+        whenIsActive {
+          io.manager.axis.valid        := True
+          io.manager.axis.payload.data := Cat(io.debug.source(0, 16 bits), io.debug.destination)
+          io.manager.axis.payload.last := False
+          when (io.manager.axis.fire) {
+            goto(headerPart2)
+          }
+        }
+      }
+
+      val headerPart2: State = new State {
+        whenIsActive {
+          io.manager.axis.valid        := True
+          io.manager.axis.payload.data := Cat(io.debug.startWord, io.debug.linkType, io.debug.source(16, 32 bits))
+          when (io.manager.axis.fire) {
+            goto(payload)
+          }
+        }
+      }
+
+      //Denis paraphrasing: make a separate state for loading zeros to the payload with a toggle
+      val payload: State = new State {
+        //I feel like there is a smarter way of doing this
+        whenIsActive {
+          io.manager.axis.valid := True      
+          when (counter.value === io.debug.packetSize) {
+            goto(footer) 
+          }
+          .elsewhen ((!io.manager.empty) && io.manager.axis.fire) {
+            io.manager.axis.payload.data := queue.io.pop.payload //pop from the queue and send to the manager
+            counter.increment()
+          }
+          .elsewhen (io.manager.empty && io.manager.axis.fire) {
+            io.manager.axis.payload.data := B(0).resized //make this the correct type
+            counter.increment()
+          }
+        }
+      }
+
+      val footer: State = new State {
+        whenIsActive {
+          io.manager.axis.valid        := True
+          io.manager.axis.payload.data := io.debug.endWord.resized
+          io.manager.axis.payload.last := True
+          when (io.manager.axis.fire) {
+            counter.clear()
+            when (io.manager.empty) {
+              goto(idle)
+            } 
+            .otherwise {
+              goto(headerPart1)
+            }
+          }
+        }
+      }
+
     }
+  
+    queue.io.pop.ready := (fsm.isActive(fsm.payload)) && io.manager.axis.isFree && (!io.manager.empty)
+    io.manager.ready := fsm.isActive(fsm.payload) && io.manager.axis.isFree
+
   }
-  
-  BufferQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & !inputs_debug.FFSisEmpty
-
-  inputs_debug.FFMisReady := SendingFSM.isActive(SendingFSM.Payload) & io.Manager.isFree
-
-  
-}
-
-
-
-object FrameFormerVerilogGen extends App {
-  val inputWidth = 64
-  val outputWidth = 64
-  val maxInternalSpace = 128
-
-  Config.spinal.generateVerilog(new FrameFormer(
-      inputWidth,
-      outputWidth,
-      maxInternalSpace
-    )
-  )
-}
-
-object FrameFormerVHDLGen extends App {
-  val inputWidth = 64
-  val outputWidth = 64
-  val maxInternalSpace = 128
-
-  Config.spinal.generateVhdl(new FrameFormer(
-      inputWidth,
-      outputWidth,
-      maxInternalSpace
-    )
-  )
 }
