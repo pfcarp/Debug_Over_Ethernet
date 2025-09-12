@@ -13,43 +13,54 @@ import spinal.lib.bus.amba4.axis._
 //import spinal.core
 
 
+object FrameFormerFlow {
+
+  def apply(inputWidth: Int, outputWidth: Int, depth: Int): FrameFormerFlow = new FrameFormerFlow(inputWidth, outputWidth, depth)
+}
+
 
 // Hardware definition
-class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends Component {
+class FrameFormerFlow(Input_Width: Int, Output_Width: Int, depth: Int) extends Component {
+  
   val io = new Bundle {
     //interfaces
-    val subordinate = slave Flow (Bits(Input_Width bits)) //is always 64or32 bits wide
-    val manager = master(Axi4Stream(Axi4StreamConfig(dataWidth = Output_Width/8, useLast=true)))//is always 64or32 bits wide
-    val clockSub = in Bool() //clock for the subordinate interface
-    val clockMan = in Bool() //clock for the manager interface
-    val resetSub = in Bool() //reset for the subordinate interface
-    val resetMan = in Bool() //reset for the manager interface
+    val subordinate = new Bundle {
+      val clock = Bool()
+      val reset = Bool()
+      val flow = slave(Flow(Bits(Input_Width bits))) //is always 64or32 bits wide
+    }
+    val manager = new Bundle {
+      val clock = Bool()
+      val reset = Bool()
+      val axis  = master(Axi4Stream(Axi4StreamConfig(dataWidth = Output_Width/8, useLast=true)))//is always 64or32 bits wide
+    }
   }
+
   val inputs_debug = new Bundle {
     //configurable input parameters
-    val Destination = in (Bits(48 bits))
-    val Source = in (Bits(48 bits))
-    val LinkType = in (Bits(16 bits))
-    val StartWord = in (Bits(16 bits))
-    val EndWord = in (Bits(16 bits))
-    val PacketSize = in (UInt(16 bits))
+    val Destination = in(Bits(48 bits))
+    val Source      = in(Bits(48 bits))
+    val LinkType    = in(Bits(16 bits))
+    val StartWord   = in(Bits(16 bits))
+    val EndWord     = in(Bits(16 bits))
+    val PacketSize  = in(UInt(16 bits))
     
     //timers in respect to queue size
-    // val PacketThreshold = in (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
-    // val TimerThreshold = in (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
-    // val AdditionalPacketGap = in (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
+    // val PacketThreshold = in (UInt((log10(depth.asInstanceOf[Double]) / log10(2.0)).toInt bits))
+    // val TimerThreshold = in (UInt((log10(depth.asInstanceOf[Double]) / log10(2.0)).toInt bits))
+    // val AdditionalPacketGap = in (UInt((log10(depth.asInstanceOf[Double]) / log10(2.0)).toInt bits))
 
     //debug
-    val FFMisReady = out (Bool())
-    val FFSisFull = out (Bool())
-    val FFSisEmpty = out (Bool())
-    val FFSQueueTail = out (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
-    val FFMisFull = out (Bool())
-    val FFMisEmpty = out (Bool())
-    val FFMQueueTail = out (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
+    val FFMisReady   = out(Bool())
+    val FFSisFull    = out(Bool())
+    val FFSisEmpty   = out(Bool())
+    val FFSQueueTail = out(UInt(log2Up(depth) bits))
+    val FFMisFull    = out(Bool())
+    val FFMisEmpty   = out(Bool())
+    val FFMQueueTail = out(UInt(log2Up(depth) bits))
 
   }
-  println(io.Manager.config.dataWidth+" "+ Output_Width)
+  println(io.manager.axis.config.dataWidth+" "+ Output_Width)
   //Stream to queue, when first item enters, put the input data then que data then end word
   
   /*things to keep in mind: 
@@ -63,16 +74,16 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   // EmptyStream.valid := True
 
   val ManagerDomain = ClockDomain(
-    clock = io.clockMan,
-    reset = io.resetMan,
+    clock = io.manager.clock,
+    reset = io.manager.reset,
     config = ClockDomainConfig(
       resetKind = ASYNC,
       resetActiveLevel = HIGH
     )
   )
   val SubordinateDomain = ClockDomain(
-    clock = io.clockSub,
-    reset = io.resetSub,
+    clock = io.subordinate.clock,
+    reset = io.subordinate.reset,
     clockEnable = ManagerDomain.readResetWire,
     config = ClockDomainConfig(
       resetKind = ASYNC,
@@ -83,7 +94,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
 
   val BufferQueue = StreamFifoCC(
     dataType = Bits(Output_Width bits),
-    depth = Max_Internal_Space,
+    depth = depth,
     pushClock =  SubordinateDomain,
     popClock = ManagerDomain
     )
@@ -95,121 +106,110 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   // }else {
   //     BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue    }
   // }
-   BufferQueue.io.push.payload := io.Subordinate.toReg().resized //Subordinate should feed directly into the queue
-   BufferQueue.io.push.valid :=  io.Subordinate.valid
+    BufferQueue.io.push.valid   :=  io.subordinate.flow.valid
+    BufferQueue.io.push.payload := io.subordinate.flow.toReg().resized //Subordinate should feed directly into the queue
   
-  inputs_debug.FFSisFull := BufferQueue.io.pushOccupancy === Max_Internal_Space
-  inputs_debug.FFSisEmpty := BufferQueue.io.pushOccupancy === 0
-
-  inputs_debug.FFSQueueTail := BufferQueue.io.pushOccupancy.resized //this is the current occupancy of the queue
+    inputs_debug.FFSisFull  := BufferQueue.io.pushOccupancy === depth
+    inputs_debug.FFSisEmpty := BufferQueue.io.pushOccupancy === 0
+    inputs_debug.FFSQueueTail := BufferQueue.io.pushOccupancy.resized //this is the current occupancy of the queue
 
   }
 
-val managerClockArea = new ClockingArea(ManagerDomain) {
-  inputs_debug.FFMisFull := BufferQueue.io.popOccupancy === Max_Internal_Space
-  inputs_debug.FFMisEmpty := BufferQueue.io.popOccupancy === 0
-
-  inputs_debug.FFMQueueTail := BufferQueue.io.popOccupancy.resized //this is the current occupancy of the queue
+  val managerClockArea = new ClockingArea(ManagerDomain) {
+    inputs_debug.FFMisFull := BufferQueue.io.popOccupancy === depth
+    inputs_debug.FFMisEmpty := BufferQueue.io.popOccupancy === 0
+    inputs_debug.FFMQueueTail := BufferQueue.io.popOccupancy.resized //this is the current occupancy of the queue
   
+    val SendingFSM = new StateMachine{// I can already see a potential bug because it is checking if fired but the delay between states make put duplicates 
+      val counter = Reg(UInt(8 bits)) init(0)
+      io.manager.axis.payload.data := B(0).resized
+      io.manager.axis.valid := False
+      io.manager.axis.payload.last := False
+      //BufferQueue.io.pop.ready := False       
 
-  val SendingFSM = new StateMachine{// I can already see a potential bug because it is checking if fired but the delay between states make put duplicates 
-    val counter = Reg(UInt(8 bits)) init(0)
-    io.Manager.payload.data := B(0).resized
-    io.Manager.valid := False
-    io.Manager.payload.last := False
-    //BufferQueue.io.pop.ready := False       
-
-    //val arbiteredStream = StreamArbiterFactory.lowerFirst.transactionLock.onArgs(BufferQueue.io.pop.haltWhen(inputs_debug.FFSisEmpty | counter === inputs_debug.PacketSize),EmptyStream)
-
+      //val arbiteredStream = StreamArbiterFactory.lowerFirst.transactionLock.onArgs(BufferQueue.io.pop.haltWhen(inputs_debug.FFSisEmpty | counter === inputs_debug.PacketSize),EmptyStream)
     
-
-    val Idle: State = new State with EntryPoint{
-      whenIsActive{
-        // io.Manager.payload := B(0).resized
-        io.Manager.valid := False
-        io.Manager.payload.last := False
-        when(!inputs_debug.FFMisEmpty){
-          goto(HeaderPart1) 
+      val Idle: State = new State with EntryPoint{
+        whenIsActive{
+          // io.manager.payload := B(0).resized
+          io.manager.axis.valid := False
+          io.manager.axis.payload.last := False
+          when(!inputs_debug.FFMisEmpty){
+            goto(HeaderPart1) 
+          }
         }
       }
-    }
 
-    val HeaderPart1: State = new State{
-      whenIsActive{
-        io.Manager.payload.data := Cat(inputs_debug.Source(0, 16 bits),inputs_debug.Destination)
-        io.Manager.valid := True
-        io.Manager.payload.last := False
-        when(io.Manager.fire){
-   
-          goto (HeaderPart2)
+      val HeaderPart1: State = new State{
+        whenIsActive{
+          io.manager.axis.payload.data := Cat(inputs_debug.Source(0, 16 bits),inputs_debug.Destination)
+          io.manager.axis.valid := True
+          io.manager.axis.payload.last := False
+          when(io.manager.axis.fire){
+            goto (HeaderPart2)
+          }
         }
       }
-    }
 
-    val HeaderPart2: State = new State{
-      whenIsActive{
-        io.Manager.payload.data := Cat(inputs_debug.StartWord,inputs_debug.LinkType,inputs_debug.Source(16, 32 bits))
-        io.Manager.valid := True
-        when(io.Manager.fire){
-          goto(Payload)
+      val HeaderPart2: State = new State{
+        whenIsActive{
+          io.manager.axis.payload.data := Cat(inputs_debug.StartWord,inputs_debug.LinkType,inputs_debug.Source(16, 32 bits))
+          io.manager.axis.valid := True
+          when(io.manager.axis.fire){
+            goto(Payload)
+          }
         }
       }
-    }
 
-
-    //Denis paraphrasing: make a separate state for loading zeros to the payload with a toggle
-    val Payload: State = new State{
-      whenIsActive{//I feel like there is a smarter way of doing this
-        //io.Manager << arbiteredStream
-        //BufferQueue.io.pop.ready := False 
-        io.Manager.valid := True      
-        when(counter === inputs_debug.PacketSize){
-          goto(Footer)
-          
+      //Denis paraphrasing: make a separate state for loading zeros to the payload with a toggle
+      val Payload: State = new State{
+        whenIsActive{//I feel like there is a smarter way of doing this
+          //io.manager << arbiteredStream
+          //BufferQueue.io.pop.ready := False 
+          io.manager.axis.valid := True      
+          when(counter === inputs_debug.PacketSize){
+            goto(Footer) 
+          }
+          //just an otherwise statement 
+          .elsewhen(!inputs_debug.FFMisEmpty & io.manager.axis.fire){
+            io.manager.axis.payload.data := BufferQueue.io.pop.payload //pop from the queue and send to the manager
+            //BufferQueue.io.pop.ready := True
+            counter:= counter + 1
+          }
+          .elsewhen(inputs_debug.FFMisEmpty & io.manager.axis.fire){
+            //BufferQueue.io.pop.ready := False
+            io.manager.axis.payload.data := B(0).resized//make this the correct type
+            counter:= counter + 1
+          }
+          // .otherwise{
+          //   io.manager.payload := Mux(inputs_debug.FFSisEmpty,B(0).resized,BufferQueue.io.pop.payload)
+          // }
         }
-
-        //just an otherwise statement 
-        .elsewhen(!inputs_debug.FFMisEmpty & io.Manager.fire){
-          io.Manager.payload.data := BufferQueue.io.pop.payload //pop from the queue and send to the manager
-          //BufferQueue.io.pop.ready := True
-          counter:= counter + 1
-        }
-
-        .elsewhen(inputs_debug.FFMisEmpty & io.Manager.fire){
-          //BufferQueue.io.pop.ready := False
-          io.Manager.payload.data := B(0).resized//make this the correct type
-          counter:= counter + 1
-        } 
-
-        // .otherwise{
-        //   io.Manager.payload := Mux(inputs_debug.FFSisEmpty,B(0).resized,BufferQueue.io.pop.payload)
-        // }
       }
-    }
 
-    val Footer: State = new State{
-      whenIsActive{
-        io.Manager.payload.data:= inputs_debug.EndWord.resized
-        io.Manager.payload.last := True
-        io.Manager.valid := True
-        when(io.Manager.fire){
-          //io.Manager.valid := False
-          counter:=0
-          when(inputs_debug.FFMisEmpty){
-           goto(Idle)
-          } 
-          .otherwise {
-            goto(HeaderPart1)
+      val Footer: State = new State{
+        whenIsActive{
+          io.manager.axis.payload.data:= inputs_debug.EndWord.resized
+          io.manager.axis.payload.last := True
+          io.manager.axis.valid := True
+          when(io.manager.axis.fire){
+            //io.manager.valid := False
+            counter:=0
+            when(inputs_debug.FFMisEmpty){
+              goto(Idle)
+            } 
+            .otherwise {
+              goto(HeaderPart1)
+            }
           }
         }
       }
     }
-  }
   
-  BufferQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & !inputs_debug.FFMisEmpty
+    BufferQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.manager.axis.isFree & !inputs_debug.FFMisEmpty
 
-  inputs_debug.FFMisReady := SendingFSM.isActive(SendingFSM.Payload) & io.Manager.isFree
-}
+    inputs_debug.FFMisReady := SendingFSM.isActive(SendingFSM.Payload) & io.manager.axis.isFree
+  }
   
 }
 
@@ -226,7 +226,7 @@ object FrameFormerFlowVerilogGen extends App {
       outputWidth,
       maxInternalSpace
     )
-    VerilogBusAttributeAdder(FF.io.Manager) // Add bus attributes to the Manager interface
+    VerilogBusAttributeAdder(FF.io.manager.axis) // Add bus attributes to the Manager interface
     FF
 })
 }
@@ -242,7 +242,7 @@ object FrameFormerFlowVHDLGen extends App {
       outputWidth,
       maxInternalSpace
     )
-    VerilogBusAttributeAdder(FF.io.Manager)
+    VerilogBusAttributeAdder(FF.io.manager.axis)
     FF
 })
 }
