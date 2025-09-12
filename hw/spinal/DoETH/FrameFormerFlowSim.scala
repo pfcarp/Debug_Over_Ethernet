@@ -6,17 +6,17 @@ import spinal.core.sim._
 case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends FrameFormerFlow(Input_Width, Output_Width, Max_Internal_Space) {
   
   def sendRandomPayload () : Unit = {
-        this.io.Subordinate.payload.randomize()
-        this.io.Subordinate.valid #= true
+        this.io.subordinate.flow.payload.randomize()
+        this.io.subordinate.flow.valid #= true
         // this.io.Manager.ready #= false
 
         this.clockDomain.waitRisingEdge()
 
-        this.io.Subordinate.valid #= false
+        this.io.subordinate.flow.valid #= false
     }
 
     def waitForIdleAgain () : Unit = {
-        this.io.Manager.ready #= true
+        this.io.manager.axis.ready #= true
         this.clockDomain.waitRisingEdge()
         while (this.managerClockArea.SendingFSM.stateReg.toBigInt != this.managerClockArea.SendingFSM.Idle.stateId ){
             this.clockDomain.waitRisingEdge()
@@ -28,13 +28,13 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
       this.clockDomain.waitRisingEdge()
       while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 1){
       if(this.managerClockArea.SendingFSM.stateNext.toBigInt != this.managerClockArea.SendingFSM.stateReg.toBigInt){
-        this.io.Manager.ready #= false
+        this.io.manager.axis.ready #= false
         for(i <- 1 to wait){
           this.clockDomain.waitRisingEdge()
         }
       }
       else{
-          this.io.Manager.ready #= true
+          this.io.manager.axis.ready #= true
           this.clockDomain.waitRisingEdge()
       }
       }
@@ -43,21 +43,21 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
     def waitXcyclesBetweenPayload(wait: Int) : Unit = {
       var flip = true
 
-      this.io.Manager.ready #= true
+      this.io.manager.axis.ready #= true
       this.clockDomain.waitRisingEdge()
       while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 4){
         this.clockDomain.waitRisingEdge()
       }
       while(this.managerClockArea.SendingFSM.stateNext.toBigInt == 4){
       if(flip){
-        this.io.Manager.ready #= false
+        this.io.manager.axis.ready #= false
         for(i <- 1 to wait){
           this.clockDomain.waitRisingEdge()
         }
         
       }
       else{
-          this.io.Manager.ready #= true
+          this.io.manager.axis.ready #= true
           this.clockDomain.waitRisingEdge()
       }
       flip = !flip
@@ -115,9 +115,9 @@ object FrameFormerFlowSim extends App {
         //3. multiple entries entering when full
         //4. variations of downstream being ready in between states
         //5. sending and recieving
-        dut.io.Subordinate.payload.randomize()
-        dut.io.Subordinate.valid #= true
-        dut.io.Manager.ready #= false
+        dut.io.subordinate.flow.payload.randomize()
+        dut.io.subordinate.flow.valid #= true
+        dut.io.manager.axis.ready #= false
 
 
         
@@ -125,14 +125,14 @@ object FrameFormerFlowSim extends App {
         var FinishingPacket: Boolean = dut.managerClockArea.SendingFSM.stateReg.toString == "Footer"
 
         dut.clockDomain.waitRisingEdge()
-        dut.io.Subordinate.valid #= false
+        dut.io.subordinate.flow.valid #= false
 
 
-        dut.io.Manager.ready #= true
+        dut.io.manager.axis.ready #= true
 
         dut.clockDomain.waitRisingEdge()
 
-        dut.io.Subordinate.valid #= false
+        dut.io.subordinate.flow.valid #= false
         dut.clockDomain.waitRisingEdge(2)
         println(dut.managerClockArea.SendingFSM.stateReg.toBigInt)
 
@@ -148,8 +148,8 @@ object FrameFormerFlowSim extends App {
             // println(dut.SendingFSM.stateReg.toBigInt)
         }
 
-        if(dut.io.Manager.valid==false){
-            dut.io.Manager.ready #= false
+        if(dut.io.manager.axis.valid==false){
+            dut.io.manager.axis.ready #= false
         }
 
         for (i <- 1 to 5){
@@ -157,14 +157,14 @@ object FrameFormerFlowSim extends App {
         }
         println("Hello")
 
-        dut.io.Manager.ready #= true
+        dut.io.manager.axis.ready #= true
         dut.waitForIdleAgain()
 
         for (i <- 1 to 5){
             dut.sendRandomPayload()
         }
 
-        dut.io.Manager.ready #= true
+        dut.io.manager.axis.ready #= true
         dut.waitXcyclesAfterLeaving(2)
         dut.waitForIdleAgain()
 
