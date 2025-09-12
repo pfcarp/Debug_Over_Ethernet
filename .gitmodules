@@ -1,0 +1,3 @@
+[submodule "ext/ultrascale-spinal-wrapper"]
+	path = ext/ultrascale-spinal-wrapper
+	url = https://github.com/denishoornaert/ultrascale-spinal-wrapper.git

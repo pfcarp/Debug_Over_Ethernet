@@ -1,5 +1,5 @@
 ThisBuild / version := "1.0"
-ThisBuild / scalaVersion := "2.13.14"
+ThisBuild / scalaVersion := "2.13.16"
 ThisBuild / organization := "org.example"
 
 val spinalVersion = "1.12.0"
@@ -12,8 +12,8 @@ lazy val doeth = (project in file("."))
     name := "DoETH", 
     Compile / scalaSource := baseDirectory.value / "hw" / "spinal",
     libraryDependencies ++= Seq(spinalCore, spinalLib, spinalIdslPlugin)
-  )//.dependsOn(UltraScaleSpinalWrapper)
+  ).dependsOn(UltraScaleSpinalWrapper)
 
-//lazy val UltraScaleSpinalWrapper = RootProject(uri("/home/Patrick/ultrascale-spinal-wrapper/"))
+lazy val UltraScaleSpinalWrapper = RootProject(uri("ext/ultrascale-spinal-wrapper"))
 
 fork := true
