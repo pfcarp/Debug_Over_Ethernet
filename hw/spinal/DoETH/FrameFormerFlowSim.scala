@@ -10,32 +10,98 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
         this.io.Subordinate.valid #= true
         // this.io.Manager.ready #= false
 
-        this.clockDomain.waitRisingEdge()
+        this.SubordinateDomain.waitRisingEdge()
 
         this.io.Subordinate.valid #= false
     }
 
+    def sendXDuplicatePayload (cycles: Int) : Unit = {
+        for(i <- 1 to cycles){
+          this.io.Subordinate.payload #= 0xdead
+          this.io.Subordinate.valid #= true
+          // this.io.Manager.ready #= false
+
+          this.SubordinateDomain.waitRisingEdge()
+        }
+
+        this.io.Subordinate.valid #= false
+    }
+
+
+    def waitXcyclesBetweenSendingPayload(wait: Int) : Unit = {
+      var flip = true
+
+      this.io.Manager.ready #= true
+      
+      this.SubordinateDomain.waitRisingEdge()
+      while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 4){
+        this.SubordinateDomain.waitRisingEdge()
+      }
+      while(this.managerClockArea.SendingFSM.stateNext.toBigInt == 4){
+      if(flip){
+        this.io.Subordinate.valid #= false
+        for(i <- 1 to wait){
+          this.SubordinateDomain.waitRisingEdge()
+        }
+        
+      }
+      else{
+          this.io.Subordinate.payload #= 0xdead
+          this.io.Subordinate.valid #= true
+          this.SubordinateDomain.waitRisingEdge()
+      }
+      flip = !flip
+      }
+    }
+
+    def waitXcyclesBetweenSendingRandomPayload(wait: Int, packets: Int) : Unit = {
+      var flip = true
+
+      this.io.Manager.ready #= true
+      this.SubordinateDomain.waitRisingEdge()
+      // while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 4){
+      //   this.clockDomain.waitRisingEdge()
+      // }
+      //while(this.managerClockArea.SendingFSM.stateNext.toBigInt == 4){
+      for(i <- 1 to packets){
+      if(flip){
+        this.io.Subordinate.valid #= false
+        for(i <- 1 to wait){
+          this.SubordinateDomain.waitRisingEdge()
+        }
+        
+      }
+      else{
+          this.io.Subordinate.payload.randomize()
+          this.io.Subordinate.valid #= true
+          this.SubordinateDomain.waitRisingEdge()
+      }
+      flip = !flip
+      }
+      //}
+    }
+
     def waitForIdleAgain () : Unit = {
         this.io.Manager.ready #= true
-        this.clockDomain.waitRisingEdge()
+        this.ManagerDomain.waitRisingEdge()
         while (this.managerClockArea.SendingFSM.stateReg.toBigInt != this.managerClockArea.SendingFSM.Idle.stateId ){
-            this.clockDomain.waitRisingEdge()
+            this.ManagerDomain.waitRisingEdge()
             //println(this.SendingFSM.stateReg.toBigInt)
         }
     }
 
     def waitXcyclesAfterLeaving (wait: Int) : Unit = {
-      this.clockDomain.waitRisingEdge()
+      this.ManagerDomain.waitRisingEdge()
       while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 1){
       if(this.managerClockArea.SendingFSM.stateNext.toBigInt != this.managerClockArea.SendingFSM.stateReg.toBigInt){
         this.io.Manager.ready #= false
         for(i <- 1 to wait){
-          this.clockDomain.waitRisingEdge()
+          this.ManagerDomain.waitRisingEdge()
         }
       }
       else{
           this.io.Manager.ready #= true
-          this.clockDomain.waitRisingEdge()
+          this.ManagerDomain.waitRisingEdge()
       }
       }
     }
@@ -44,21 +110,21 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
       var flip = true
 
       this.io.Manager.ready #= true
-      this.clockDomain.waitRisingEdge()
+      this.ManagerDomain.waitRisingEdge()
       while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 4){
-        this.clockDomain.waitRisingEdge()
+        this.ManagerDomain.waitRisingEdge()
       }
       while(this.managerClockArea.SendingFSM.stateNext.toBigInt == 4){
       if(flip){
         this.io.Manager.ready #= false
         for(i <- 1 to wait){
-          this.clockDomain.waitRisingEdge()
+          this.ManagerDomain.waitRisingEdge()
         }
         
       }
       else{
           this.io.Manager.ready #= true
-          this.clockDomain.waitRisingEdge()
+          this.ManagerDomain.waitRisingEdge()
       }
       flip = !flip
       }
@@ -81,7 +147,7 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
 
 object FrameFormerFlowSim extends App {
     Config.sim.compile({
-       val dut = FrameFormerFlowSimModule(32, 64, 4)
+       val dut = FrameFormerFlowSimModule(32, 64, 16)
         dut.managerClockArea.SendingFSM.stateReg.simPublic()
         dut.managerClockArea.SendingFSM.stateNext.simPublic()
         dut
@@ -94,7 +160,7 @@ object FrameFormerFlowSim extends App {
         val lt = 0x1337
         val sw = 0xBAAB
         val ew = 0xBEEB
-        val ps = 4
+        val ps = 16
 
 
         dut.inputs_debug.Destination #= dest
@@ -104,7 +170,7 @@ object FrameFormerFlowSim extends App {
         dut.inputs_debug.EndWord #= ew
         dut.inputs_debug.PacketSize #= ps
         
-        dut.clockDomain.forkStimulus(period = 5)
+        dut.clockDomain.forkStimulus(period = 6)
         dut.ManagerDomain.forkStimulus(period = 10)
 
         dut.SubordinateDomain.forkStimulus(period = 5)
@@ -115,78 +181,30 @@ object FrameFormerFlowSim extends App {
         //3. multiple entries entering when full
         //4. variations of downstream being ready in between states
         //5. sending and recieving
-        dut.io.Subordinate.payload.randomize()
-        dut.io.Subordinate.valid #= true
-        dut.io.Manager.ready #= false
-
+        dut.waitForIdleAgain()
+        dut.sendRandomPayload()
 
         
+        //dut.ManagerDomain.waitRisingEdgeWhere(dut.managerClockArea.SendingFSM.stateReg.toString == "Payload")
+        //dut.ManagerDomain.waitActiveEdgeWhere(dut.managerClockArea.SendingFSM.stateReg.toString == "Payload")
+        dut.ManagerDomain.waitRisingEdge(10)
 
-        var FinishingPacket: Boolean = dut.managerClockArea.SendingFSM.stateReg.toString == "Footer"
-
-        dut.clockDomain.waitRisingEdge()
-        dut.io.Subordinate.valid #= false
-
-
-        dut.io.Manager.ready #= true
-
-        dut.clockDomain.waitRisingEdge()
-
-        dut.io.Subordinate.valid #= false
-        dut.clockDomain.waitRisingEdge(2)
-        println(dut.managerClockArea.SendingFSM.stateReg.toBigInt)
-
-        //dut.clockDomain.waitSamplingWhere(dut.SendingFSM.stateReg.toString == "Payload")
-        
-        // if(FinishingPacket){
-        //     dut.io.Subordinate.payload.randomize()
-        //     dut.io.Subordinate.valid #= true
+        dut.waitXcyclesBetweenSendingRandomPayload(3,15)
+        // while (dut.managerClockArea.SendingFSM.stateReg.toString != "HeaderPart2"){
+        //   dut.ManagerDomain.waitRisingEdge()
         // }
-
-        while (dut.managerClockArea.SendingFSM.stateReg.toBigInt != dut.managerClockArea.SendingFSM.Idle.stateId ){
-            dut.clockDomain.waitRisingEdge()
-            // println(dut.SendingFSM.stateReg.toBigInt)
-        }
-
-        if(dut.io.Manager.valid==false){
-            dut.io.Manager.ready #= false
-        }
-
-        for (i <- 1 to 5){
-            dut.sendRandomPayload()
-        }
-        println("Hello")
-
-        dut.io.Manager.ready #= true
-        dut.waitForIdleAgain()
-
-        for (i <- 1 to 5){
-            dut.sendRandomPayload()
-        }
-
-        dut.io.Manager.ready #= true
-        dut.waitXcyclesAfterLeaving(2)
-        dut.waitForIdleAgain()
-
-
-        for (i <- 1 to 5){
-            dut.sendRandomPayload()
-        }
-
-        dut.waitXcyclesBetweenPayload(5)
-        dut.waitForIdleAgain()
         
+        
+        
+        dut.sendXDuplicatePayload(5)
+          for (i <- 1 to 2){
+              dut.sendRandomPayload()
+          }
+          // dut.waitForIdleAgain()
+
+          dut.waitXcyclesBetweenSendingPayload(2)
+          dut.waitForIdleAgain()
+
     }
-
-    // def SendRandomPayload(dut: FrameFormer) : Unit = {
-    //     dut.io.Subordinate.payload.randomize()
-    //     dut.io.Subordinate.valid #= true
-    //     dut.io.Manager.ready #= false
-
-    //     dut.clockDomain.waitRisingEdge()
-
-    //     dut.io.Subordinate.valid #= false
- 
-    // }
 
 }

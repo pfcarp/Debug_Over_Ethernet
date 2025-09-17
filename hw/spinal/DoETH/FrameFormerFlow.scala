@@ -73,7 +73,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   val SubordinateDomain = ClockDomain(
     clock = io.clockSub,
     reset = io.resetSub,
-    clockEnable = ManagerDomain.readResetWire,
+    //clockEnable = ManagerDomain.readResetWire,
     config = ClockDomainConfig(
       resetKind = ASYNC,
       resetActiveLevel = LOW
@@ -81,7 +81,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   )
   //SubordinateDomain.setSynchronousWith(ManagerDomain)
 
-  
+  val Previous = Bits(32 bits)
 
   val BufferQueue = new StreamFifoCC(
     dataType = Bits(Output_Width bits),
@@ -101,8 +101,11 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
 
   //val BufferedSubordinate = 
   
-  BufferQueue.io.push << io.Subordinate.stage().toStream.resized //Subordinate should feed directly into the queue
-  
+  //BufferQueue.io.push << io.Subordinate.toStream.throwWhen(io.Subordinate.payload===io.Subordinate.stage().payload).resized //Subordinate should feed directly into the queue
+
+  BufferQueue.io.push << io.Subordinate.toStream.resized //Subordinate should feed directly into the queue
+
+
   //BufferQueue.io.push.payload := io.Subordinate.toReg().resized //Subordinate should feed directly into the queue
   //BufferQueue.io.push.valid :=  io.Subordinate.valid
   
@@ -177,7 +180,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
         }
 
         //just an otherwise statement 
-        .elsewhen(!inputs_debug.FFMisEmpty & io.Manager.fire){
+        .elsewhen(!inputs_debug.FFMisEmpty & BufferQueue.io.pop.valid & io.Manager.fire){
           io.Manager.payload.data := BufferQueue.io.pop.payload //pop from the queue and send to the manager
           //BufferQueue.io.pop.ready := True
           counter:= counter + 1
