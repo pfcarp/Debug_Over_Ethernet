@@ -9,6 +9,7 @@ import spinal.lib.bus.amba4.axis._
 
 
 import ultrascaleplus.clock.PLClockingArea
+import ultrascaleplus.clock.pll._
 import ultrascaleplus.ip.Ethernet
 import ultrascaleplus.bus.amba.axi4.Axi4toAxiLite4
 
@@ -19,12 +20,12 @@ import zcu102.io.ethernet._
 
 case class TopModule() extends ZCU102(
   config    = new ZCU102Config(
-    withPL_CLK0   = 250.00 MHz,
-    withPL_CLK1   =  75.00 MHz,
-    withLPD_HPM0  =       true,
-    with_GT0      =       true,
-    withSI570_MGT = 156.25 MHz,
-    withTRACE     =       true
+    withPL_CLK0   = PLL.IO(250.00 MHz),
+    withPL_CLK1   =  PLL.R( 75.00 MHz),
+    withLPD_HPM0  =               true,
+    with_GT0      =               true,
+    withSI570_MGT =         156.25 MHz,
+    withTRACE     =               true
   )
 ) {
 
