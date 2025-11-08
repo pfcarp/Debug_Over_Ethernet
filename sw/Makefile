@@ -12,7 +12,7 @@ INCLUDE=-Iinclude/view -Iinclude/model -Iinclude/control
 OBJ=object
 
 
-all: main
+all: gui parser
 
 
 Color.o:
@@ -57,11 +57,18 @@ Graph.o: GraphEdge.o GraphNode.o
 GraphArea.o: Graph.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/GraphArea.cpp -o $(OBJ)/GraphArea.o $(GTK4FLAGS)
 
-main: DataBuffer.o HistogramBuffer.o Controls.o Color.o PlotArea.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o
-	g++ $(DEBUG) $(OPT) $(INCLUDE) main.c $(OBJ)/*.o -o doeth.out $(GTK4FLAGS) $(GRAPHVIZFLAGS)
+gui: DataBuffer.o HistogramBuffer.o Controls.o Color.o PlotArea.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(OBJ)/*.o -o doeth.out $(GTK4FLAGS) $(GRAPHVIZFLAGS)
+
+
+packetfactory.o:
+	g++ $(DEBUG) $(OPT) -c PacketFactory.cpp -o $(OBJ)/PacketFactory.o
+
+parser: packetfactory.o
+	g++ $(DEBUG) $(OPT) parser.cpp $(OBJ)/*.o -o parser.out
 
 
 clean:
-	rm doeth.out
-	rm $(OBJ)/*.o
+	rm -f doeth.out parser.out
+	rm -f $(OBJ)/*.o
 
