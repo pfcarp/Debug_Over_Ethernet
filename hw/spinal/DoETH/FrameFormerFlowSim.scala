@@ -14,6 +14,26 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
 
         this.io.Subordinate.valid #= false
     }
+    
+    def sendWordAsync () : Unit = {
+        this.io.Subordinate.payload#=0x7fffffff
+        this.io.Subordinate.valid #= true
+        // this.io.Manager.ready #= false
+
+        this.SubordinateDomain.waitRisingEdge()
+
+        this.io.Subordinate.valid #= false
+    }
+
+    def sendHalfWordAsync () : Unit = {
+        this.io.Subordinate.payload#=0x7fff7fff
+        this.io.Subordinate.valid #= true
+        // this.io.Manager.ready #= false
+
+        this.SubordinateDomain.waitRisingEdge()
+
+        this.io.Subordinate.valid #= false
+    }
 
     def sendXDuplicatePayload (cycles: Int) : Unit = {
         for(i <- 1 to cycles){
@@ -183,11 +203,15 @@ object FrameFormerFlowSim extends App {
         //5. sending and recieving
         dut.waitForIdleAgain()
         dut.sendRandomPayload()
+        dut.sendHalfWordAsync()
+        dut.sendWordAsync()
 
         
         //dut.ManagerDomain.waitRisingEdgeWhere(dut.managerClockArea.SendingFSM.stateReg.toString == "Payload")
         //dut.ManagerDomain.waitActiveEdgeWhere(dut.managerClockArea.SendingFSM.stateReg.toString == "Payload")
         dut.ManagerDomain.waitRisingEdge(10)
+
+        dut.sendHalfWordAsync()
 
         dut.waitXcyclesBetweenSendingRandomPayload(3,15)
         // while (dut.managerClockArea.SendingFSM.stateReg.toString != "HeaderPart2"){

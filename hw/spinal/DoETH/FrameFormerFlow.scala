@@ -102,8 +102,11 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   //val BufferedSubordinate = 
   
   //BufferQueue.io.push << io.Subordinate.toStream.throwWhen(io.Subordinate.payload===io.Subordinate.stage().payload).resized //Subordinate should feed directly into the queue
-
-  BufferQueue.io.push << io.Subordinate.toStream.resized //Subordinate should feed directly into the queue
+  
+  // BufferQueue.io.push << io.Subordinate.toStream.discardWhen(io.Subordinate.payload===0x7FFFFFFF || io.Subordinate.payload===0x7FFF7FFF || io.Subordinate.payload===0x00000001).resized //Subordinate should feed directly into the queue
+  //continuous mode ignores tracectl, so always set valid to true
+  BufferQueue.io.push.payload := io.Subordinate.payload.resized
+  BufferQueue.io.push.valid := !(io.Subordinate.payload===0x7FFFFFFF || io.Subordinate.payload===0x7FFF7FFF || io.Subordinate.payload===0x00000001)
 
 
   //BufferQueue.io.push.payload := io.Subordinate.toReg().resized //Subordinate should feed directly into the queue
