@@ -61,11 +61,14 @@ gui: DataBuffer.o HistogramBuffer.o Controls.o Color.o PlotArea.o Collection.o I
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(OBJ)/*.o -o doeth.out $(GTK4FLAGS) $(GRAPHVIZFLAGS)
 
 
-packetfactory.o:
-	g++ $(DEBUG) $(OPT) -c PacketFactory.cpp -o $(OBJ)/PacketFactory.o
+packet.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Packet.cpp -o $(OBJ)/Packet.o
 
-parser: packetfactory.o
-	g++ $(DEBUG) $(OPT) parser.cpp $(OBJ)/*.o -o parser.out
+packetfactory.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/PacketFactory.cpp -o $(OBJ)/PacketFactory.o
+
+parser: packetfactory.o packet.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) parser.cpp $(OBJ)/*.o -o parser.out
 
 
 clean:
