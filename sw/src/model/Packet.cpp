@@ -1,4 +1,5 @@
 #include "Packet.hpp"
+#include <cstdint>
 
 inline bool Packet::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) {
   return (lower <= a) && (a <= upper);
@@ -169,6 +170,8 @@ inline void Packet::Resynchronization::insert(uint8_t byte) {}
 inline std::string Packet::Resynchronization::asString() const {
   return "Resynchronization.";
 }
+
+Packet::Reserved::Reserved(uint8_t header) {}
 
 inline bool Packet::Reserved::isDone() const {
   return true;

@@ -104,7 +104,7 @@ void PacketFactory::identify(uint8_t id) {
   else if (isInInclusiveRange(id, 0b11111000, 0b11111111))
     current = std::make_unique<Packet::AtomFormat3>(id);
   else
-    current = std::make_unique<Packet::Reserved>();
+    current = std::make_unique<Packet::Reserved>(id);
 }
 
 std::ostream& operator<<(std::ostream& os, const Packet::Base& e) {

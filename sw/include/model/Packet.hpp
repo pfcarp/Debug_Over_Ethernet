@@ -124,6 +124,7 @@ namespace Packet {
 
     public:
 
+      Reserved(uint8_t header);
       virtual inline bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
