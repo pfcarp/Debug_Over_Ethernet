@@ -5,12 +5,16 @@ inline bool Packet::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) 
   return (lower <= a) && (a <= upper);
 }
 
+inline uint8_t Packet::Base::getIterator() const {
+  return iterator;
+}
+
 inline bool Packet::Extension::isDone() const {
   switch (type) {
-    case Extension::Ext::ASync:             return iterator == 12; // 11+1
-    case Extension::Ext::Discard:           return iterator ==  2; //  1+1
-    case Extension::Ext::Overflow:          return iterator ==  2; //  1+1
-    case Extension::Ext::BranchFutureFlush: return iterator ==  2; //  1+1
+    case Extension::Ext::ASync:             return iterator == 11;
+    case Extension::Ext::Discard:           return iterator ==  1;
+    case Extension::Ext::Overflow:          return iterator ==  1;
+    case Extension::Ext::BranchFutureFlush: return iterator ==  1;
     default: return false;
   } 
 }
@@ -30,9 +34,9 @@ void Packet::Extension::insert(uint8_t byte) {
       case 0b00000111:
         type = Extension::Ext::BranchFutureFlush;
         break;
-      }
     }
-    iterator++;
+  }
+  iterator++;
 }
 
 std::string Packet::Extension::asString() const {
