@@ -88,9 +88,6 @@ namespace Packet {
       virtual inline bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
-
-      // For test only
-      friend struct TraceOnTestAccess;
   };
 
   class FunctionReturn: public Base {
