@@ -55,42 +55,50 @@ void Packet::TraceInfo::insert(uint8_t byte) {
     hasKey  = (0b00000010 & byte) >> 1;
     hasSpec = (0b00000100 & byte) >> 2;
     hasCyct = (0b00001000 & byte) >> 3;
-    iterator += (byte < 128);
+    if (byte < 128) {
+      if (hasInfo)      { iterator = 1; }
+      else if (hasKey)  { iterator = 2; }
+      else if (hasSpec) { iterator = 3; }
+      else if (hasCyct) { iterator = 4; }
+      else              { iterator = 5; }
+    }
   }
   else if (iterator == 1) {
     if (hasInfo) {
       info.push_back(0b01111111 & byte);
-      iterator += (byte < 128);
-    }
-    else {
-      iterator++;
+      if (byte < 128) {
+        if      (hasKey)  { iterator = 2; }
+        else if (hasSpec) { iterator = 3; }
+        else if (hasCyct) { iterator = 4; }
+        else              { iterator = 5; }
+      }
     }
   }
   else if (iterator == 2) {
     if (hasKey) {
       key.push_back(0b01111111 & byte);
-      iterator += (byte < 128);
-    }
-    else {
-      iterator++;
+      if (byte < 128) {
+        if      (hasSpec) { iterator = 3; }
+        else if (hasCyct) { iterator = 4; }
+        else              { iterator = 5; }
+      }
     }
   }
   else if (iterator == 3) {
     if (hasSpec) {
       spec.push_back(0b01111111 & byte);
-      iterator += (byte < 128);
-    }
-    else {
-      iterator++;
+      if (byte < 128) {
+        if   (hasCyct) { iterator = 4; }
+        else           { iterator = 5; }
+      }
     }
   }
   else if (iterator == 4) {
     if (hasCyct) {
       cyct.push_back(0b01111111 & byte);
-      iterator += (byte < 128);
-    }
-    else {
-      iterator++;
+      if (byte < 128) {
+        iterator = 5;
+      }
     }
   }
 }
