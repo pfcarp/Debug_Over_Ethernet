@@ -14,7 +14,7 @@ INCLUDE=-Iinclude/view -Iinclude/model -Iinclude/control
 OBJ=object
 
 
-all: gui parser
+all: gui parser tests
 
 
 Color.o:
@@ -73,14 +73,11 @@ parser: packetfactory.o packet.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) parser.cpp $(OBJ)/*.o -o parser.out
 
 
-test.traceon: packet.o
-	g++ $(OPT) $(INCLUDE) $(TEST)/packet/TraceOnTest.cpp $(OBJ)/Packet.o -o traceon.test
-
-test.extension: packet.o
-	g++ $(OPT) $(INCLUDE) $(TEST)/packet/ExtensionTest.cpp $(OBJ)/Packet.o -o extension.test
+tests: packet.o
+	g++ $(OPT) $(INCLUDE) tests.cpp $(TEST)/packet/*.cpp $(OBJ)/*.o -o tests.out
 
 
 clean:
-	rm -f doeth.out parser.out
+	rm -f doeth.out parser.out tests.out
 	rm -f $(OBJ)/*.o
 

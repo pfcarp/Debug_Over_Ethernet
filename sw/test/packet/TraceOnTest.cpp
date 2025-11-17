@@ -1,9 +1,7 @@
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
 
 #include "Packet.hpp"
-#include "TraceOnTestAccess.hpp"
 
 
 TEST_CASE("TraceOn packets are 'done' right after construction") {
