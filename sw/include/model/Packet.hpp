@@ -21,6 +21,7 @@ namespace Packet {
       virtual void insert(uint8_t byte) = 0;
       virtual std::string asString() const = 0;
       virtual ~Base() = default;
+      inline uint8_t getIterator() const;
 
   };
   
@@ -88,6 +89,8 @@ namespace Packet {
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
+      // For test only
+      friend struct TraceOnTestAccess;
   };
 
   class FunctionReturn: public Base {

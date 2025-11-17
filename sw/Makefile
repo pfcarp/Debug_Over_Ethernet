@@ -8,6 +8,8 @@ MODEL=src/model
 VIEW=src/view
 CTRL=src/control
 
+TEST=test/
+
 INCLUDE=-Iinclude/view -Iinclude/model -Iinclude/control
 OBJ=object
 
@@ -69,6 +71,13 @@ packetfactory.o:
 
 parser: packetfactory.o packet.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) parser.cpp $(OBJ)/*.o -o parser.out
+
+
+test.traceon: packet.o
+	g++ $(OPT) $(INCLUDE) $(TEST)/packet/TraceOnTest.cpp $(OBJ)/Packet.o -o traceon.test
+
+test.extension: packet.o
+	g++ $(OPT) $(INCLUDE) $(TEST)/packet/ExtensionTest.cpp $(OBJ)/Packet.o -o extension.test
 
 
 clean:
