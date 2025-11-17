@@ -345,6 +345,7 @@ inline std::string Packet::CancelFormat1::asString() const {
   return "Cancel format 1.";
 }
 
+
 Packet::Mispredict::Mispredict(uint8_t header) {
   A = 0b00000011 & header;
 }
