@@ -9,6 +9,7 @@ inline uint8_t Packet::Base::getIterator() const {
   return iterator;
 }
 
+
 inline bool Packet::Extension::isDone() const {
   switch (type) {
     case Extension::Ext::ASync:             return iterator == 11;
@@ -48,6 +49,7 @@ std::string Packet::Extension::asString() const {
     default: return "No match found!";
   }
 }
+
 
 inline bool Packet::TraceInfo::isDone() const {
   return iterator == 5;
@@ -111,37 +113,51 @@ inline std::string Packet::TraceInfo::asString() const {
   return "Trace info.";
 }
 
+
 inline bool Packet::Timestamp::isDone() const {
-  return (!hasCountFlag) && (!timestampFlag);
+  return !(hasCountFlag || timestampFlag);
+}
+
+Packet::Timestamp::Timestamp(uint8_t header) {
+  //Page 264: N = 0 -> no count; N = 1 -> count.
+  hasCountFlag = header%2;
 }
 
 void Packet::Timestamp::insert(uint8_t byte) {
-  if (iterator == 0) {
-    //Page 264: N = 0 -> no count; N = 1 -> count.
-    hasCountFlag = byte%2;
-  }
-  else if (timestampFlag && (iterator <= 1) && (iterator < 9)) {
-    timestampFlag = byte >= (1 << 7);
-    TS |= byte << ((iterator-1)*7);
-  }
-  else if (timestampFlag && (iterator == 9)) {
-    timestampFlag = false;
-    TS |= byte << ((iterator-1)*7);
+  if (timestampFlag) {
+    if (iterator < 7) {
+      TS |= (0b01111111 & byte) << (iterator*7);
+      iterator++;
+      if (byte < 128) {
+        iterator = 0;
+        timestampFlag = false;
+      }
     }
-  else if (hasCountFlag && (iterator < 12)) {
-    hasCountFlag = byte >= (1 << 7);
-    COUNT |= byte << ((iterator-10)*7);
+    else {
+      TS |= byte << (iterator*7);
+      iterator = 0;
+      timestampFlag = false;
+    }
   }
-  else if (hasCountFlag && (iterator == 12)) {
-    hasCountFlag = false;
-    COUNT |= byte << ((iterator-10)*7);
+  else if (hasCountFlag) {
+    if (iterator < 2) {
+      COUNT |= (0b01111111 & byte) << (iterator*7);
+      iterator++;
+      if (byte < 128) {
+        hasCountFlag = false;
+      }
+    }
+    else {
+      COUNT |= (0b00111111 & byte) << (iterator*7);
+      hasCountFlag = false;
+    }
   }
-  iterator++;
 }
 
 inline std::string Packet::Timestamp::asString() const {
   return "Timestamp.";
 }
+
 
 inline bool Packet::TraceOn::isDone() const {
   return true;
@@ -153,6 +169,7 @@ inline std::string Packet::TraceOn::asString() const {
   return "Trace on.";
 }
 
+
 inline bool Packet::FunctionReturn::isDone() const {
   return true;
 }
@@ -162,6 +179,7 @@ inline void Packet::FunctionReturn::insert(uint8_t byte) {}
 inline std::string Packet::FunctionReturn::asString() const {
   return "Function return.";
 }
+
 
 inline bool Packet::ExceptionReturn::isDone() const {
   return true;
@@ -173,6 +191,7 @@ inline std::string Packet::ExceptionReturn::asString() const {
   return "Exception return.";
 }
 
+
 inline bool Packet::Resynchronization::isDone() const {
   return true;
 }
@@ -182,6 +201,7 @@ inline void Packet::Resynchronization::insert(uint8_t byte) {}
 inline std::string Packet::Resynchronization::asString() const {
   return "Resynchronization.";
 }
+
 
 Packet::Reserved::Reserved(uint8_t header) {}
 
@@ -194,6 +214,7 @@ inline void Packet::Reserved::insert(uint8_t byte) {}
 inline std::string Packet::Reserved::asString() const {
   return "Reserved.";
 }
+
 
 Packet::CycleCountFormat2::CycleCountFormat2(uint8_t header) {
   F = 0b00000001 & header;
@@ -213,29 +234,39 @@ inline std::string Packet::CycleCountFormat2::asString() const {
   return "Cycle count format 2.";
 }
 
+
+Packet::CycleCountFormat1::CycleCountFormat1(uint8_t header) {
+  U = header & 0b00000001;
+}
+
 inline bool Packet::CycleCountFormat1::isDone() const {
-  return iterator == 3;
+  return iterator == 4;
 }
 
 void Packet::CycleCountFormat1::insert(uint8_t byte) {
   if (iterator == 0) {
     commit.push_back(byte & 0b01111111);
-    iterator += (byte < 128);
-  }
-  else if (iterator == 1) {
-    count |= (0b01111111 & byte) << 7;
     if (byte < 128)
-      iterator += 2;
+      iterator = (U)? 4 : 1;
   }
-  else if (iterator == 2) {
-    count |= (0b00111111 & byte) << 14;
-    iterator++;
+  else if ((0 < iterator) && (iterator < 4)) {
+    if (iterator == 3) {
+      count |= (0b00111111 & byte) << ((iterator-1)*7);
+      iterator = 4;
+    }
+    else {
+      count |= (0b01111111 & byte) << ((iterator-1)*7);
+      iterator++;
+      if (byte < 128)
+        iterator = 4;
+    }
   }
 }
 
 inline std::string Packet::CycleCountFormat1::asString() const {
   return "Cycle count format 1.";
 }
+
 
 Packet::CycleCountFormat3::CycleCountFormat3(uint8_t header) {
   aa = (0b00001100 & header) >> 2;
@@ -252,6 +283,7 @@ inline std::string Packet::CycleCountFormat3::asString() const {
   return "Cycle count format 3.";
 }
 
+
 Packet::NumberedDataSyncMark::NumberedDataSyncMark(uint8_t header) {
   NUM = 0b00000111 & header;
 }
@@ -265,6 +297,7 @@ inline void Packet::NumberedDataSyncMark::insert(uint8_t byte) {}
 inline std::string Packet::NumberedDataSyncMark::asString() const {
   return "Numbered data sync mark.";
 }
+
 
 Packet::UnnumberedDataSyncMark::UnnumberedDataSyncMark(uint8_t header) {
   A = 0b00000111 & header;
@@ -280,6 +313,7 @@ inline std::string Packet::UnnumberedDataSyncMark::asString() const {
   return "Unnumbered data sync mark.";
 }
 
+
 inline bool Packet::Commit::isDone() const {
   return done;
 }
@@ -292,6 +326,7 @@ inline void Packet::Commit::insert(uint8_t byte) {
 inline std::string Packet::Commit::asString() const {
   return "Commit.";
 }
+
 
 Packet::CancelFormat1::CancelFormat1(uint8_t header) {
   M = 0b00000001 & header;

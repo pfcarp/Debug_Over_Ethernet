@@ -21,7 +21,7 @@ namespace Packet {
       virtual void insert(uint8_t byte) = 0;
       virtual std::string asString() const = 0;
       virtual ~Base() = default;
-      inline uint8_t getIterator() const;
+      virtual inline uint8_t getIterator() const;
 
   };
   
@@ -74,7 +74,8 @@ namespace Packet {
       uint32_t COUNT = 0;
 
     public:
-
+      // Methods
+      Timestamp(uint8_t header);
       virtual inline bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
@@ -155,7 +156,8 @@ namespace Packet {
       uint32_t count = 0;
 
     public:
-
+      // Methods
+      CycleCountFormat1(uint8_t header);
       virtual inline bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
