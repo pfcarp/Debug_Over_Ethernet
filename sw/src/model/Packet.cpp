@@ -360,6 +360,7 @@ inline std::string Packet::Mispredict::asString() const {
   return "Mispredict (A = "+std::to_string(static_cast<int>(A))+")";
 }
 
+
 Packet::CancelFormat2::CancelFormat2(uint8_t header) {
   A = 0b00000011 & header;
 }
@@ -373,6 +374,7 @@ inline void Packet::CancelFormat2::insert(uint8_t byte) {}
 inline std::string Packet::CancelFormat2::asString() const {
   return "CancelFormat2 (A = "+std::to_string(static_cast<int>(A))+")";
 }
+
 
 Packet::CancelFormat3::CancelFormat3(uint8_t header) {
   CC = 0b00000110 & header;
@@ -389,6 +391,7 @@ inline std::string Packet::CancelFormat3::asString() const {
   return "CancelFormat3 (CC = "+std::to_string(static_cast<int>(CC))+", A = "+std::to_string(static_cast<int>(A))+")";
 }
 
+
 Packet::ConditionalInstructionFormat2::ConditionalInstructionFormat2(uint8_t header) {
   CI = 0b00000011 & header;
 }
@@ -403,6 +406,7 @@ inline std::string Packet::ConditionalInstructionFormat2::asString() const {
   return "Conditional instruction format 2 (CI = "+std::to_string(static_cast<int>(CI))+")";
 }
 
+
 inline bool Packet::ConditionalFlush::isDone() const {
   return true;
 }
@@ -412,6 +416,7 @@ inline void Packet::ConditionalFlush::insert(uint8_t byte) {}
 inline std::string Packet::ConditionalFlush::asString() const {
   return "Conditional flush.";
 }
+
 
 Packet::ConditionalResultFormat4::ConditionalResultFormat4(uint8_t header) {
   T = 0b00000011 & header;
@@ -427,6 +432,7 @@ inline std::string Packet::ConditionalResultFormat4::asString() const {
   return "Conditional result format 4.";
 }
 
+
 Packet::ConditionalResultFormat2::ConditionalResultFormat2(uint8_t header) {
   T = (0b00000011 & header);
   K = (0b00000100 & header) >> 2;
@@ -441,6 +447,7 @@ inline void Packet::ConditionalResultFormat2::insert(uint8_t byte) {}
 inline std::string Packet::ConditionalResultFormat2::asString() const {
   return "Condition result format 2.";
 }
+
 
 Packet::ConditionalResultFormat3::ConditionalResultFormat3(uint8_t header) {
   TOKEN |= (0b00001111 & header) << 8;
@@ -458,6 +465,7 @@ inline void Packet::ConditionalResultFormat3::insert(uint8_t byte) {
 inline std::string Packet::ConditionalResultFormat3::asString() const {
   return "Condition result format 3.";
 }
+
 
 Packet::ConditionalResultFormat1::ConditionalResultFormat1(uint8_t header) {
   single = (0b00000100 & header) >> 2;
@@ -500,6 +508,7 @@ void Packet::ConditionalResultFormat1::insert(uint8_t byte) {
 inline std::string Packet::ConditionalResultFormat1::asString() const {
   return "Conditional result format 1.";
 }
+
 
 inline bool Packet::ConditionalInstructionFormat1::isDone() const {
   return done;
