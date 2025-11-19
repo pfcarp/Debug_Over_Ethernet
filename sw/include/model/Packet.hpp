@@ -17,11 +17,11 @@ namespace Packet {
 
     public:
 
-      virtual inline bool isDone() const = 0;
+      virtual bool isDone() const = 0;
       virtual void insert(uint8_t byte) = 0;
       virtual std::string asString() const = 0;
       virtual ~Base() = default;
-      virtual inline uint8_t getIterator() const;
+      virtual uint8_t getIterator() const;
 
   };
   
@@ -39,7 +39,7 @@ namespace Packet {
 
     public:
       // Methods
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -59,7 +59,7 @@ namespace Packet {
 
     public:
       // Methods
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -76,7 +76,7 @@ namespace Packet {
     public:
       // Methods
       Timestamp(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -86,7 +86,7 @@ namespace Packet {
 
     public:
 
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
   };
@@ -95,7 +95,7 @@ namespace Packet {
 
     public:
 
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -105,7 +105,7 @@ namespace Packet {
 
     public:
 
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -115,7 +115,7 @@ namespace Packet {
 
     public:
 
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -126,7 +126,7 @@ namespace Packet {
     public:
 
       Reserved(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -142,7 +142,7 @@ namespace Packet {
     public:
 
       CycleCountFormat2(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -158,7 +158,7 @@ namespace Packet {
     public:
       // Methods
       CycleCountFormat1(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -173,7 +173,7 @@ namespace Packet {
     public:
 
       CycleCountFormat3(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -187,7 +187,7 @@ namespace Packet {
     public:
 
       NumberedDataSyncMark(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -201,7 +201,7 @@ namespace Packet {
     public:
   
       UnnumberedDataSyncMark(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -215,7 +215,7 @@ namespace Packet {
   
     public:
   
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -231,7 +231,7 @@ namespace Packet {
     public:
   
       CancelFormat1(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -245,7 +245,7 @@ namespace Packet {
     public:
 
       Mispredict(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -259,7 +259,7 @@ namespace Packet {
     public:
   
       CancelFormat2(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -274,7 +274,7 @@ namespace Packet {
     public:
 
       CancelFormat3(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -288,7 +288,7 @@ namespace Packet {
     public:
 
       ConditionalInstructionFormat2(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -298,7 +298,7 @@ namespace Packet {
   
     public:
   
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -312,7 +312,7 @@ namespace Packet {
     public:
 
       ConditionalResultFormat4(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -327,7 +327,7 @@ namespace Packet {
     public:
 
       ConditionalResultFormat2(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -341,7 +341,7 @@ namespace Packet {
     public:
 
       ConditionalResultFormat3(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -362,7 +362,7 @@ namespace Packet {
     public:
 
       ConditionalResultFormat1(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -376,7 +376,7 @@ namespace Packet {
   
     public:
   
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -390,7 +390,7 @@ namespace Packet {
   
     public:
   
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -400,7 +400,7 @@ namespace Packet {
   
     public:
   
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -414,7 +414,7 @@ namespace Packet {
     public:
 
       Event(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -436,7 +436,7 @@ namespace Packet {
     public:
 
       Context(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -463,7 +463,7 @@ namespace Packet {
     public:
   
       AddressWithContext(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -473,7 +473,7 @@ namespace Packet {
   
     public:
   
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -487,7 +487,7 @@ namespace Packet {
     public:
 
       ExactMatchAddress(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -503,7 +503,7 @@ namespace Packet {
     public:
 
       ShortAddress(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -519,7 +519,7 @@ namespace Packet {
     public:
   
       LongAddress(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -539,7 +539,7 @@ namespace Packet {
     public:
  
       Q(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -553,7 +553,7 @@ namespace Packet {
     public:
   
       AtomFormat1(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -567,7 +567,7 @@ namespace Packet {
     public:
   
       AtomFormat2(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -581,7 +581,7 @@ namespace Packet {
     public:
 
       AtomFormat3(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -595,7 +595,7 @@ namespace Packet {
     public:
   
       AtomFormat4(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -609,7 +609,7 @@ namespace Packet {
     public:
 
       AtomFormat5(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -624,7 +624,7 @@ namespace Packet {
     public:
   
       AtomFormat6(uint8_t header);
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
 
@@ -641,7 +641,7 @@ namespace Packet {
 
     public:
 
-      virtual inline bool isDone() const override;
+      virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
       ~Exception();
