@@ -523,6 +523,7 @@ inline std::string Packet::ConditionalInstructionFormat1::asString() const {
   return "Conditional instruction format 1.";
 }
 
+
 inline bool Packet::ConditionalInstructionFormat3::isDone() const {
   return iterator == 1;
 }
@@ -537,6 +538,7 @@ inline std::string Packet::ConditionalInstructionFormat3::asString() const {
   return "Condition instruction format 3.";
 }
 
+
 inline bool Packet::Ignore::isDone() const {
   return true;
 }
@@ -546,6 +548,7 @@ inline void Packet::Ignore::insert(uint8_t byte) {}
 inline std::string Packet::Ignore::asString() const {
   return "Ignore.";
 }
+
 
 Packet::Event::Event(uint8_t header) {
   for (int i = 0; i < events.size(); i++) {
@@ -563,42 +566,46 @@ inline std::string Packet::Event::asString() const {
   return "Event (#0 = "+std::to_string(static_cast<int>(events[0]))+", #1 = "+std::to_string(static_cast<int>(events[1]))+", #2 = "+std::to_string(static_cast<int>(events[2]))+", #3 = "+std::to_string(static_cast<int>(events[3]))+").";
 }
 
+
 Packet::Context::Context(uint8_t header) {
   P = header & 0b00000001;
 }
 
 inline bool Packet::Context::isDone() const {
-  return (P)? iterator == 7 : true;
+  return (P)? headerDone && (!(hasVirt || hasCont)) : true;
 }
 
 void Packet::Context::insert(uint8_t byte) {
-  if (iterator == 0) {
+  if (!headerDone) {
     EL = 0b00000011 & byte;
     SF = (0b00010000 & byte) >> 4;
     NS = (0b00100000 & byte) >> 5;
     hasVirt = (0b01000000 & byte) >> 6;
     hasCont = (0b10000000 & byte) >> 7;
-    iterator ++;
+    headerDone = true;
+    iterator = 0;
   }
-  else if (hasVirt && (1 <= iterator) && (iterator < 4)) {
-    VMID |= byte << (8*(iterator-1));
-    iterator ++;
+  else if (hasVirt) {
+    VMID |= byte << (8*iterator);
+    iterator++;
+    if (iterator == 4) {
+      iterator = 0;
+      hasVirt = false;
+    }
   }
-  else if (!hasVirt) {
-    iterator = 4;
-  }
-  else if (hasCont && (4 <= iterator) && (iterator < 7)) {
+  else if (hasCont) {
     CONTEXTID |= byte << (8*(iterator-4));
-    iterator ++;
-  }
-  else if (!hasCont) {
-    iterator = 7;
+    iterator++;
+    if (iterator == 4) {
+      hasCont = false;
+    }
   }
 }
 
 inline std::string Packet::Context::asString() const {
   return "Context.";
 }
+
 
 Packet::AddressWithContext::AddressWithContext(uint8_t header) {
   switch(header & 0b00000111) {
@@ -611,46 +618,53 @@ Packet::AddressWithContext::AddressWithContext(uint8_t header) {
 }
   
 inline bool Packet::AddressWithContext::isDone() const {
-  return iterator == length+9;
+  return addrDone && headerDone && !(hasVirt || hasCont);
 }
 
 void Packet::AddressWithContext::insert(uint8_t byte) {
-  if (iterator < length) {
+  if (!addrDone) {
     if (iterator < offset) {
       A |= (0b01111111 & byte) << (offset+(8*iterator)-iterator);
     }
     else {
       A |= byte << (8*iterator);
     }
-    iterator += iterator < length;
+    iterator++;
+    if (iterator == length) {
+      addrDone = true;
+      iterator = 0;
+    }
   }
-  else if (iterator == length) {
+  else if (!headerDone) {
     EL = 0b00000011 & byte;
     SF = (0b00010000 & byte) >> 4;
     NS = (0b00100000 & byte) >> 5;
     hasVirt = (0b01000000 & byte) >> 6;
     hasCont = (0b10000000 & byte) >> 7;
-    iterator ++;
+    headerDone = true;
+    iterator = 0;
   }
-  else if (hasVirt && (length+1 <= iterator) && (iterator < length+5)) {
-    VMID |= byte << (8*(iterator-1));
-    iterator ++;
-  }
-  else if (!hasVirt) {
-    iterator = length+4;
-  }
-  else if (hasCont && (length+5 <= iterator) && (iterator < length+9)) {
-    CONTEXTID |= byte << (8*(iterator-length-4));
+  else if (hasVirt) {
+    VMID |= byte << (8*iterator);
     iterator++;
+    if (iterator == 4) {
+      iterator = 0;
+      hasVirt = false;
+    }
   }
-  else if (!hasCont) {
-    iterator = length+9;
+  else if (hasCont) {
+    CONTEXTID |= byte << (8*(iterator-4));
+    iterator++;
+    if (iterator == 4) {
+      hasCont = false;
+    }
   }
 }
 
 inline std::string Packet::AddressWithContext::asString() const {
   return "Addres with context.";
 }
+
 
 inline bool Packet::TimestampMarker::isDone() const {
   return true;
@@ -661,6 +675,7 @@ inline void Packet::TimestampMarker::insert(uint8_t byte) {}
 inline std::string Packet::TimestampMarker::asString() const {
   return "Timestamp marker.";
 }
+
 
 Packet::ExactMatchAddress::ExactMatchAddress(uint8_t header) {
   QE = 0b00000011 && header;
@@ -675,6 +690,7 @@ inline void Packet::ExactMatchAddress::insert(uint8_t byte) {}
 inline std::string Packet::ExactMatchAddress::asString() const {
   return "exact match address.";
 }
+
 
 Packet::ShortAddress::ShortAddress(uint8_t header) {
   switch(header & 0b00000011) {
@@ -704,6 +720,7 @@ inline std::string Packet::ShortAddress::asString() const {
   return "Short address.";
 }
 
+
 Packet::LongAddress::LongAddress(uint8_t header) {
   switch(header & 0b00000111) {
     case 0b00000010: offset = 2; length = 4; break;
@@ -732,15 +749,61 @@ inline std::string Packet::LongAddress::asString() const {
   return "Long address.";
 }
 
-inline bool Packet::Q::isDone() const {
-  return true; // At least one
+Packet::Q::Q(uint8_t header) {
+  TYPE = header & 0b00001111
+  switch (TYPE) {
+    case 0b0000:
+    case 0b0001:
+    case 0b0010:
+    case 0b1100: hasAddress = false; hasCount = true ; break;
+    case 0b0101: hasAddress = true ; hasCount = true ; offset = 2; break;
+    case 0b0110: hasAddress = true ; hasCount = true ; offset = 1; break;
+    case 0b1010: hasAddress = true ; hasCount = true ; offset = 2; isAddrLong = true; break;
+    case 0b1011: hasAddress = true ; hasCount = true ; offset = 1; isAddrLong = true; break;
+    case 0b1111: hasAddress = false; hasCount = false; break;
+    default: break; // throw warning
+  }
 }
 
-inline void Packet::Q::insert(uint8_t byte) {}
+inline bool Packet::Q::isDone() const {
+  return !(hasAddress || hasCount);
+}
+
+inline void Packet::Q::insert(uint8_t byte) {
+  if (hasAddress) {
+    if (!isAddrLong) {
+      if (iterator == 0) {
+        address |= (0b01111111 & byte) << offset;
+        hasAddress = (byte >= 128);
+        iterator++;
+      }
+      else if (!done & (iterator == 1)) {
+        address |= byte << (8+offset);
+        hasAddress = false;
+        iterator = 0;
+      }
+    }
+    else {
+      if (iterator < offset) {
+        address |= (0b01111111 & byte) << (offset+(8*iterator)-iterator);
+      }
+      else {
+        address |= byte << (8*iterator);
+      }
+      iterator++;
+      hasAddress = (iterator != 4);
+    }
+  }
+  else if (hasCount) {
+    count.push_bash(byte & 0b01111111);
+    hasCount = !(byte < 128);
+  }
+}
 
 inline std::string Packet::Q::asString() const {
   return "Q.";
 }
+
 
 Packet::AtomFormat1::AtomFormat1(uint8_t header) {
   a = 0b00000001 | header;

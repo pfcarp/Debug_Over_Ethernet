@@ -16,7 +16,7 @@ void PacketFactory::identify(uint8_t id) {
   else if (id == 0b00000001)
     current = std::make_unique<Packet::TraceInfo>();
   else if (isInInclusiveRange(id, 0b00000010, 0b00000011))
-    current = std::make_unique<Packet::Timestamp>();
+    current = std::make_unique<Packet::Timestamp>(id);
   else if (id == 0b00000100)
     current = std::make_unique<Packet::TraceOn>();
   else if (id == 0b00000101)
@@ -30,7 +30,7 @@ void PacketFactory::identify(uint8_t id) {
   else if (isInInclusiveRange(id, 0b00001100, 0b00001101))
     current = std::make_unique<Packet::CycleCountFormat2>(id);
   else if (isInInclusiveRange(id, 0b00001110, 0b00001111))
-    current = std::make_unique<Packet::CycleCountFormat1>();
+    current = std::make_unique<Packet::CycleCountFormat1>(id);
   else if (isInInclusiveRange(id, 0b00010000, 0b00011111))
     current = std::make_unique<Packet::CycleCountFormat3>(id);
   else if (isInInclusiveRange(id, 0b00100000, 0b00100111))

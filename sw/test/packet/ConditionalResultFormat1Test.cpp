@@ -6,11 +6,11 @@
 #include "Packet.hpp"
 
 
-TEST_CASE("CycleCountFormat1 packet: unknown (i.e., no COUNT)") {
+TEST_CASE("ConditionalResultFormat1 packet: just KEY0") {
   // Encoding
   std::vector<uint8_t> encoding = {0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x0A};
   // Packet under construction
-  Packet::CycleCountFormat1 obj(0b00001111);
+  Packet::ConditionalResultFormat1 obj(0b01101110);
 
   // During insertion
   for (uint8_t byte : encoding) {
@@ -22,11 +22,11 @@ TEST_CASE("CycleCountFormat1 packet: unknown (i.e., no COUNT)") {
   CHECK(obj.isDone());
 }
 
-TEST_CASE("CycleCountFormat1 packet: known (i.e., with partial COUNT)") {
+TEST_CASE("ConditionalResultFormat1 packet: KEY0 and KEY1") {
   // Encoding
-  std::vector<uint8_t> encoding = {0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x0A, 0x9A, 0x0B};
+  std::vector<uint8_t> encoding = {0x80, 0x81, 0x82, 0x83, 0x84, 0x05, 0x86, 0x87, 0x88, 0x89, 0x0A};
   // Packet under construction
-  Packet::CycleCountFormat1 obj(0b00001110);
+  Packet::ConditionalResultFormat1 obj(0b01101010);
 
   // During insertion
   for (uint8_t byte : encoding) {
@@ -38,11 +38,11 @@ TEST_CASE("CycleCountFormat1 packet: known (i.e., with partial COUNT)") {
   CHECK(obj.isDone());
 }
 
-TEST_CASE("CycleCountFormat1 packet: known (i.e., with full COUNT)") {
+TEST_CASE("ConditionalResultFormat1 packet: KEY0 and KEY1 with short step") {
   // Encoding
-  std::vector<uint8_t> encoding = {0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x0A, 0x9A, 0x9B, 0xAC};
+  std::vector<uint8_t> encoding = {0x65, 0x7A};
   // Packet under construction
-  Packet::CycleCountFormat1 obj(0b00001110);
+  Packet::ConditionalResultFormat1 obj(0b01101010);
 
   // During insertion
   for (uint8_t byte : encoding) {

@@ -429,6 +429,7 @@ namespace Packet {
       bool     NS = false;
       bool     hasVirt = false;
       bool     hasCont = false;
+      bool     headerDone = false;
       uint32_t VMID = 0;
       uint32_t CONTEXTID = 0;
   
@@ -454,6 +455,8 @@ namespace Packet {
       bool     NS = false;
       bool     hasVirt = false;
       bool     hasCont = false;
+      bool     addrDone = false;
+      bool     headerDone = false;
       uint32_t VMID = 0;
       uint32_t CONTEXTID = 0;
 
@@ -523,9 +526,17 @@ namespace Packet {
   };
 
   class Q: public Base {
+
+    private:
+      uint8_t TYPE = 0;
+      bool    hasAddress = false;
+      bool    isAddrLong = false;
+      bool    hasCount   = false;
+      std::vector<uint8_t> count;
   
     public:
-  
+ 
+      Q(uint8_t header);
       virtual inline bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
