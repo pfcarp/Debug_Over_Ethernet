@@ -529,6 +529,8 @@ namespace Packet {
 
     private:
       uint8_t TYPE = 0;
+      uint8_t offset = 0;
+      uint64_t address = 0;
       bool    hasAddress = false;
       bool    isAddrLong = false;
       bool    hasCount   = false;
@@ -631,10 +633,11 @@ namespace Packet {
   class Exception: public Base {
 
     private:
-      uint8_t          e1e0    = 0;
-      uint16_t         type    = 0;
-      bool             p       = false;
-      Exception::Base* address = nullptr;
+      uint16_t         type       = 0;
+      bool             p          = false;
+      bool             headerDone = false;
+      bool             hasAddress = false;
+      Exception::Base* address    = nullptr;
 
     public:
 

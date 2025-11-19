@@ -86,7 +86,7 @@ void PacketFactory::identify(uint8_t id) {
   else if (isInInclusiveRange(id, 0b10011101, 0b10011110))
     current = std::make_unique<Packet::LongAddress>(id);
   else if (isInInclusiveRange(id, 0b10100000, 0b10101111))
-    current = std::make_unique<Packet::Q>();
+    current = std::make_unique<Packet::Q>(id);
   else if (isInInclusiveRange(id, 0b11000000, 0b11010100))
     current = std::make_unique<Packet::AtomFormat6>(id);
   else if (isInInclusiveRange(id, 0b11010101, 0b11010111))

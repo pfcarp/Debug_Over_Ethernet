@@ -750,11 +750,11 @@ inline std::string Packet::LongAddress::asString() const {
 }
 
 Packet::Q::Q(uint8_t header) {
-  TYPE = header & 0b00001111
+  TYPE = header & 0b00001111;
   switch (TYPE) {
-    case 0b0000:
-    case 0b0001:
-    case 0b0010:
+    case 0b0000: hasAddress = false; hasCount = true ; break;
+    case 0b0001: hasAddress = false; hasCount = true ; break;
+    case 0b0010: hasAddress = false; hasCount = true ; break;
     case 0b1100: hasAddress = false; hasCount = true ; break;
     case 0b0101: hasAddress = true ; hasCount = true ; offset = 2; break;
     case 0b0110: hasAddress = true ; hasCount = true ; offset = 1; break;
@@ -777,7 +777,7 @@ inline void Packet::Q::insert(uint8_t byte) {
         hasAddress = (byte >= 128);
         iterator++;
       }
-      else if (!done & (iterator == 1)) {
+      else {
         address |= byte << (8+offset);
         hasAddress = false;
         iterator = 0;
@@ -795,8 +795,8 @@ inline void Packet::Q::insert(uint8_t byte) {
     }
   }
   else if (hasCount) {
-    count.push_bash(byte & 0b01111111);
-    hasCount = !(byte < 128);
+    count.push_back(byte & 0b01111111);
+    hasCount = (byte >= 128);
   }
 }
 
@@ -819,6 +819,7 @@ inline std::string Packet::AtomFormat1::asString() const {
   return "Atom format 1.";
 }
 
+
 Packet::AtomFormat2::AtomFormat2(uint8_t header) {
   a = 0b00000011 | header;
 }
@@ -832,6 +833,7 @@ inline void Packet::AtomFormat2::insert(uint8_t byte) {}
 inline std::string Packet::AtomFormat2::asString() const {
   return "Atom formt 2.";
 }
+
 
 Packet::AtomFormat3::AtomFormat3(uint8_t header) {
   a = 0b00000111 | header;
@@ -847,6 +849,7 @@ inline std::string Packet::AtomFormat3::asString() const {
   return "Atom formt 3.";
 }
 
+
 Packet::AtomFormat4::AtomFormat4(uint8_t header) {
   a = 0b00000011 | header;
 }
@@ -861,6 +864,7 @@ inline std::string Packet::AtomFormat4::asString() const {
   return "Atom formt 4.";
 }
 
+
 Packet::AtomFormat5::AtomFormat5(uint8_t header) {
   abc = ((0b00100000 & header) >> 3) | (0b00000011 & header);
 }
@@ -874,6 +878,7 @@ inline void Packet::AtomFormat5::insert(uint8_t byte) {}
 inline std::string Packet::AtomFormat5::asString() const {
   return "Atom formt 5.";
 }
+
 
 Packet::AtomFormat6::AtomFormat6(uint8_t header) {
   A = (0b00100000 & header) >> 5;
@@ -890,41 +895,55 @@ inline std::string Packet::AtomFormat6::asString() const {
   return "Atom formt 6.";
 }
 
+
 inline bool Packet::Exception::isDone() const {
-  return (e1e0 == 1) || ((e1e0 == 2) && (address != nullptr) && address->isDone());
+  return headerDone && (!hasAddress);
 }
 
 void Packet::Exception::insert(uint8_t byte) {
-  if (iterator == 0) {
-    switch (byte & 0b01000001) {
-      case 0b00000001: e1e0 = 1; break;
-      case 0b01000000: e1e0 = 2; break;
-      default        : e1e0 = 0; break;
+  if (!headerDone) {
+    if (iterator == 0) {
+      switch (byte & 0b01000001) {
+        case 0b00000001: hasAddress = true ; break;
+        case 0b01000000: hasAddress = true ; break;
+        default        : hasAddress = false; break;
+      }
+      type = (byte & 0b00111110) >> 1;
+      if (byte >= 128) { 
+        iterator++;
+      }
+      else {
+        iterator = 0;
+        headerDone = true;
+      }
     }
-    type = (byte & 0b00111110) >> 1;
+    else {
+      type |= (byte & 0b00011111) << 5;
+      p = (byte & 0b00100000) >> 5;
+      iterator = 0;
+      headerDone = true;
+    }
   }
-  else if (iterator == 1) {
-    type |= (byte & 0b00011111) << 5;
-    p = (byte & 0b00100000) >> 5;
+  else if (hasAddress) {
+    if (address == nullptr) {
+      if (isInInclusiveRange(byte, 0b10000010, 0b10000011))
+        address = new Packet::AddressWithContext(byte);
+      else if (isInInclusiveRange(byte, 0b10000101, 0b10000110))
+        address = new Packet::AddressWithContext(byte);
+      else if (isInInclusiveRange(byte, 0b10010000, 0b10010010))
+        address = new Packet::ExactMatchAddress(byte);
+      else if (isInInclusiveRange(byte, 0b10010101, 0b10010110))
+        address = new Packet::ShortAddress(byte);
+      else if (isInInclusiveRange(byte, 0b10011010, 0b10011011))
+        address = new Packet::LongAddress(byte);
+      else if (isInInclusiveRange(byte, 0b10011101, 0b10011110))
+        address = new Packet::LongAddress(byte);
+    }
+    else {
+      address->insert(byte);
+      hasAddress = !address->isDone();
+    }
   }
-  else if ((iterator == 3) && (e1e0 == 2)) {
-    if (isInInclusiveRange(byte, 0b10000010, 0b10000011))
-      address = new Packet::AddressWithContext(byte);
-    else if (isInInclusiveRange(byte, 0b10000101, 0b10000110))
-      address = new Packet::AddressWithContext(byte);
-    else if (isInInclusiveRange(byte, 0b10010000, 0b10010010))
-      address = new Packet::ExactMatchAddress(byte);
-    else if (isInInclusiveRange(byte, 0b10010101, 0b10010110))
-      address = new Packet::ShortAddress(byte);
-    else if (isInInclusiveRange(byte, 0b10011010, 0b10011011))
-      address = new Packet::LongAddress(byte);
-    else if (isInInclusiveRange(byte, 0b10011101, 0b10011110))
-      address = new Packet::LongAddress(byte);
-  }
-  else if ((iterator > 3) && !address->isDone()) {
-    address->insert(byte);
-  }
-  iterator++;
 }
       
 inline std::string Packet::Exception::asString() const {
