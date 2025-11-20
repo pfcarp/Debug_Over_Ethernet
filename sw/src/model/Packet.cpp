@@ -566,6 +566,14 @@ inline std::string Packet::Event::asString() const {
   return "Event (#0 = "+std::to_string(static_cast<int>(events[0]))+", #1 = "+std::to_string(static_cast<int>(events[1]))+", #2 = "+std::to_string(static_cast<int>(events[2]))+", #3 = "+std::to_string(static_cast<int>(events[3]))+").";
 }
 
+bool Packet::Event::hasEvent(uint8_t index) {
+  if (index < events.size()) {
+    return events[index];
+  }
+  // throw warning
+  return false;
+}
+
 
 Packet::Context::Context(uint8_t header) {
   P = header & 0b00000001;

@@ -409,14 +409,16 @@ namespace Packet {
   class Event: public Base {
 
     private:
+      // Attributes
       std::vector<bool> events = std::vector<bool>(4);
   
     public:
-
+      // Methods
       Event(uint8_t header);
       virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
+      bool hasEvent(uint8_t index);
 
   };
 
