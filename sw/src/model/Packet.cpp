@@ -1,5 +1,6 @@
 #include "Packet.hpp"
 #include <cstdint>
+#include <format>
 
 inline bool Packet::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) {
   return (lower <= a) && (a <= upper);
@@ -110,7 +111,26 @@ void Packet::TraceInfo::insert(uint8_t byte) {
 }
 
 inline std::string Packet::TraceInfo::asString() const {
-  return "Trace info.";
+  std::string base = "Trace info";
+  if (hasInfo) {
+    for (uint8_t inf : info) {
+      bool cc_enabled = inf & 0b00000001;
+      if (cc_enabled)
+        base += " (cycle count enabled)";
+      else
+        base += " (cycle count disabled)";
+      uint8_t cond_enabled = (inf & 0b00001110) >> 1;
+      switch (cond_enabled) {
+        case 0b000: base += " (Tracing of conditional non-branch instructions is disabled)"; break;
+        case 0b001: base += " (Conditional load instructions are traced)"; break;
+        case 0b010: base += " (Conditional store instructions are traced)"; break;
+        case 0b011: base += " (Conditional load and store instructions are traced)"; break;
+        case 0b111: base += " (All conditional non-branch instructions are traced)"; break;
+        default   : break;
+      }
+    }
+  }
+  return base;
 }
 
 
@@ -566,7 +586,7 @@ inline std::string Packet::Event::asString() const {
   return "Event (#0 = "+std::to_string(static_cast<int>(events[0]))+", #1 = "+std::to_string(static_cast<int>(events[1]))+", #2 = "+std::to_string(static_cast<int>(events[2]))+", #3 = "+std::to_string(static_cast<int>(events[3]))+").";
 }
 
-bool Packet::Event::hasEvent(uint8_t index) {
+bool Packet::Event::hasEvent(uint8_t index) const {
   if (index < events.size()) {
     return events[index];
   }
@@ -670,7 +690,7 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
 }
 
 inline std::string Packet::AddressWithContext::asString() const {
-  return "Addres with context.";
+  return std::format("Address with context (0x{:08X})", A);
 }
 
 
@@ -714,18 +734,24 @@ inline bool Packet::ShortAddress::isDone() const {
 
 void Packet::ShortAddress::insert(uint8_t byte) {
   if (iterator == 0) {
-    address |= (0b01111111 & byte) << offset;
-    done = !((0b10000000 & byte) >> 7);
+    address = static_cast<uint32_t>(0b01111111 & byte) << offset;
+    offset--;
+    done = (byte < 128);
   }
-  else if (!done & (iterator == 1)) {
-    address |= byte << (8+offset);
+  else if (iterator == 1) {
+    address |= static_cast<uint32_t>(byte) << (8+offset);
     done = true;
   }
   iterator++;
 }
 
 inline std::string Packet::ShortAddress::asString() const {
-  return "Short address.";
+  //return "Short address.";
+  return std::format("Short address (0x{:04X})", address);
+}
+
+uint32_t Packet::ShortAddress::getAddress() const {
+  return address;
 }
 
 
@@ -745,17 +771,22 @@ inline bool Packet::LongAddress::isDone() const {
 
 void Packet::LongAddress::insert(uint8_t byte) {
   if (iterator < offset) {
-    address |= (0b01111111 & byte) << (offset+(8*iterator)-iterator);
+    address |= static_cast<uint64_t>(0b01111111 & byte) << (offset-iterator+(8*iterator));
   }
   else {
-    address |= byte << (8*iterator);
+    address |= static_cast<uint64_t>(byte) << (8*iterator);
   }
   iterator += iterator < length;
 }
 
 inline std::string Packet::LongAddress::asString() const {
-  return "Long address.";
+  return std::format("Long address (0x{:016X})", address);
 }
+
+uint64_t Packet::LongAddress::getAddress() const {
+  return address;
+}
+
 
 Packet::Q::Q(uint8_t header) {
   TYPE = header & 0b00001111;
@@ -955,7 +986,10 @@ void Packet::Exception::insert(uint8_t byte) {
 }
       
 inline std::string Packet::Exception::asString() const {
-  return "Exception.";
+  std::string base = "Exception";
+  if (hasAddress)
+    base += " ("+address->asString()+")";
+  return base;
 }
 
 Packet::Exception::~Exception() {

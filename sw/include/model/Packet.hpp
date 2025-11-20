@@ -418,7 +418,7 @@ namespace Packet {
       virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
-      bool hasEvent(uint8_t index);
+      bool hasEvent(uint8_t index) const;
 
   };
 
@@ -498,32 +498,36 @@ namespace Packet {
   class ShortAddress: public Base {
   
     private:
+      // Attributes
       bool done = false;
       uint8_t offset = 0;
       uint32_t address = 0;
 
     public:
-
+      // Methods
       ShortAddress(uint8_t header);
       virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
+      uint32_t getAddress() const;
 
   };
 
   class LongAddress: public Base {
   
     private:
+      // Attributes
       uint8_t offset = 0;
       uint8_t length = 4;
       uint64_t address = 0;
 
     public:
-  
+      // Methods
       LongAddress(uint8_t header);
       virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
+      uint64_t getAddress() const;
 
   };
 

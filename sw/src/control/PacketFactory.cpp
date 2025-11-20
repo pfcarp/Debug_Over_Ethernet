@@ -115,7 +115,6 @@ std::ostream& operator<<(std::ostream& os, const Packet::Base& e) {
 bool PacketFactory::insert(uint8_t byte) {
   if (!current) {
     identify(byte);
-    std::cout << current->asString() << std::endl;
   }
   else
     current->insert(byte);
