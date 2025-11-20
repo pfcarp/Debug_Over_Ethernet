@@ -31,6 +31,10 @@ int main() {
     }
   }
 
+  // Print trace
+  for (const auto& packet : packets)
+    std::cout << packet->asString() << std::endl;
+
   return 0;
 }
 

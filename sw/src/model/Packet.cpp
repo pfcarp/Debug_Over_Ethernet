@@ -175,7 +175,7 @@ void Packet::Timestamp::insert(uint8_t byte) {
 }
 
 inline std::string Packet::Timestamp::asString() const {
-  return "Timestamp.";
+  return std::format("Timestamp (TS = {}, COUNT = {})", TS, COUNT);
 }
 
 
@@ -449,7 +449,7 @@ inline bool Packet::ConditionalResultFormat4::isDone() const {
 inline void Packet::ConditionalResultFormat4::insert(uint8_t byte) {}
 
 inline std::string Packet::ConditionalResultFormat4::asString() const {
-  return "Conditional result format 4.";
+  return std::format("Conditional result format 4 (TOKEN = {})", T);
 }
 
 
@@ -631,7 +631,7 @@ void Packet::Context::insert(uint8_t byte) {
 }
 
 inline std::string Packet::Context::asString() const {
-  return "Context.";
+  return std::format("Context (P = {}, EL = {}, SF = {}, NS = {}, VMID = 0x{:016X}, CONTEXTID = 0x{:016X})", P, EL, SF, NS, VMID, CONTEXTID);
 }
 
 
@@ -840,7 +840,7 @@ inline void Packet::Q::insert(uint8_t byte) {
 }
 
 inline std::string Packet::Q::asString() const {
-  return "Q.";
+  return std::format("Q (Address = {:016X}, #Counts = {})", address, count.size());
 }
 
 
@@ -986,7 +986,7 @@ void Packet::Exception::insert(uint8_t byte) {
 }
       
 inline std::string Packet::Exception::asString() const {
-  std::string base = "Exception";
+  std::string base = std::format("Exception (TYPE = {}, P = {})", type, p);
   if (hasAddress)
     base += " ("+address->asString()+")";
   return base;

@@ -129,3 +129,34 @@ void PacketFactory::consume() {
 std::unique_ptr<Packet::Base> PacketFactory::get() {
   return std::move(current);
 }
+
+
+bool PacketFactoryWithFormatter::insert(uint8_t byte) {
+  // Insert new byte
+  frame[counter] = byte;
+  // If frame size reached
+  if (counter == 15) {
+    // Format frame
+    format();
+    // Insert formatted byte to created new packet
+    // NOTE: up to 15 (excluded) to not parse the bytes with carried bits
+    for (uint8_t i = 0; i < 15; i++)
+      PacketFactory::insert(frame[i]);
+    // Clean-up for next frame
+    counter = 0;
+    frame.assign(frame.size(), 0);
+  }
+  return true;
+}
+
+/**
+ * Followed format presented in DDI0314H page 220 (Sec. 8.12.1)
+ */
+void PacketFactoryWithFormatter::format() {
+  for (uint8_t i = 0; i < 15; i++) { // 15 becasue last byte contains carried over bits
+    // Inspect if odd indexed byte and check if it is an ID
+    if ((i%2 == 0) && (frame[i]%2)) {
+      frame[i] = (frame[i] & 0xfe) | ((frame[15] >> (i/2)) & 0x01);
+    }
+  }
+}
