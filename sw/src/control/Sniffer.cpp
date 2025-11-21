@@ -1,15 +1,26 @@
 #include "Sniffer.hpp"
 
 
-#include <pcap.h>
 #include <iostream>
 
+
+void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
+  std::cout << "Packet: " << header->len << " bytes\n";
+  for (u_int i = 0; i < header->len; i++) {
+    printf("%02X ", packet[i]);
+  }
+  printf("\n");
+}
+
+void Sniffer::dispatch(u_char* user, const pcap_pkthdr* header, const u_char* packet) {
+  Sniffer* self = reinterpret_cast<Sniffer*>(user);
+  self->onPacket(header, packet);
+}
 
 std::vector<std::string> Sniffer::getDevices() {
   // Interfaces
   std::vector<std::string> interfaces;
   // PCAP
-  char errbuf[PCAP_ERRBUF_SIZE];
   pcap_if_t *alldevs, *dev;
 
   if (pcap_findalldevs(&alldevs, errbuf) == -1) {
@@ -25,6 +36,30 @@ std::vector<std::string> Sniffer::getDevices() {
   return interfaces;
 }
 
-void Sniffer::setDevice(std::string interface) {
-  interfaceName = interface;
+void Sniffer::pickDevice(std::string newInterfaceName) {
+  // Close current interface is one is already opened
+  if (interface != nullptr) {
+     pcap_close(interface);
+  }
+  // Update name
+  name = newInterfaceName;
+  // Init. interface
+  interface = pcap_open_live(name.c_str(), 65535, 1, 10, errbuf);
+  if (interface == nullptr) {
+    std::cerr << "pcap_open_live failed: " << errbuf << std::endl;
+  }
+  // Start sniffing
+  pcap_loop(interface, 0, Sniffer::dispatch, (u_char*)this);
+}
+
+void Sniffer::unpickDevice() {
+  if (interface != nullptr) {
+     pcap_close(interface);
+  }
+}
+
+Sniffer::~Sniffer() {
+  if (interface != nullptr) {
+     pcap_close(interface);
+  }
 }

@@ -14,7 +14,7 @@ class InterfaceSelector {
     Sniffer* sniffer = nullptr;
     // Methods
     void on_combo_changed(GtkComboBox* check);
-    static void c_on_combo_changed(GObject* object, GParamSpec* pspec, gpointer user_data);
+    static void c_on_combo_changed(GObject* object, gpointer user_data);
 
   public:
     // Attributes
