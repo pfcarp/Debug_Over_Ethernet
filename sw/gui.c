@@ -3,6 +3,8 @@
 #include <vector>
 #include <mutex>
 
+
+#include "Sniffer.hpp"
 #include "Points.hpp"
 #include "PlotArea.hpp"
 #include "DataBuffer.hpp"
@@ -11,16 +13,18 @@
 #include "Inserter.hpp"
 #include "Graph.hpp"
 #include "GraphArea.hpp"
+#include "InterfaceSelector.hpp"
 
 
 // Model/data
+static Sniffer* sniffer;
 static Graph* graph = NULL;
 static Collection* traces;
 static Collection* watchpoints;
 static Points* roofline;
 static std::vector<Inserter*> inserters;
 
-static Event* eventsRoofline;
+static std::vector<Event> eventsRoofline;
 static std::vector<Event> eventsPerf;
 // Overall control
 static bool enabled = false;
@@ -34,6 +38,7 @@ static GtkWidget* button;
 static GtkWidget* clearButton;
 static std::vector<GtkWidget*> separators;
 static std::vector<Controls*> controls;
+static InterfaceSelector* interfacesSelector;
 
 
 static void update_button() {
@@ -120,6 +125,9 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
   update_reset_button();
   g_signal_connect(clearButton, "clicked", G_CALLBACK(on_reset_click), NULL);
   gtk_header_bar_pack_start(GTK_HEADER_BAR(header_bar), clearButton);
+  //// Interface selection
+  interfacesSelector = new InterfaceSelector(sniffer);
+  gtk_header_bar_pack_start(GTK_HEADER_BAR(header_bar), interfacesSelector->parent);
 
   GtkWidget* hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   gtk_window_set_child(GTK_WINDOW(window), hbox);
@@ -187,8 +195,10 @@ int main(int argc, char *argv[]) {
   GtkApplication *app;
   int status;
 
-  eventsRoofline = new Event("Roofline");
+  eventsRoofline = {Event("Roofline")};
   eventsPerf = {Event("Inst. retired"), Event("L1 refills"), Event("L2 refills"), Event("DTLB refills")};
+
+  sniffer = new Sniffer();
 
   graph = new Graph("inputs/toy_example.dot");
   traces = new Collection();
@@ -201,8 +211,8 @@ int main(int argc, char *argv[]) {
     watchpoints->add(new HistogramBuffer(&graph->nodes[i]));
     inserters.push_back(new InserterNormal((*watchpoints)[i], (i+1)*25));
   }
-  roofline = new Points(eventsRoofline);
-  inserters.push_back(new InserterStep((*roofline)[1], 25));
+  roofline = new Points(&eventsRoofline[0]);
+  inserters.push_back(new InserterStep((*roofline)[0], 25));
   // Generate roofline
   app = gtk_application_new("com.example.LivePlot", G_APPLICATION_DEFAULT_FLAGS);
 
@@ -222,7 +232,8 @@ int main(int argc, char *argv[]) {
   delete watchpoints;
   delete plot;
   delete graph;
-  delete eventsRoofline;
+  delete interfacesSelector;
+  delete sniffer;
 
   return status;
 }

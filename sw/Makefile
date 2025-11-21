@@ -1,5 +1,6 @@
 CXXFLAGS=-lm -std=c++20 -Wall -Wextra
 GTK4FLAGS=`pkg-config --cflags --libs gtk4`
+PCAPFLAGS=`pkg-config --cflags --libs libpcap`
 GRAPHVIZFLAGS=-lgvc -lcgraph
 OPT=-O0
 DEBUG=-g
@@ -33,7 +34,7 @@ Collection.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Collection.cpp -o $(OBJ)/Collection.o $(CXXFLAGS)
 
 Points.o:
-	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Points.cpp -o $(OBJ)/Points. $(CXXFLAGS)
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Points.cpp -o $(OBJ)/Points.o $(CXXFLAGS)
 
 DataBuffer.o: Color.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/DataBuffer.cpp -o $(OBJ)/DataBuffer.o $(CXXFLAGS)
@@ -43,6 +44,9 @@ HistogramBuffer.o: Color.o
 
 Controls.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/Controls.cpp -o $(OBJ)/Controls.o $(GTK4FLAGS) $(CXXFLAGS)
+
+InterfaceSelector.o: Sniffer.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/InterfaceSelector.cpp -o $(OBJ)/InterfaceSelector.o $(GTK4FLAGS) $(CXXFLAGS)
 
 PlotArea.o: Collection.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/PlotArea.cpp -o $(OBJ)/PlotArea.o $(GTK4FLAGS) $(CXXFLAGS)
@@ -59,8 +63,11 @@ Graph.o: GraphEdge.o GraphNode.o
 GraphArea.o: Graph.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/GraphArea.cpp -o $(OBJ)/GraphArea.o $(GTK4FLAGS) $(CXXFLAGS)
 
-gui: DataBuffer.o HistogramBuffer.o Controls.o Color.o PlotArea.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o
-	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(OBJ)/*.o -o doeth.out $(GTK4FLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
+Sniffer.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/Sniffer.cpp -o $(OBJ)/Sniffer.o $(PCAPFLAGS) $(CXXFLAGS)
+
+gui: DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(wildcard object/*.o) -o doeth.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
 
 
 packet.o:
