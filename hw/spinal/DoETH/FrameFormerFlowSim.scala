@@ -4,9 +4,28 @@ import spinal.core._
 import spinal.core.sim._
 
 case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends FrameFormerFlow(Input_Width, Output_Width, Max_Internal_Space) {
-  
   def sendRandomPayload () : Unit = {
         this.io.Subordinate.payload.randomize()
+        this.io.Subordinate.valid #= true
+        // this.io.Manager.ready #= false
+
+        this.SubordinateDomain.waitRisingEdge()
+
+        this.io.Subordinate.valid #= false
+    }
+
+    def sendWordSync () : Unit = {
+        this.io.Subordinate.payload#=0x7fffffff
+        this.io.Subordinate.valid #= true
+        // this.io.Manager.ready #= false
+
+        this.SubordinateDomain.waitRisingEdge()
+
+        this.io.Subordinate.valid #= false
+    }
+
+    def sendHalfWordSync () : Unit = {
+        this.io.Subordinate.payload#=0x7fff7fff
         this.io.Subordinate.valid #= true
         // this.io.Manager.ready #= false
 
@@ -33,15 +52,11 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
 
       this.io.Manager.ready #= true
       
-      this.SubordinateDomain.waitRisingEdge()
-      while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 4){
-        this.SubordinateDomain.waitRisingEdge()
-      }
       while(this.managerClockArea.SendingFSM.stateNext.toBigInt == 4){
       if(flip){
         this.io.Subordinate.valid #= false
         for(i <- 1 to wait){
-          this.SubordinateDomain.waitRisingEdge()
+          this.sendHalfWordSync()
         }
         
       }
@@ -67,7 +82,7 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
       if(flip){
         this.io.Subordinate.valid #= false
         for(i <- 1 to wait){
-          this.SubordinateDomain.waitRisingEdge()
+          this.sendHalfWordSync()
         }
         
       }
@@ -175,35 +190,31 @@ object FrameFormerFlowSim extends App {
 
         dut.SubordinateDomain.forkStimulus(period = 5)
 
-        //we want to create random payload but also vary the timings of transactions to see the following scenarios
-        //1. a singlepayload entering
-        //2. multiple entries entering when empty
-        //3. multiple entries entering when full
-        //4. variations of downstream being ready in between states
-        //5. sending and recieving
+  
         dut.waitForIdleAgain()
         dut.sendRandomPayload()
+        dut.sendHalfWordSync()
+        dut.sendWordSync()
+        
 
-        
-        //dut.ManagerDomain.waitRisingEdgeWhere(dut.managerClockArea.SendingFSM.stateReg.toString == "Payload")
-        //dut.ManagerDomain.waitActiveEdgeWhere(dut.managerClockArea.SendingFSM.stateReg.toString == "Payload")
-        dut.ManagerDomain.waitRisingEdge(10)
+        dut.sendRandomPayload()
+        dut.sendRandomPayload()
+        dut.sendRandomPayload()
+        dut.sendRandomPayload()
+        dut.sendRandomPayload()
 
-        dut.waitXcyclesBetweenSendingRandomPayload(3,15)
-        // while (dut.managerClockArea.SendingFSM.stateReg.toString != "HeaderPart2"){
-        //   dut.ManagerDomain.waitRisingEdge()
-        // }
-        
-        
-        
-        dut.sendXDuplicatePayload(5)
-          for (i <- 1 to 2){
-              dut.sendRandomPayload()
-          }
-          // dut.waitForIdleAgain()
+        dut.sendHalfWordSync()
+        dut.SubordinateDomain.waitRisingEdge(10)
 
-          dut.waitXcyclesBetweenSendingPayload(2)
-          dut.waitForIdleAgain()
+        dut.sendWordSync()
+        dut.sendRandomPayload()
+        dut.sendWordSync()
+        dut.sendRandomPayload()
+        dut.sendWordSync()
+        dut.sendRandomPayload()
+        dut.sendRandomPayload()
+
+        dut.waitForIdleAgain()
 
     }
 

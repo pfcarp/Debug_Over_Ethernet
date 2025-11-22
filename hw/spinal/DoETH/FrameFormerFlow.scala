@@ -111,38 +111,46 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   }
   val recieving1stBeat: State = new State{
     whenIsActive{
-      when(!(io.Subordinate.payload === 0x7fffffff & io.Subordinate.payload === 0x7fff7fff)){
+      when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
         BufferQueue.io.push.payload := io.Subordinate.payload.resized
         BufferQueue.io.push.valid := True
         goto(recieving2ndBeat)
+      }otherwise{
+        BufferQueue.io.push.valid := False
       }
     }
   }
   val recieving2ndBeat: State = new State{
     whenIsActive{
-      when(!(io.Subordinate.payload === 0x7fffffff & io.Subordinate.payload === 0x7fff7fff)){
+      when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
         BufferQueue.io.push.payload := io.Subordinate.payload.resized
         BufferQueue.io.push.valid := True
         goto(recieving3rdBeat)
+      }otherwise{
+        BufferQueue.io.push.valid := False
       }
     }
 
   }
   val recieving3rdBeat: State = new State{
     whenIsActive{
-      when(!(io.Subordinate.payload === 0x7fffffff & io.Subordinate.payload === 0x7fff7fff)){
+      when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
         BufferQueue.io.push.payload := io.Subordinate.payload.resized
         BufferQueue.io.push.valid := True
         goto(recieving4thBeat)
+      }otherwise{
+        BufferQueue.io.push.valid := False
       }
     }
   }
   val recieving4thBeat: State = new State{
     whenIsActive{
-      when(!(io.Subordinate.payload === 0x7fffffff & io.Subordinate.payload === 0x7fff7fff)){
+      when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
         BufferQueue.io.push.payload := io.Subordinate.payload.resized
         BufferQueue.io.push.valid := True
         goto(Idle)
+      }otherwise{
+        BufferQueue.io.push.valid := False
       }
     }
   }
