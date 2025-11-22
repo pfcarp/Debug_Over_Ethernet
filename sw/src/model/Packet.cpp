@@ -875,7 +875,7 @@ inline std::string Packet::AtomFormat2::asString() const {
 
 
 Packet::AtomFormat3::AtomFormat3(uint8_t header) {
-  a = 0b00000111 | header;
+  a = 0b00000111 & header;
 }
   
 inline bool Packet::AtomFormat3::isDone() const {
@@ -885,7 +885,7 @@ inline bool Packet::AtomFormat3::isDone() const {
 inline void Packet::AtomFormat3::insert(uint8_t byte) {}
 
 inline std::string Packet::AtomFormat3::asString() const {
-  return "Atom formt 3.";
+  return "Atom format 3 (A = "+std::format("0x{:02X}", a)+")";
 }
 
 
@@ -931,7 +931,7 @@ inline bool Packet::AtomFormat6::isDone() const {
 inline void Packet::AtomFormat6::insert(uint8_t byte) {}
 
 inline std::string Packet::AtomFormat6::asString() const {
-  return "Atom formt 6.";
+  return "Atom format 6 (COUNT = "+std::format("0x{:02X}", COUNT)+")";
 }
 
 
