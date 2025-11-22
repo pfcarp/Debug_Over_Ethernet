@@ -93,21 +93,61 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
 
   val subordinateClockArea = new ClockingArea(SubordinateDomain) {
 
-  // if(Input_Width != Output_Width){
-  //   BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue    }else{
-  // }else {
-  //     BufferQueue.io.push << io.Subordinate //Subordinate should feed directly into the queue    }
-  // }
+  // BufferQueue.io.push << io.Subordinate.toStream.resized //Subordinate should feed directly into the queue
 
-  //val BufferedSubordinate = 
-  
-  //BufferQueue.io.push << io.Subordinate.toStream.throwWhen(io.Subordinate.payload===io.Subordinate.stage().payload).resized //Subordinate should feed directly into the queue
+  //now recieving is a state machine based on the recieving of the full sync word then expected subsequent data burst 
+  //if the packet is a halfword sync then ignore the data and stay within state
+  //only consume data if there data beat is within 4 beats from the full sync
+  //if there is a full sync in between 4 packets that can be ignored (e.g. fs,d1,fs,d2,d3,d4 == fs,d1,d2,d3,d4 but hs,d1,fs,d2,d3,fs,d4,d5 == fs,d2,d3,d4,d5)
+ val RecievingFSM = new StateMachine{
+  BufferQueue.io.push.payload := B(1)#*Output_Width
+  BufferQueue.io.push.valid := False
+  val Idle: State = new State with EntryPoint{
+    whenIsActive{
+      when(io.Subordinate.payload === 0x7fffffff){
+        goto(recieving1stBeat)
+      }
+    }
+  }
+  val recieving1stBeat: State = new State{
+    whenIsActive{
+      when(!(io.Subordinate.payload === 0x7fffffff & io.Subordinate.payload === 0x7fff7fff)){
+        BufferQueue.io.push.payload := io.Subordinate.payload.resized
+        BufferQueue.io.push.valid := True
+        goto(recieving2ndBeat)
+      }
+    }
+  }
+  val recieving2ndBeat: State = new State{
+    whenIsActive{
+      when(!(io.Subordinate.payload === 0x7fffffff & io.Subordinate.payload === 0x7fff7fff)){
+        BufferQueue.io.push.payload := io.Subordinate.payload.resized
+        BufferQueue.io.push.valid := True
+        goto(recieving3rdBeat)
+      }
+    }
 
-  BufferQueue.io.push << io.Subordinate.toStream.resized //Subordinate should feed directly into the queue
+  }
+  val recieving3rdBeat: State = new State{
+    whenIsActive{
+      when(!(io.Subordinate.payload === 0x7fffffff & io.Subordinate.payload === 0x7fff7fff)){
+        BufferQueue.io.push.payload := io.Subordinate.payload.resized
+        BufferQueue.io.push.valid := True
+        goto(recieving4thBeat)
+      }
+    }
+  }
+  val recieving4thBeat: State = new State{
+    whenIsActive{
+      when(!(io.Subordinate.payload === 0x7fffffff & io.Subordinate.payload === 0x7fff7fff)){
+        BufferQueue.io.push.payload := io.Subordinate.payload.resized
+        BufferQueue.io.push.valid := True
+        goto(Idle)
+      }
+    }
+  }
+ }
 
-
-  //BufferQueue.io.push.payload := io.Subordinate.toReg().resized //Subordinate should feed directly into the queue
-  //BufferQueue.io.push.valid :=  io.Subordinate.valid
   
   inputs_debug.FFSisFull := BufferQueue.io.pushOccupancy === Max_Internal_Space
   inputs_debug.FFSisEmpty := BufferQueue.io.pushOccupancy === 0
