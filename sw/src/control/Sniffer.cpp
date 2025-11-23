@@ -25,7 +25,7 @@ void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
       for (size_t i = 2; i < header->len-8; i += 8) {
         // If next four byte do not compose 0xffffffff, do not skip
         if ((packet[i] != 0xff) && (packet[i+1] != 0xff) && (packet[i+2] != 0xff) && (packet[i+3] != 0xff)) {
-          for (uint8_t j = 0; j < 4; j++) {
+          for (uint8_t j = 3; j >= 0; j--) {
             deformatter.insert(packet[i+j]);
             recording.push_back(packet[i+j]);
           }
