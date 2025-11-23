@@ -24,18 +24,3 @@ class PacketFactory {
     std::unique_ptr<Packet::Base> get();
 
 };
-
-
-class PacketFactoryWithFormatter: public PacketFactory {
-
-  private:
-    // Attributes
-    uint8_t counter = 0;
-    std::vector<uint8_t> frame = std::vector<uint8_t>(16);    
-    
-  public:
-    // Methods
-    virtual bool insert(uint8_t byte) override;
-    void format();
-
-};
