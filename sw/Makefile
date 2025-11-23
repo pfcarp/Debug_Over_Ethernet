@@ -66,21 +66,27 @@ GraphArea.o: Graph.o
 Sniffer.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/Sniffer.cpp -o $(OBJ)/Sniffer.o $(PCAPFLAGS) $(CXXFLAGS)
 
-gui: DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o
+gui: DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(wildcard object/*.o) -o doeth.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
 
 
-packet.o:
+Packet.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Packet.cpp -o $(OBJ)/Packet.o $(CXXFLAGS)
 
-packetfactory.o:
+PacketFactory.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/PacketFactory.cpp -o $(OBJ)/PacketFactory.o $(CXXFLAGS)
 
-parser: packetfactory.o packet.o
+Stream.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/Stream.cpp -o $(OBJ)/Stream.o $(CXXFLAGS)
+
+Deformatter.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/Deformatter.cpp -o $(OBJ)/Deformatter.o $(CXXFLAGS)
+
+parser: PacketFactory.o Packet.o Stream.o Deformatter.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) parser.cpp $(OBJ)/*.o -o parser.out $(CXXFLAGS)
 
 
-tests: packet.o
+tests: Packet.o
 	g++ $(OPT) $(INCLUDE) tests.cpp $(TEST)/packet/*.cpp $(OBJ)/*.o -o tests.out $(CXXFLAGS)
 
 

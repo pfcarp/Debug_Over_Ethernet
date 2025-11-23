@@ -1,8 +1,10 @@
 #include "PacketFactory.hpp"
-#include "Packet.hpp"
-#include <cstdint>
+
+
 #include <iostream>
-#include <memory>
+
+
+#include "Packet.hpp"
 
 
 inline bool PacketFactory::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) {
