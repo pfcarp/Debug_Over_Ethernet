@@ -75,10 +75,16 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
   // Update name
   name = newInterfaceName;
   // Init. interface
-  interface = pcap_open_live(name.c_str(), 65535, 1, 10, errbuf);
+  interface = pcap_create(name.c_str(), errbuf);
   if (interface == nullptr) {
     std::cerr << "pcap_open_live failed: " << errbuf << std::endl;
   }
+  pcap_set_snaplen(interface, 65535);
+  pcap_set_promisc(interface, 1);
+  pcap_set_timeout(interface, 10);
+  pcap_set_buffer_size(interface, 128*1024*1024);
+  pcap_activate(interface);
+
   // Start sniffing
   pcap_loop(interface, 0, Sniffer::dispatch, (u_char*)this);
 }
