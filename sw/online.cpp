@@ -1,15 +1,26 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <csignal>
 
 
 #include "Sniffer.hpp"
 
 
-int main(int argc, char* argv[]) {
 
-  Sniffer sniffer;
-  
+static Sniffer sniffer;
+
+
+static void handle_sigint(int) {
+  sniffer.unpickDevice();
+}
+
+
+int main(int argc, char* argv[]) {
+  // CTRL+C handler
+  std::signal(SIGINT, handle_sigint);
+
+
   if (argc != 2) {
     std::cerr << "Error: exactly one argument expected." << std::endl;
     std::cerr << "Usage: " << argv[0] << " <argument>" << std::endl;

@@ -23,7 +23,7 @@ inline bool Sniffer::areNext8BytesAllSet(const u_char* packet) const {
 }
 
 void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
-  // Must be larger than 2+8 (i.e., 0xBAAB+0xBEEB000000000000)
+  // Must be larger than 2+8 (i.e., 0xABBA+0xEBBE000000000000)
   if (header->len > 10) {
     if (hasHeader(packet) && hasFooter(&packet[header->len-8])) {
       // From here, jump 8 byte by 8 byte (lower half: data, upper half: zeroes)
@@ -85,14 +85,18 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
 
 void Sniffer::unpickDevice() {
   if (interface != nullptr) {
-     pcap_close(interface);
+    pcap_breakloop(interface);
+    pcap_close(interface);
+    interface = nullptr;
   }
 }
 
 Sniffer::~Sniffer() {
   // Close pcap
   if (interface != nullptr) {
-     pcap_close(interface);
+    pcap_breakloop(interface);
+    pcap_close(interface);
+    interface = nullptr;
   }
   // Dump recording
   std::ofstream out("dump.bin", std::ios::binary);
