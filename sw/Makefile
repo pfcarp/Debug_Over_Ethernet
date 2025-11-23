@@ -86,8 +86,8 @@ parser: PacketFactory.o Packet.o Stream.o Deformatter.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) parser.cpp $(OBJ)/*.o -o parser.out $(CXXFLAGS)
 
 
-tests: Packet.o
-	g++ $(OPT) $(INCLUDE) tests.cpp $(TEST)/packet/*.cpp $(OBJ)/*.o -o tests.out $(CXXFLAGS)
+tests: Packet.o Deformatter.o
+	g++ $(OPT) $(INCLUDE) tests.cpp $(TEST)/packet/*.cpp $(TEST)/deformatter/*.cpp $(OBJ)/*.o -o tests.out $(CXXFLAGS)
 
 
 clean:
