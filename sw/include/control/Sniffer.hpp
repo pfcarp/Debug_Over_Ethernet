@@ -24,6 +24,7 @@ class Sniffer {
     static void dispatch(u_char* user, const pcap_pkthdr* header, const u_char* packet);
     bool hasHeader(const u_char* packet) const;
     bool hasFooter(const u_char* packet) const;
+    bool areNext8BytesAllSet(const u_char* packet) const;
 
   public:
     // Attributes
