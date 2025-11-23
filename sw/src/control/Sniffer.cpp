@@ -7,11 +7,11 @@
 
 
 inline bool Sniffer::hasHeader(const u_char* packet) const {
-  return (packet[0] == 0xab) && (packet[1] == 0xba);
+  return (packet[0] == 0xba) && (packet[1] == 0xab);
 }
 
 inline bool Sniffer::hasFooter(const u_char* packet) const {
-  return (packet[0] == 0xeb) && (packet[1] == 0xbe) &&
+  return (packet[0] == 0xbe) && (packet[1] == 0xeb) &&
     (packet[2] == 0x00) && (packet[3] == 0x00) &&
     (packet[4] == 0x00) && (packet[5] == 0x00) &&
     (packet[6] == 0x00) && (packet[7] == 0x00);
@@ -23,14 +23,14 @@ inline bool Sniffer::areNext8BytesAllSet(const u_char* packet) const {
 }
 
 void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
-  // Must be larger than 2+8 (i.e., 0xABBA+0xEBBE000000000000)
+  // Must be larger than 2+8 (i.e., 0xBAAB+0xBEEB000000000000)
   if (header->len > 10) {
     if (hasHeader(packet) && hasFooter(&packet[header->len-8])) {
       // From here, jump 8 byte by 8 byte (lower half: data, upper half: zeroes)
       for (size_t i = 2; i < header->len-8; i += 8) {
         // If next four byte do not compose 0xffffffff, do not skip
         if (!areNext8BytesAllSet(&packet[i])) {
-          for (uint8_t j = 3; j >= 0; j--) {
+          for (int j = 3; j >= 0; j--) {
             deformatter.insert(packet[i+j]);
             recording.push_back(packet[i+j]);
           }
