@@ -16,7 +16,6 @@ bool Deformatter::insert(uint8_t byte) {
   // If frame size reached
   if (counter == 15) {
     // Format frame
-    std::cout << "Formating (Byte = " << std::format("0x{:02X}|0x{:02X}", byte, frame[15]) << ")" << std::endl;
     format();
     clean();
     return true;
@@ -32,7 +31,6 @@ bool Deformatter::insert(uint8_t byte) {
  */
 void Deformatter::format() {
   for (uint8_t i = 0; i < 15; i++) { // 15 becasue last byte contains carried over bits
-    std::cout << std::format("0x{:02X}", frame[i]) << std::endl;
     // Inspect if odd indexed byte and check if it is an ID
     if (i%2 == 0) {
       // Check AUX to detect whether the next (data) byte belong to the current or previous stream source
@@ -40,7 +38,6 @@ void Deformatter::format() {
         previous = current;
         current = frame[i] >> 1;
         insertInPrevious = toInsertInPrevious(frame[15], i/2);
-        std::cout << "(New ID! " << static_cast<int>(current) << " @" << static_cast<int>(i) << " | " << static_cast<int>(previous) << " " << static_cast<int>(current) << " insert previous? " << insertInPrevious << ")" << std::endl;
       }
       else {
         streams[current].insert((frame[i] & 0xfe) | ((frame[15] >> (i/2)) & 0x01));
@@ -55,7 +52,6 @@ void Deformatter::format() {
         streams[current].insert(frame[i]);
     }
   }
-  std::cout << std::format("0x{:02X}", frame[15]) << std::endl;
 }
 
 void Deformatter::clean() {

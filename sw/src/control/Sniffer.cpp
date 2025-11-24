@@ -8,7 +8,6 @@
 
 
 inline bool Sniffer::hasHeader(const u_char* packet) const {
-  std::cout<<std::format("0x{:02X}",packet[0])<<" "<<std::format("0x{:02X}",packet[1])<<std::endl;
   return (packet[0] == 0xab) && (packet[1] == 0xba);
 }
 
@@ -26,11 +25,6 @@ inline bool Sniffer::areNext8BytesAllSet(const u_char* packet) const {
 
 void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
   // Must be larger than 2+8 (i.e., 0xABBA+0xEBBE000000000000)
-  for(int i=0; i<header->len;i++){
-    std::cout<<std::format("0x{:02X} ",packet[i]);
-  }
-  std::cout<<std::endl;
-  
   if (header->len > 10+headerOffset) {
     if (hasHeader(&packet[headerOffset]) && hasFooter(&packet[header->len-8])) {
       // From here, jump 8 byte by 8 byte (lower half: data, upper half: zeroes)

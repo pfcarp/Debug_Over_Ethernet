@@ -1,4 +1,5 @@
 #include "Packet.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <format>
 
@@ -8,6 +9,17 @@ inline bool Packet::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) 
 
 inline uint8_t Packet::Base::getIterator() const {
   return iterator;
+}
+
+
+inline bool Packet::Base::isDone() const {
+  return false;
+}
+
+inline void Packet::Base::insert(uint8_t byte) {}
+
+inline std::string Packet::Base::asString() const {
+  return "";
 }
 
 
@@ -183,8 +195,6 @@ inline bool Packet::TraceOn::isDone() const {
   return true;
 }
 
-inline void Packet::TraceOn::insert(uint8_t byte) {}
-
 inline std::string Packet::TraceOn::asString() const {
   return "Trace on.";
 }
@@ -193,8 +203,6 @@ inline std::string Packet::TraceOn::asString() const {
 inline bool Packet::FunctionReturn::isDone() const {
   return true;
 }
-
-inline void Packet::FunctionReturn::insert(uint8_t byte) {}
 
 inline std::string Packet::FunctionReturn::asString() const {
   return "Function return.";
@@ -205,8 +213,6 @@ inline bool Packet::ExceptionReturn::isDone() const {
   return true;
 }
 
-inline void Packet::ExceptionReturn::insert(uint8_t byte) {}
-
 inline std::string Packet::ExceptionReturn::asString() const {
   return "Exception return.";
 }
@@ -216,20 +222,14 @@ inline bool Packet::Resynchronization::isDone() const {
   return true;
 }
 
-inline void Packet::Resynchronization::insert(uint8_t byte) {}
-
 inline std::string Packet::Resynchronization::asString() const {
   return "Resynchronization.";
 }
 
 
-Packet::Reserved::Reserved(uint8_t header) {}
-
 inline bool Packet::Reserved::isDone() const {
   return true;
 }
-
-inline void Packet::Reserved::insert(uint8_t byte) {}
 
 inline std::string Packet::Reserved::asString() const {
   return "Reserved.";
@@ -297,8 +297,6 @@ inline bool Packet::CycleCountFormat3::isDone() const {
   return true;
 }
 
-inline void Packet::CycleCountFormat3::insert(uint8_t byte) {}
-
 inline std::string Packet::CycleCountFormat3::asString() const {
   return "Cycle count format 3.";
 }
@@ -312,8 +310,6 @@ inline bool Packet::NumberedDataSyncMark::isDone() const {
   return true;
 }
 
-inline void Packet::NumberedDataSyncMark::insert(uint8_t byte) {}
-
 inline std::string Packet::NumberedDataSyncMark::asString() const {
   return "Numbered data sync mark.";
 }
@@ -326,8 +322,6 @@ Packet::UnnumberedDataSyncMark::UnnumberedDataSyncMark(uint8_t header) {
 inline bool Packet::UnnumberedDataSyncMark::isDone() const {
   return true;
 }
-
-inline void Packet::UnnumberedDataSyncMark::insert(uint8_t byte) {}
 
 inline std::string Packet::UnnumberedDataSyncMark::asString() const {
   return "Unnumbered data sync mark.";
@@ -374,8 +368,6 @@ inline bool Packet::Mispredict::isDone() const {
   return true;
 }
 
-inline void Packet::Mispredict::insert(uint8_t byte) {}
-
 inline std::string Packet::Mispredict::asString() const {
   return "Mispredict (A = "+std::to_string(static_cast<int>(A))+")";
 }
@@ -388,8 +380,6 @@ Packet::CancelFormat2::CancelFormat2(uint8_t header) {
 inline bool Packet::CancelFormat2::isDone() const {
   return true;
 }
-
-inline void Packet::CancelFormat2::insert(uint8_t byte) {}
 
 inline std::string Packet::CancelFormat2::asString() const {
   return "CancelFormat2 (A = "+std::to_string(static_cast<int>(A))+")";
@@ -405,8 +395,6 @@ inline bool Packet::CancelFormat3::isDone() const {
   return true;
 }
 
-inline void Packet::CancelFormat3::insert(uint8_t byte) {}
-
 inline std::string Packet::CancelFormat3::asString() const {
   return "CancelFormat3 (CC = "+std::to_string(static_cast<int>(CC))+", A = "+std::to_string(static_cast<int>(A))+")";
 }
@@ -420,8 +408,6 @@ inline bool Packet::ConditionalInstructionFormat2::isDone() const {
   return true;
 }
 
-inline void Packet::ConditionalInstructionFormat2::insert(uint8_t byte) {}
-
 inline std::string Packet::ConditionalInstructionFormat2::asString() const {
   return "Conditional instruction format 2 (CI = "+std::to_string(static_cast<int>(CI))+")";
 }
@@ -430,8 +416,6 @@ inline std::string Packet::ConditionalInstructionFormat2::asString() const {
 inline bool Packet::ConditionalFlush::isDone() const {
   return true;
 }
-
-inline void Packet::ConditionalFlush::insert(uint8_t byte) {}
 
 inline std::string Packet::ConditionalFlush::asString() const {
   return "Conditional flush.";
@@ -446,8 +430,6 @@ inline bool Packet::ConditionalResultFormat4::isDone() const {
   return true;
 }
 
-inline void Packet::ConditionalResultFormat4::insert(uint8_t byte) {}
-
 inline std::string Packet::ConditionalResultFormat4::asString() const {
   return std::format("Conditional result format 4 (TOKEN = {})", T);
 }
@@ -461,8 +443,6 @@ Packet::ConditionalResultFormat2::ConditionalResultFormat2(uint8_t header) {
 inline bool Packet::ConditionalResultFormat2::isDone() const {
   return true;
 }
-
-inline void Packet::ConditionalResultFormat2::insert(uint8_t byte) {}
 
 inline std::string Packet::ConditionalResultFormat2::asString() const {
   return "Condition result format 2.";
@@ -563,15 +543,13 @@ inline bool Packet::Ignore::isDone() const {
   return true;
 }
 
-inline void Packet::Ignore::insert(uint8_t byte) {}
-
 inline std::string Packet::Ignore::asString() const {
   return "Ignore.";
 }
 
 
 Packet::Event::Event(uint8_t header) {
-  for (int i = 0; i < events.size(); i++) {
+  for (size_t i = 0; i < events.size(); i++) {
     events[i] = ((0b00000001 << i) & header) >> i;
   }
 }
@@ -579,8 +557,6 @@ Packet::Event::Event(uint8_t header) {
 inline bool Packet::Event::isDone() const {
   return true;
 }
-
-inline void Packet::Event::insert(uint8_t byte) {}
 
 inline std::string Packet::Event::asString() const {
   return "Event (#0 = "+std::to_string(static_cast<int>(events[0]))+", #1 = "+std::to_string(static_cast<int>(events[1]))+", #2 = "+std::to_string(static_cast<int>(events[2]))+", #3 = "+std::to_string(static_cast<int>(events[3]))+").";
@@ -698,8 +674,6 @@ inline bool Packet::TimestampMarker::isDone() const {
   return true;
 }
 
-inline void Packet::TimestampMarker::insert(uint8_t byte) {}
-
 inline std::string Packet::TimestampMarker::asString() const {
   return "Timestamp marker.";
 }
@@ -712,8 +686,6 @@ Packet::ExactMatchAddress::ExactMatchAddress(uint8_t header) {
 inline bool Packet::ExactMatchAddress::isDone() const {
   return true;
 }
-
-inline void Packet::ExactMatchAddress::insert(uint8_t byte) {}
 
 inline std::string Packet::ExactMatchAddress::asString() const {
   return "exact match address.";
@@ -852,8 +824,6 @@ inline bool Packet::AtomFormat1::isDone() const {
   return true;
 }
 
-inline void Packet::AtomFormat1::insert(uint8_t byte) {}
-
 inline std::string Packet::AtomFormat1::asString() const {
   return "Atom format 1.";
 }
@@ -866,8 +836,6 @@ Packet::AtomFormat2::AtomFormat2(uint8_t header) {
 inline bool Packet::AtomFormat2::isDone() const {
   return true;
 }
-
-inline void Packet::AtomFormat2::insert(uint8_t byte) {}
 
 inline std::string Packet::AtomFormat2::asString() const {
   return "Atom formt 2.";
@@ -882,8 +850,6 @@ inline bool Packet::AtomFormat3::isDone() const {
   return true;
 }
 
-inline void Packet::AtomFormat3::insert(uint8_t byte) {}
-
 inline std::string Packet::AtomFormat3::asString() const {
   return "Atom format 3 (A = "+std::format("0x{:02X}", a)+")";
 }
@@ -896,8 +862,6 @@ Packet::AtomFormat4::AtomFormat4(uint8_t header) {
 inline bool Packet::AtomFormat4::isDone() const {
   return true;
 }
-
-inline void Packet::AtomFormat4::insert(uint8_t byte) {}
 
 inline std::string Packet::AtomFormat4::asString() const {
   return "Atom formt 4.";
@@ -912,8 +876,6 @@ inline bool Packet::AtomFormat5::isDone() const {
   return true;
 }
 
-inline void Packet::AtomFormat5::insert(uint8_t byte) {}
-
 inline std::string Packet::AtomFormat5::asString() const {
   return "Atom formt 5.";
 }
@@ -927,8 +889,6 @@ Packet::AtomFormat6::AtomFormat6(uint8_t header) {
 inline bool Packet::AtomFormat6::isDone() const {
   return true;
 }
-
-inline void Packet::AtomFormat6::insert(uint8_t byte) {}
 
 inline std::string Packet::AtomFormat6::asString() const {
   return "Atom format 6 (COUNT = "+std::format("0x{:02X}", COUNT)+")";

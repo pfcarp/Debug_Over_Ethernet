@@ -14,7 +14,7 @@ class Sniffer {
 
   private:
     // Attributes
-    const uint8_t headerOffset = 14;
+    const unsigned int headerOffset = 14;
     std::string name;
     pcap_t* interface = nullptr;
     char errbuf[PCAP_ERRBUF_SIZE];
