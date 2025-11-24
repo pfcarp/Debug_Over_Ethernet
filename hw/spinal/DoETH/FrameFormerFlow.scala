@@ -84,7 +84,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   val Previous = Bits(32 bits)
 
   val BufferQueue = new StreamFifoCC(
-    dataType = Bits(Output_Width bits),
+    dataType = Bits(Input_Width bits),
     depth = Max_Internal_Space,
     pushClock =  SubordinateDomain,
     popClock = ManagerDomain,
@@ -100,7 +100,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   //only consume data if there data beat is within 4 beats from the full sync
   //if there is a full sync in between 4 packets that can be ignored (e.g. fs,d1,fs,d2,d3,d4 == fs,d1,d2,d3,d4 but hs,d1,fs,d2,d3,fs,d4,d5 == fs,d2,d3,d4,d5)
  val RecievingFSM = new StateMachine{
-  BufferQueue.io.push.payload := B(1)#*Output_Width
+  BufferQueue.io.push.payload := B("0").resized
   BufferQueue.io.push.valid := False
   val Idle: State = new State with EntryPoint{
     whenIsActive{
@@ -112,7 +112,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   val recieving1stBeat: State = new State{
     whenIsActive{
       when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
-        BufferQueue.io.push.payload := io.Subordinate.payload.resized
+        BufferQueue.io.push.payload := io.Subordinate.payload
         BufferQueue.io.push.valid := True
         goto(recieving2ndBeat)
       }otherwise{
@@ -123,7 +123,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   val recieving2ndBeat: State = new State{
     whenIsActive{
       when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
-        BufferQueue.io.push.payload := io.Subordinate.payload.resized
+        BufferQueue.io.push.payload := io.Subordinate.payload
         BufferQueue.io.push.valid := True
         goto(recieving3rdBeat)
       }otherwise{
@@ -135,7 +135,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   val recieving3rdBeat: State = new State{
     whenIsActive{
       when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
-        BufferQueue.io.push.payload := io.Subordinate.payload.resized
+        BufferQueue.io.push.payload := io.Subordinate.payload
         BufferQueue.io.push.valid := True
         goto(recieving4thBeat)
       }otherwise{
@@ -146,7 +146,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   val recieving4thBeat: State = new State{
     whenIsActive{
       when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
-        BufferQueue.io.push.payload := io.Subordinate.payload.resized
+        BufferQueue.io.push.payload := io.Subordinate.payload
         BufferQueue.io.push.valid := True
         goto(Idle)
       }otherwise{
@@ -229,7 +229,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
         //just an otherwise statement 
         .elsewhen(!inputs_debug.FFMisEmpty & BufferQueue.io.pop.valid & io.Manager.fire){
-          io.Manager.payload.data := BufferQueue.io.pop.payload //pop from the queue and send to the manager
+          io.Manager.payload.data := BufferQueue.io.pop.payload.resized //pop from the queue and send to the manager
           //BufferQueue.io.pop.ready := True
           counter:= counter + 1
         }
@@ -277,7 +277,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 object FrameFormerFlowVerilogGen extends App {
   val inputWidth = 32
   val outputWidth = 64
-  val maxInternalSpace = 32
+  val maxInternalSpace = 16
 
   Config.spinal.generateVerilog({
     val FF = new FrameFormerFlow(

@@ -22,13 +22,14 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
       }
     }
         this.io.Subordinate.valid #= true
+        this.io.Manager.valid #= true
         for(data<-dataList){
           println(data)
           this.io.Subordinate.payload #= BigInt(data,16)
           
           // this.io.Manager.ready #= false
           // this.SubordinateDomain.waitRisingEdge()
-          this.SubordinateDomain.waitEdge()
+          this.SubordinateDomain.waitRisingEdge()
         }
         
     }
