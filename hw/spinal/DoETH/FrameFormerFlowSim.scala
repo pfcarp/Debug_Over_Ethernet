@@ -2,8 +2,37 @@ package doeth
 
 import spinal.core._
 import spinal.core.sim._
+import scala.io.Source
 
 case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Internal_Space: Int) extends FrameFormerFlow(Input_Width, Output_Width, Max_Internal_Space) {
+  
+
+  def sendPayloadFromFile (filename: String) : Unit = {
+    val dataList = {
+      val source = Source.fromFile(filename)
+      try {
+        source.getLines()
+        .drop(2)  // Skip first two lines
+        .map(_.split(","))  // Split each line by comma
+        .filter(_.length >= 4)  // Ensure line has at least 4 columns
+        .map(_(3))  // Get 4th column (0-indexed, so index 3)
+        .toList
+      } finally {
+        source.close()
+      }
+    }
+        this.io.Subordinate.valid #= true
+        for(data<-dataList){
+          println(data)
+          this.io.Subordinate.payload #= BigInt(data,16)
+          
+          // this.io.Manager.ready #= false
+          // this.SubordinateDomain.waitRisingEdge()
+          this.SubordinateDomain.waitEdge()
+        }
+        
+    }
+
   def sendRandomPayload () : Unit = {
         this.io.Subordinate.payload.randomize()
         this.io.Subordinate.valid #= true
@@ -13,8 +42,8 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
 
         this.io.Subordinate.valid #= false
     }
-
-    def sendWordSync () : Unit = {
+    
+    def sendWordAsync () : Unit = {
         this.io.Subordinate.payload#=0x7fffffff
         this.io.Subordinate.valid #= true
         // this.io.Manager.ready #= false
@@ -24,7 +53,7 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
         this.io.Subordinate.valid #= false
     }
 
-    def sendHalfWordSync () : Unit = {
+    def sendHalfWordAsync () : Unit = {
         this.io.Subordinate.payload#=0x7fff7fff
         this.io.Subordinate.valid #= true
         // this.io.Manager.ready #= false
@@ -52,11 +81,15 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
 
       this.io.Manager.ready #= true
       
+      this.SubordinateDomain.waitRisingEdge()
+      while(this.managerClockArea.SendingFSM.stateNext.toBigInt != 4){
+        this.SubordinateDomain.waitRisingEdge()
+      }
       while(this.managerClockArea.SendingFSM.stateNext.toBigInt == 4){
       if(flip){
         this.io.Subordinate.valid #= false
         for(i <- 1 to wait){
-          this.sendHalfWordSync()
+          this.SubordinateDomain.waitRisingEdge()
         }
         
       }
@@ -82,7 +115,7 @@ case class FrameFormerFlowSimModule(Input_Width: Int, Output_Width: Int, Max_Int
       if(flip){
         this.io.Subordinate.valid #= false
         for(i <- 1 to wait){
-          this.sendHalfWordSync()
+          this.SubordinateDomain.waitRisingEdge()
         }
         
       }
@@ -165,6 +198,7 @@ object FrameFormerFlowSim extends App {
        val dut = FrameFormerFlowSimModule(32, 64, 16)
         dut.managerClockArea.SendingFSM.stateReg.simPublic()
         dut.managerClockArea.SendingFSM.stateNext.simPublic()
+        dut.SubordinateDomain.clock.simPublic()
         dut
     }).doSim {dut =>
 
@@ -190,31 +224,42 @@ object FrameFormerFlowSim extends App {
 
         dut.SubordinateDomain.forkStimulus(period = 5)
 
-  
-        dut.waitForIdleAgain()
-        dut.sendRandomPayload()
-        dut.sendHalfWordSync()
-        dut.sendWordSync()
+
+        dut.sendPayloadFromFile("/home/Patrick/packetParsingDebug/ConfirmBeforeFF.csv")
+
+        //we want to create random payload but also vary the timings of transactions to see the following scenarios
+        //1. a singlepayload entering
+        //2. multiple entries entering when empty
+        //3. multiple entries entering when full
+        //4. variations of downstream being ready in between states
+        //5. sending and recieving
+        // dut.waitForIdleAgain()
+        // dut.sendRandomPayload()
+        // dut.sendHalfWordAsync()
+        // dut.sendWordAsync()
+
         
+        // //dut.ManagerDomain.waitRisingEdgeWhere(dut.managerClockArea.SendingFSM.stateReg.toString == "Payload")
+        // //dut.ManagerDomain.waitActiveEdgeWhere(dut.managerClockArea.SendingFSM.stateReg.toString == "Payload")
+        // dut.ManagerDomain.waitRisingEdge(10)
 
-        dut.sendRandomPayload()
-        dut.sendRandomPayload()
-        dut.sendRandomPayload()
-        dut.sendRandomPayload()
-        dut.sendRandomPayload()
+        // dut.sendHalfWordAsync()
 
-        dut.sendHalfWordSync()
-        dut.SubordinateDomain.waitRisingEdge(10)
+        // dut.waitXcyclesBetweenSendingRandomPayload(3,15)
+        // // while (dut.managerClockArea.SendingFSM.stateReg.toString != "HeaderPart2"){
+        // //   dut.ManagerDomain.waitRisingEdge()
+        // // }
+        
+        
+        
+        // dut.sendXDuplicatePayload(5)
+        //   for (i <- 1 to 2){
+        //       dut.sendRandomPayload()
+        //   }
+        //   // dut.waitForIdleAgain()
 
-        dut.sendWordSync()
-        dut.sendRandomPayload()
-        dut.sendWordSync()
-        dut.sendRandomPayload()
-        dut.sendWordSync()
-        dut.sendRandomPayload()
-        dut.sendRandomPayload()
-
-        dut.waitForIdleAgain()
+        //   dut.waitXcyclesBetweenSendingPayload(2)
+        //   dut.waitForIdleAgain()
 
     }
 
