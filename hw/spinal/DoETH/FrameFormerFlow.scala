@@ -145,7 +145,17 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
 
     val Overflow = Reg(UInt(32 bits)) init(0)
 
+    val PacketsRecieved = Reg(UInt(32 bits)) init(0)
+
+    val BadSync = Reg(UInt(32 bits)) init(0)
+
+    //packets recieved
+    //fs during 
+    //packets in the queue
+
     configPort.readAndWrite(Overflow,address=BigInt("A0000000",16))
+    configPort.readAndWrite(PacketsRecieved,address=BigInt("A0000000",16),bitOffset=32)
+    configPort.readAndWrite(BadSync,address=BigInt("A0000000",16),bitOffset=64)
 
     when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff) & inputs_debug.FFSisFull){
       Overflow:=Overflow+1
@@ -173,6 +183,9 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
         BufferQueue.io.push.valid := True
         goto(recieving2ndBeat)
       }otherwise{
+        when(io.Subordinate.payload === 0x7fffffff){
+          BadSync:=BadSync+1
+        }
         BufferQueue.io.push.valid := False
       }
     }
@@ -184,6 +197,9 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
         BufferQueue.io.push.valid := True
         goto(recieving3rdBeat)
       }otherwise{
+        when(io.Subordinate.payload === 0x7fffffff){
+          BadSync:=BadSync+1
+        }
         BufferQueue.io.push.valid := False
       }
     }
@@ -196,6 +212,9 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
         BufferQueue.io.push.valid := True
         goto(recieving4thBeat)
       }otherwise{
+        when(io.Subordinate.payload === 0x7fffffff){
+          BadSync:=BadSync+1
+        }
         BufferQueue.io.push.valid := False
       }
     }
@@ -205,8 +224,14 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
       when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff)){
         BufferQueue.io.push.payload := io.Subordinate.payload
         BufferQueue.io.push.valid := True
+
+        PacketsRecieved := PacketsRecieved + 1
+        
         goto(Idle)
       }otherwise{
+        when(io.Subordinate.payload === 0x7fffffff){
+          BadSync:=BadSync+1
+        }
         BufferQueue.io.push.valid := False
       }
     }

@@ -199,7 +199,6 @@ object FrameFormerFlowSim extends App {
        val dut = FrameFormerFlowSimModule(32, 64, 16)
         dut.managerClockArea.SendingFSM.stateReg.simPublic()
         dut.managerClockArea.SendingFSM.stateNext.simPublic()
-        dut.SubordinateDomain.clock.simPublic()
         dut
     }).doSim {dut =>
 
