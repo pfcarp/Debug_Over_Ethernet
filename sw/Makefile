@@ -79,6 +79,9 @@ Stream.o:
 Deformatter.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/Deformatter.cpp -o $(OBJ)/Deformatter.o $(CXXFLAGS)
 
+Dispatcher.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/Dispatcher.cpp -o $(OBJ)/Dispatcher.o $(CXXFLAGS)
+
 
 parser: PacketFactory.o Packet.o Stream.o Deformatter.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) parser.cpp $(OBJ)/*.o -o parser.out $(CXXFLAGS)
@@ -86,10 +89,10 @@ parser: PacketFactory.o Packet.o Stream.o Deformatter.o
 online: PacketFactory.o Packet.o Stream.o Deformatter.o Sniffer.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) online.cpp $(OBJ)/*.o -o online.out $(CXXFLAGS) $(PCAPFLAGS)
 
-tests: Packet.o Deformatter.o
+tests: Dispatcher.o Packet.o Deformatter.o Stream.o PacketFactory.o
 	g++ $(OPT) $(INCLUDE) tests.cpp $(TEST)/packet/*.cpp $(TEST)/deformatter/*.cpp $(OBJ)/*.o -o tests.out $(CXXFLAGS)
 
-gui: DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
+gui: Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(wildcard object/*.o) -o doeth.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
 
 

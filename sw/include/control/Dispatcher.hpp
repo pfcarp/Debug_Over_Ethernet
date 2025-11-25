@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "Event.hpp"
+#include "Packet.hpp"
 #include "Collection.hpp"
 
 
@@ -14,6 +14,6 @@ class Dispatcher {
 
   public:
     // Methods
-    void add(Packet::Event event)
+    void push(int source, Packet::Base packet);
     
 };

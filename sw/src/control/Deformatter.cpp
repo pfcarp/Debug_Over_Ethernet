@@ -40,16 +40,16 @@ void Deformatter::format() {
         insertInPrevious = toInsertInPrevious(frame[15], i/2);
       }
       else {
-        streams[current].insert((frame[i] & 0xfe) | ((frame[15] >> (i/2)) & 0x01));
+        streams[current]->insert((frame[i] & 0xfe) | ((frame[15] >> (i/2)) & 0x01));
       }
     }
     else {
       if (insertInPrevious) {
-        streams[previous].insert(frame[i]);
+        streams[previous]->insert(frame[i]);
         insertInPrevious = false;
       }
       else
-        streams[current].insert(frame[i]);
+        streams[current]->insert(frame[i]);
     }
   }
 }
@@ -59,3 +59,30 @@ void Deformatter::clean() {
   frame.resize(16);
   frame.assign(frame.size(), 0);
 }
+
+
+DeformatterVector::DeformatterVector() {
+  for (size_t i = 0; i < 4; i++) {
+    streams.push_back(new StreamVector());
+  }
+}
+
+DeformatterVector::~DeformatterVector() {
+  for (size_t i = 0; i < streams.size(); i++) {
+    delete streams[i];
+  }
+}
+
+
+DeformatterDispatcher::DeformatterDispatcher(Dispatcher& dispatcher): dispatcher(dispatcher) {
+  for (size_t i = 0; i < 4; i++) {
+    streams.push_back(new StreamDispatcher(dispatcher));
+  }
+}
+
+DeformatterDispatcher::~DeformatterDispatcher() {
+  for (size_t i = 0; i < streams.size(); i++) {
+    delete streams[i];
+  }
+}
+

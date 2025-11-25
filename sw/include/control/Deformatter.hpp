@@ -5,6 +5,7 @@
 #include <cstdint>
 
 
+#include "Dispatcher.hpp"
 #include "Stream.hpp"
 
 
@@ -22,7 +23,7 @@ class Deformatter {
     
   public:
     // Attributes
-    std::vector<Stream> streams = std::vector<Stream>(4);
+    std::vector<Stream*> streams = std::vector<Stream*>(); // Needed for tests...
     std::vector<uint8_t> frame = std::vector<uint8_t>(16); // Needed for tests...
     // Methods
     bool insert(uint8_t byte);
@@ -30,3 +31,24 @@ class Deformatter {
 
 };
 
+
+class DeformatterVector: public Deformatter {
+
+  public:
+    DeformatterVector();
+    ~DeformatterVector();
+
+};
+
+
+class DeformatterDispatcher: public Deformatter {
+
+  private:
+    // Attributes
+    Dispatcher& dispatcher;
+
+  public:
+    DeformatterDispatcher(Dispatcher& dispatcher);
+    ~DeformatterDispatcher();
+
+};

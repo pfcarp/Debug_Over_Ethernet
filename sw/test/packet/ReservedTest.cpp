@@ -5,14 +5,14 @@
 
 
 TEST_CASE("Reserved packets are 'done' right after construction") {
-  Packet::Reserved obj(0);
+  Packet::Reserved obj;
 
   // Right after creaion
   CHECK(obj.isDone());
 }
 
 TEST_CASE("Reserved packets are always 'done'") {
-  Packet::Reserved obj(0);
+  Packet::Reserved obj;
 
   for (int i = 0; i < 5; i++) {
     obj.insert(0);
