@@ -120,7 +120,11 @@ int main(int argc, char** argv) {
     if (pipeline.capture()) {
       break;
     }
-    pipeline.filter(mode);
+    //if (pipeline.detect()) {
+      pipeline.filter(mode);
+      //pipeline.compress();
+      //pipeline.store();
+    //}
     pipeline.display();
   }
 
