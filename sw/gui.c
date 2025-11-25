@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
     inserters.push_back(new InserterNormal((*watchpoints)[i], (i+1)*25));
   }
   roofline = new Points(&eventsRoofline[0]);
-  inserters.push_back(new InserterStep((*roofline)[0], 25));
+  inserters.push_back(new InserterStep((*roofline)[1], 25));
   // Generate roofline
   app = gtk_application_new("com.example.LivePlot", G_APPLICATION_DEFAULT_FLAGS);
 
