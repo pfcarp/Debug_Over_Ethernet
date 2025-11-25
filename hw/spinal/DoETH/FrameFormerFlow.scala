@@ -8,6 +8,8 @@ import scala.math._
 
 import VerilogBusAttributeAdder._
 import spinal.lib.bus.amba4.axis._
+import spinal.lib.bus.amba4.axi._
+import spinal.core
 
 //import spinal.core.sim._
 //import spinal.core
@@ -20,10 +22,37 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     //interfaces
     val Subordinate = slave Flow (Bits(Input_Width bits)) //is always 64or32 bits wide
     val Manager = master(Axi4Stream(Axi4StreamConfig(dataWidth = Output_Width/8, useLast=true)))//is always 64or32 bits wide
-    val clockSub = in Bool() //clock for the subordinate interface
-    val clockMan = in Bool() //clock for the manager interface
-    val resetSub = in Bool() //reset for the subordinate interface
-    val resetMan = in Bool() //reset for the manager interface
+    // val clockSub = in Bool() //clock for the subordinate interface
+    // val clockMan = in Bool() //clock for the manager interface
+    // val resetSub = in Bool() //reset for the subordinate interface
+    // val resetMan = in Bool() //reset for the manager interface
+    val axi = slave (Axi4(Axi4Config(
+      addressWidth              =    40,
+      dataWidth                 =   128,
+      idWidth                   =    16,
+      useId                     =  true,
+      useRegion                 = false,
+      useBurst                  =  true,
+      useLock                   =  true,
+      useCache                  =  true,
+      useSize                   =  true,
+      useQos                    =  true,
+      useLen                    =  true,
+      useLast                   =  true,
+      useResp                   =  true,
+      useProt                   =  true,
+      useStrb                   =  true,
+      useAllStrb                = false,
+      arUserWidth               =    16,
+      awUserWidth               =    16,
+      rUserWidth                =    -1,
+      wUserWidth                =    -1,
+      bUserWidth                =    -1,
+      readIssuingCapability     =     8,
+      writeIssuingCapability    =     8,
+      combinedIssuingCapability =    16,
+      readDataReorderingDepth   =    -1
+    )))
   }
   val inputs_debug = new Bundle {
     //configurable input parameters
@@ -62,23 +91,42 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   // EmptyStream.payload := 0
   // EmptyStream.valid := True
 
-  val ManagerDomain = ClockDomain(
-    clock = io.clockMan,
-    reset = io.resetMan,
+
+  // val ManagerDomain = ClockDomain(
+  //   clock = io.clockMan,
+  //   reset = io.resetMan,
+  //   config = ClockDomainConfig(
+  //     resetKind = ASYNC,
+  //     resetActiveLevel = LOW
+  //   )
+  // )
+  val ManagerDomain = ClockDomain.external(
+    name = "Manager",
     config = ClockDomainConfig(
       resetKind = ASYNC,
       resetActiveLevel = LOW
     )
   )
-  val SubordinateDomain = ClockDomain(
-    clock = io.clockSub,
-    reset = io.resetSub,
-    //clockEnable = ManagerDomain.readResetWire,
+
+
+  // val SubordinateDomain = ClockDomain(
+  //   clock = io.clockSub,
+  //   reset = io.resetSub,
+  //   //clockEnable = ManagerDomain.readResetWire,
+  //   config = ClockDomainConfig(
+  //     resetKind = ASYNC,
+  //     resetActiveLevel = LOW
+  //   )
+  // )
+
+  val SubordinateDomain = ClockDomain.external(
+    name = "Subordinate",
     config = ClockDomainConfig(
       resetKind = ASYNC,
       resetActiveLevel = LOW
     )
   )
+
   //SubordinateDomain.setSynchronousWith(ManagerDomain)
 
   val Previous = Bits(32 bits)
@@ -92,7 +140,16 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   )
 
   val subordinateClockArea = new ClockingArea(SubordinateDomain) {
+    
+    val configPort = Axi4SlaveFactory(io.axi)
 
+    val Overflow = Reg(UInt(32 bits)) init(0)
+
+    configPort.readAndWrite(Overflow,address=BigInt("A0000000",16))
+
+    when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff) & inputs_debug.FFSisFull){
+      Overflow:=Overflow+1
+    }
   // BufferQueue.io.push << io.Subordinate.toStream.resized //Subordinate should feed directly into the queue
 
   //now recieving is a state machine based on the recieving of the full sync word then expected subsequent data burst 
@@ -285,6 +342,7 @@ object FrameFormerFlowVerilogGen extends App {
       outputWidth,
       maxInternalSpace
     )
+    VerilogBusAttributeAdder(FF.io.axi)
     VerilogBusAttributeAdder(FF.io.Manager) // Add bus attributes to the Manager interface
     FF
 })
