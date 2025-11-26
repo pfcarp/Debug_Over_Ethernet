@@ -286,9 +286,9 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
     //fs during 
     //packets in the queue
 
-    configPort.readAndWrite(timeOut,address=BigInt("100000000",16))
-    configPort.readAndWrite(packetThreshold,address=BigInt("100000000",16),bitOffset=32)
-    configPort.readAndWrite(flushTimer,address=BigInt("100000000",16),bitOffset=64)
+    configPort.readAndWrite(timeOut,address=BigInt("B0000000",16))
+    configPort.readAndWrite(packetThreshold,address=BigInt("B0000000",16),bitOffset=32)
+    configPort.readAndWrite(flushTimer,address=BigInt("B0000000",16),bitOffset=64)
     
     
 
@@ -459,3 +459,4 @@ object FrameFormerFlowVHDLGen extends App {
 
 
 //(* X_INTERFACE_INFO = "XIL_INTERFACENAME io_axi, PROTOCOL AXI4, MODE Slave" , X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 io_axi AWVALID", X_INTERFACE_PARAMETER = "FREQ_HZ 249997498" *) 
+// X_INTERFACE_PARAMETER = "FREQ_HZ 156250000"
