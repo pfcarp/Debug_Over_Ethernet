@@ -18,7 +18,7 @@ class Sniffer {
     std::string name;
     pcap_t* interface = nullptr;
     char errbuf[PCAP_ERRBUF_SIZE];
-    Deformatter deformatter;
+    Deformatter& deformatter;
     std::vector<uint8_t> recording;
     // Methods
     void onPacket(const pcap_pkthdr* header, const u_char* packet);
@@ -30,6 +30,7 @@ class Sniffer {
   public:
     // Attributes
     // Methods
+    Sniffer(Deformatter& deformatter);
     std::vector<std::string> getDevices();
     void pickDevice(std::string interface);
     void unpickDevice();

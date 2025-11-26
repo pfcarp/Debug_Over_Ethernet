@@ -9,8 +9,6 @@
 DataBuffer::DataBuffer(Event* event, std::string style): Buffer(event, style) {}
 
 TimedData DataBuffer::at(size_t index) const {
-  //if (index >= data.x.size())
-  //  return NULL;  
   TimedData res = {.time = data.x[index], .value = data.y[index]};
   return res;
 }

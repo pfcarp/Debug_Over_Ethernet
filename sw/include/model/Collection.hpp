@@ -9,11 +9,10 @@
 
 class Collection {
 
-  protected:
-    std::vector<Buffer*> buffers;
-
   public:
-    
+    // Attributes
+    std::vector<Buffer*> buffers;
+    // methods
     double xmin();
     double xmax();
     double ymin();

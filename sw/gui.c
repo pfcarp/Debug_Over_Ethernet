@@ -14,18 +14,22 @@
 #include "Graph.hpp"
 #include "GraphArea.hpp"
 #include "InterfaceSelector.hpp"
+#include "Deformatter.hpp"
+#include "Events.hpp"
+#include "WatchPoints.hpp"
 
 
 // Model/data
 static Sniffer* sniffer;
+static Deformatter* deformatter;
+static Dispatcher* dispatcher;
 static Graph* graph = NULL;
-static Collection* traces;
-static Collection* watchpoints;
+static Events* traces;
+static WatchPoints* watchpoints;
 static Points* roofline;
 static std::vector<Inserter*> inserters;
 
-static std::vector<Event> eventsRoofline;
-static std::vector<Event> eventsPerf;
+static std::vector<Event*> eventsPerf;
 // Overall control
 static bool enabled = false;
 
@@ -85,12 +89,9 @@ static gboolean update_plot(gpointer user_data) {
 
 
 static void on_reset_click(GtkButton* button, gpointer user_data) {
-  for (int i = 0; i < traces->amount(); i++) {
-    (*traces)[i]->clear();
-  }
-  for (int i = 0; i < watchpoints->amount(); i++) {
-    (*watchpoints)[i]->clear();
-  }
+  traces->clear();
+  watchpoints->clear();
+  roofline->clear();
   update_reset_button();
   update_plot(NULL);
 }
@@ -195,27 +196,27 @@ int main(int argc, char *argv[]) {
   GtkApplication *app;
   int status;
 
-  eventsRoofline = {Event("Roofline")};
-  eventsPerf = {Event("Inst. retired"), Event("L1 refills"), Event("L2 refills"), Event("DTLB refills")};
-
-  sniffer = new Sniffer();
+  eventsPerf = {new Event("Inst. retired"), new Event("L1 refills"), new Event("L2 refills"), new Event("DTLB refills")};
 
   graph = new Graph("inputs/toy_example.dot");
-  traces = new Collection();
-  for (int i = 0; i < eventsPerf.size(); i++) {
-    traces->add(new DataBuffer(&eventsPerf[i]));
+
+  traces = new Events(eventsPerf);
+  for (int i = 0; i < traces->buffers.size(); i++) {
     inserters.push_back(new InserterLinear((*traces)[i], i*1.57));
   }
-  watchpoints = new Collection();
+  watchpoints = new WatchPoints(graph->asWatchPoints());
   for (int i = 0; i < graph->nodes.size(); i++) {
-    watchpoints->add(new HistogramBuffer(&graph->nodes[i]));
     inserters.push_back(new InserterNormal((*watchpoints)[i], (i+1)*25));
   }
-  roofline = new Points(&eventsRoofline[0]);
+  roofline = new Points();
   inserters.push_back(new InserterStep((*roofline)[1], 25));
+
+  deformatter = new DeformatterDispatcher(*dispatcher);
+  sniffer = new Sniffer(*deformatter);
+  dispatcher = new Dispatcher(*watchpoints, *traces);
+
   // Generate roofline
   app = gtk_application_new("com.example.LivePlot", G_APPLICATION_DEFAULT_FLAGS);
-
   g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
   status = g_application_run(G_APPLICATION(app), argc, argv);
   g_object_unref(app);
@@ -229,11 +230,15 @@ int main(int argc, char *argv[]) {
   for (size_t i = 0; i < inserters.size(); i++)
     delete inserters[i];
   delete traces;
+  for (size_t i = 0; i < eventsPerf.size(); i++)
+    delete eventsPerf[i];
   delete watchpoints;
   delete plot;
   delete graph;
   delete interfacesSelector;
   delete sniffer;
+  delete deformatter;
+  delete dispatcher;
 
   return status;
 }

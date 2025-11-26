@@ -1,10 +1,13 @@
 #pragma once
 
 
-#include "Event.hpp"
+#include <cstdint>
 
 
-class GraphNode: public Event {
+#include "WatchPoint.hpp"
+
+
+class GraphNode: public WatchPoint {
 
   public:
     double x;
@@ -12,5 +15,5 @@ class GraphNode: public Event {
     double width;
     double height;
     
-    GraphNode(std::string name = "", double x = 0.0, double y = 0.0, double width = 1.0, double height = 1.0);
+    GraphNode(std::string name = "", uint64_t address = 0, double x = 0.0, double y = 0.0, double width = 1.0, double height = 1.0);
 };

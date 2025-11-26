@@ -1,6 +1,7 @@
 #include "Graph.hpp"
 
 
+#include <cstdint>
 #include <iostream>
 
 
@@ -30,7 +31,8 @@ Graph::Graph(std::string filename) {
 
   // --- Extract nodes ---
   for (Agnode_t* n = agfstnode(g); n; n = agnxtnode(g, n)) {
-    nodes.push_back(GraphNode(std::string(agnameof(n)), ND_coord(n).x, ND_coord(n).y, ND_width(n)*72/2, ND_height(n)*72/2));
+    uint64_t address = 0;
+    nodes.push_back(GraphNode(std::string(agnameof(n)), address, ND_coord(n).x, ND_coord(n).y, ND_width(n)*72/2, ND_height(n)*72/2));
   }
 
   // --- Extract edges ---
@@ -66,4 +68,12 @@ Graph::Graph(std::string filename) {
   gvFreeLayout(gvc, g);
   agclose(g);
   gvFreeContext(gvc);
-};
+}
+
+std::vector<WatchPoint*> Graph::asWatchPoints() {
+  std::vector<WatchPoint*> res;
+  for (GraphNode& node : nodes) {
+    res.push_back(&node);
+  }
+  return res;
+}

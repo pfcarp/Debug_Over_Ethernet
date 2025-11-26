@@ -7,6 +7,8 @@
 #include <format>
 
 
+Sniffer::Sniffer(Deformatter& deformatter): deformatter(deformatter) {}
+
 inline bool Sniffer::hasHeader(const u_char* packet) const {
   return (packet[0] == 0xab) && (packet[1] == 0xba);
 }

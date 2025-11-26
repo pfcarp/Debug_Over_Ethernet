@@ -8,8 +8,10 @@ class Points: public Collection {
 
 
   public:
-    Points(Event* current);
+    Points();
     ~Points();
     Buffer* operator[](size_t index) override;
+    void clear() override;
     void archives();
+
 };

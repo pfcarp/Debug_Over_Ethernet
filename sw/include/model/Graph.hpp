@@ -20,4 +20,6 @@ class Graph {
     std::vector<GraphEdge> edges;
 
     Graph(std::string filename = "");
+    std::vector<WatchPoint*> asWatchPoints();
+
 };

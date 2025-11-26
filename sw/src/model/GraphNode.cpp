@@ -1,4 +1,4 @@
 #include "GraphNode.hpp"
 
 
-GraphNode::GraphNode(std::string name, double x, double y, double width, double height): Event(name), x(x), y(y), width(width), height(height) {};
+GraphNode::GraphNode(std::string name, uint64_t address, double x, double y, double width, double height): WatchPoint(name, address), x(x), y(y), width(width), height(height) {};
