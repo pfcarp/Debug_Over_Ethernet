@@ -223,7 +223,7 @@ object FrameFormerFlowSim extends App {
         dut.ManagerDomain.forkStimulus(period = 10)
 
         dut.SubordinateDomain.forkStimulus(period = 5)
-
+        dut.ManagerDomain.waitRisingEdge()
 
         dut.sendPayloadFromFile("/home/Patrick/packetParsingDebug/ConfirmBeforeFF.csv")
 

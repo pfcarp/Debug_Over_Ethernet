@@ -26,7 +26,34 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     // val clockMan = in Bool() //clock for the manager interface
     // val resetSub = in Bool() //reset for the subordinate interface
     // val resetMan = in Bool() //reset for the manager interface
-    val axi = slave (Axi4(Axi4Config(
+    val axiSub = slave (Axi4(Axi4Config(
+      addressWidth              =    40,
+      dataWidth                 =   128,
+      idWidth                   =    16,
+      useId                     =  true,
+      useRegion                 = false,
+      useBurst                  =  true,
+      useLock                   =  true,
+      useCache                  =  true,
+      useSize                   =  true,
+      useQos                    =  true,
+      useLen                    =  true,
+      useLast                   =  true,
+      useResp                   =  true,
+      useProt                   =  true,
+      useStrb                   =  true,
+      useAllStrb                = false,
+      arUserWidth               =    16,
+      awUserWidth               =    16,
+      rUserWidth                =    -1,
+      wUserWidth                =    -1,
+      bUserWidth                =    -1,
+      readIssuingCapability     =     8,
+      writeIssuingCapability    =     8,
+      combinedIssuingCapability =    16,
+      readDataReorderingDepth   =    -1
+    )))
+    val axiMan = slave (Axi4(Axi4Config(
       addressWidth              =    40,
       dataWidth                 =   128,
       idWidth                   =    16,
@@ -141,7 +168,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
 
   val subordinateClockArea = new ClockingArea(SubordinateDomain) {
     
-    val configPort = Axi4SlaveFactory(io.axi)
+    val configPort = Axi4SlaveFactory(io.axiSub)
 
     val Overflow = Reg(UInt(32 bits)) init(0)
 
@@ -247,6 +274,35 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   }
 
 val managerClockArea = new ClockingArea(ManagerDomain) {
+    val configPort = Axi4SlaveFactory(io.axiMan)
+
+    val packetThreshold = Reg(UInt(32 bits)) init(0)
+
+    val timeOut = Reg(UInt(32 bits)) init(20)
+
+    val flushTimer = Reg(UInt(32 bits)) init(0)
+
+    //packets recieved
+    //fs during 
+    //packets in the queue
+
+    configPort.readAndWrite(timeOut,address=BigInt("100000000",16))
+    configPort.readAndWrite(packetThreshold,address=BigInt("100000000",16),bitOffset=32)
+    configPort.readAndWrite(flushTimer,address=BigInt("100000000",16),bitOffset=64)
+    
+    
+
+
+  val EthernetQueue = new StreamFifo(
+    dataType = Bits(Input_Width bits),
+    depth = Max_Internal_Space*5,
+  )
+
+
+  //creating another fifo due to timeout and threshold
+  EthernetQueue.io.push<<BufferQueue.io.pop
+
+
   inputs_debug.FFMisFull := BufferQueue.io.popOccupancy === Max_Internal_Space
   inputs_debug.FFMisEmpty := BufferQueue.io.popOccupancy === 0
 
@@ -255,6 +311,9 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
   val SendingFSM = new StateMachine{// I can already see a potential bug because it is checking if fired but the delay between states make put duplicates 
     val counter = Reg(UInt(8 bits)) init(0)
+    val timeOutCounter = Reg(UInt(32 bits)) init(timeOut)
+    val flushTimerCounter = Reg(UInt(32 bits)) init(flushTimer)
+
     io.Manager.payload.data := B(1)#*Output_Width
     io.Manager.valid := False
     io.Manager.payload.last := False
@@ -269,8 +328,16 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
         // io.Manager.payload := B(0).resized
         io.Manager.valid := False
         io.Manager.payload.last := False
-        when(!inputs_debug.FFMisEmpty){
+        when((EthernetQueue.io.occupancy>=packetThreshold & timeOutCounter===0)||(EthernetQueue.io.occupancy=/=0 & timeOutCounter===0 & flushTimerCounter===0)){
+          timeOutCounter:=timeOut //reset the counter
+          flushTimerCounter:=flushTimer
           goto(HeaderPart1) 
+        }.elsewhen(timeOutCounter=/=0){
+          //decrement the timer
+          timeOutCounter:=timeOutCounter-|1
+        }.elsewhen(flushTimerCounter=/=0){
+          //only start this count down once timeout is 0
+          flushTimerCounter:=flushTimerCounter-|1
         }
       }
     }
@@ -310,13 +377,13 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
         }
 
         //just an otherwise statement 
-        .elsewhen(!inputs_debug.FFMisEmpty & BufferQueue.io.pop.valid & io.Manager.fire){
-          io.Manager.payload.data := BufferQueue.io.pop.payload.resized //pop from the queue and send to the manager
+        .elsewhen(EthernetQueue.io.occupancy=/=0 & EthernetQueue.io.pop.valid & io.Manager.fire){
+          io.Manager.payload.data := EthernetQueue.io.pop.payload.resized //pop from the queue and send to the manager
           //BufferQueue.io.pop.ready := True
           counter:= counter + 1
         }
 
-        .elsewhen(inputs_debug.FFMisEmpty & io.Manager.fire){
+        .elsewhen(EthernetQueue.io.occupancy===0 & io.Manager.fire){
           //BufferQueue.io.pop.ready := False
           io.Manager.payload.data := B(1)#*Output_Width//make this the correct type
           counter:= counter + 1
@@ -336,7 +403,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
         when(io.Manager.fire){
           //io.Manager.valid := False
           counter:=0
-          when(inputs_debug.FFMisEmpty){
+          when(inputs_debug.FFMisEmpty||timeOutCounter=/=0){
            goto(Idle)
           } 
           .otherwise {
@@ -347,7 +414,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
     }
   }
   
-  BufferQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & !inputs_debug.FFMisEmpty
+  EthernetQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & EthernetQueue.io.occupancy=/=0
 
   inputs_debug.FFMisReady := SendingFSM.isActive(SendingFSM.Payload) & io.Manager.isFree
 }
@@ -367,7 +434,8 @@ object FrameFormerFlowVerilogGen extends App {
       outputWidth,
       maxInternalSpace
     )
-    VerilogBusAttributeAdder(FF.io.axi)
+    VerilogBusAttributeAdder(FF.io.axiSub)
+    VerilogBusAttributeAdder(FF.io.axiMan)
     VerilogBusAttributeAdder(FF.io.Manager) // Add bus attributes to the Manager interface
     FF
 })
@@ -388,3 +456,6 @@ object FrameFormerFlowVHDLGen extends App {
     FF
 })
 }
+
+
+//(* X_INTERFACE_INFO = "XIL_INTERFACENAME io_axi, PROTOCOL AXI4, MODE Slave" , X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 io_axi AWVALID", X_INTERFACE_PARAMETER = "FREQ_HZ 249997498" *) 
