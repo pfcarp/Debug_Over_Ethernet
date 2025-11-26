@@ -10,6 +10,7 @@ import VerilogBusAttributeAdder._
 import spinal.lib.bus.amba4.axis._
 import spinal.lib.bus.amba4.axi._
 import spinal.core
+import spinal.lib.SlicesOrder
 
 //import spinal.core.sim._
 //import spinal.core
@@ -103,7 +104,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     val FFMisFull = out (Bool())
     val FFMisEmpty = out (Bool())
     val FFMQueueTail = out (UInt((log10(Max_Internal_Space.asInstanceOf[Double]) / log10(2.0)).toInt bits))
-
+    val EthernetFrameInput = in(Bool())
   }
   println(io.Manager.config.dataWidth+" "+ Output_Width)
   //Stream to queue, when first item enters, put the input data then que data then end word
@@ -282,6 +283,13 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
     val flushTimer = Reg(UInt(32 bits)) init(0)
 
+    val EthernetFrameCount = Reg(UInt(32 bits)) init(0)
+
+    val TrueEthernetFrameCount = Reg(UInt(32 bits)) init(0)
+
+    val succesfultransfers = Reg(UInt(32 bits)) init(0)
+    val EthernetWordsGood = Reg(UInt(32 bits)) init(0)
+
     //packets recieved
     //fs during 
     //packets in the queue
@@ -289,19 +297,33 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
     configPort.readAndWrite(timeOut,address=BigInt("B0000000",16))
     configPort.readAndWrite(packetThreshold,address=BigInt("B0000000",16),bitOffset=32)
     configPort.readAndWrite(flushTimer,address=BigInt("B0000000",16),bitOffset=64)
+    configPort.readAndWrite(EthernetFrameCount,address=BigInt("B0000000",16),bitOffset=96)
+    configPort.readAndWrite(TrueEthernetFrameCount,address=BigInt("B0000010",16))
+    configPort.readAndWrite(succesfultransfers,address=BigInt("B0000010",16),bitOffset=32)
+    configPort.readAndWrite(EthernetWordsGood,address=BigInt("B0000010",16),bitOffset=64)
+
     
+
+    when(BufferQueue.io.pop.fire){
+      succesfultransfers:=succesfultransfers+1
+    }
+    
+    when(inputs_debug.EthernetFrameInput){
+      TrueEthernetFrameCount:=TrueEthernetFrameCount+1
+    }
     
 
 
   val EthernetQueue = new StreamFifo(
-    dataType = Bits(Input_Width bits),
-    depth = Max_Internal_Space*5,
+    dataType = Bits(Output_Width bits),
+    depth = 40
   )
+  val EthernetQueueAdapter = StreamWidthAdapter(BufferQueue.io.pop, EthernetQueue.io.push)
 
 
-  //creating another fifo due to timeout and threshold
-  EthernetQueue.io.push<<BufferQueue.io.pop
-
+  when(EthernetQueue.io.pop.fire){
+      EthernetWordsGood:=EthernetWordsGood+1
+    }
 
   inputs_debug.FFMisFull := BufferQueue.io.popOccupancy === Max_Internal_Space
   inputs_debug.FFMisEmpty := BufferQueue.io.popOccupancy === 0
@@ -378,7 +400,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
         //just an otherwise statement 
         .elsewhen(EthernetQueue.io.occupancy=/=0 & EthernetQueue.io.pop.valid & io.Manager.fire){
-          io.Manager.payload.data := EthernetQueue.io.pop.payload.resized //pop from the queue and send to the manager
+          io.Manager.payload.data := EthernetQueue.io.pop.payload //pop from the queue and send to the manager
           //BufferQueue.io.pop.ready := True
           counter:= counter + 1
         }
@@ -402,8 +424,9 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
         io.Manager.valid := True
         when(io.Manager.fire){
           //io.Manager.valid := False
+          EthernetFrameCount:=EthernetFrameCount+1
           counter:=0
-          when(inputs_debug.FFMisEmpty||timeOutCounter=/=0){
+          when(EthernetQueue.io.occupancy===0||timeOutCounter=/=0){
            goto(Idle)
           } 
           .otherwise {
