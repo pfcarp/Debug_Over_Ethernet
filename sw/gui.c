@@ -93,7 +93,10 @@ static void on_reset_click(GtkButton* button, gpointer user_data) {
   watchpoints->clear();
   roofline->clear();
   update_reset_button();
-  update_plot(NULL);
+  gtk_widget_queue_draw(plot->parent);
+  gtk_widget_queue_draw(hist->parent);
+  gtk_widget_queue_draw(roof->parent);
+  gtk_widget_queue_draw(milestone->parent);
 }
 
 
