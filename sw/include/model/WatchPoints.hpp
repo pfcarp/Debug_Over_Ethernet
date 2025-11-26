@@ -3,6 +3,7 @@
 
 #include "Collection.hpp"
 #include "WatchPoint.hpp"
+#include "Packet.hpp"
 
 
 class WatchPoints: public Collection {
@@ -12,5 +13,8 @@ class WatchPoints: public Collection {
     WatchPoints(std::vector<WatchPoint*> watchpoints);
     ~WatchPoints();
     Buffer* operator[](size_t index) override;
+    void push(int source, Packet::Base& packet) override;
+    void push(int source, Packet::ShortAddress& packet) override;
+    void push(int source, Packet::LongAddress& packet) override;
 
 };

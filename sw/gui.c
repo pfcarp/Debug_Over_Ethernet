@@ -204,19 +204,12 @@ int main(int argc, char *argv[]) {
   graph = new Graph("inputs/toy_example.dot");
 
   traces = new Events(eventsPerf);
-  for (int i = 0; i < traces->buffers.size(); i++) {
-    inserters.push_back(new InserterLinear((*traces)[i], i*1.57));
-  }
   watchpoints = new WatchPoints(graph->asWatchPoints());
-  for (int i = 0; i < graph->nodes.size(); i++) {
-    inserters.push_back(new InserterNormal((*watchpoints)[i], (i+1)*25));
-  }
-  roofline = new Points();
-  inserters.push_back(new InserterStep((*roofline)[1], 25));
+  roofline = new Points(graph->asWatchPoints());
 
   deformatter = new DeformatterDispatcher(*dispatcher);
   sniffer = new Sniffer(*deformatter);
-  dispatcher = new Dispatcher(*watchpoints, *traces);
+  dispatcher = new Dispatcher(*watchpoints, *traces, *roofline);
 
   // Generate roofline
   app = gtk_application_new("com.example.LivePlot", G_APPLICATION_DEFAULT_FLAGS);
