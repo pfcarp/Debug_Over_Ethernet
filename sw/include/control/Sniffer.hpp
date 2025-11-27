@@ -35,5 +35,6 @@ class Sniffer {
     void pickDevice(std::string interface);
     void unpickDevice();
     ~Sniffer();
+    void printStats();
 
 };

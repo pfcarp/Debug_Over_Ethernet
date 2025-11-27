@@ -33,7 +33,7 @@ void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
       for (size_t i = 2+headerOffset; i < header->len-8; i += 8) {
         // If next four byte do not compose 0xffffffff, do not skip
         if (!areNext8BytesAllSet(&packet[i])) {
-          for (int j = 0; j < 4; j++) {
+          for (int j = 0; j < 8; j++) {
             deformatter.insert(packet[i+j]);
             recording.push_back(packet[i+j]);
           }
@@ -85,7 +85,7 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
   pcap_set_snaplen(interface, 65535);
   pcap_set_promisc(interface, 1);
   pcap_set_timeout(interface, 10);
-  pcap_set_buffer_size(interface, 128*1024*1024);
+  pcap_set_buffer_size(interface, 256*1024*1024);
   pcap_activate(interface);
 
   // Start sniffing
@@ -95,20 +95,46 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
 void Sniffer::unpickDevice() {
   if (interface != nullptr) {
     pcap_breakloop(interface);
+    printStats();
     pcap_close(interface);
     interface = nullptr;
   }
+}
+
+void Sniffer::printStats() {
+    if (interface != nullptr) {
+        struct pcap_stat stats;
+        
+        if (pcap_stats(interface, &stats) == 0) {
+            std::cout << "\n=== Packet Capture Statistics ===" << std::endl;
+            std::cout << "Packets received: " << stats.ps_recv << std::endl;
+            std::cout << "Packets dropped by kernel: " << stats.ps_drop << std::endl;
+            std::cout << "Packets dropped by interface: " << stats.ps_ifdrop << std::endl;
+            
+            // Calculate drop percentage if any packets were received
+            if (stats.ps_recv > 0) {
+                double dropRate = (static_cast<double>(stats.ps_drop) / stats.ps_recv) * 100.0;
+                std::cout << "Drop rate: " << std::format("{:.2f}%", dropRate) << std::endl;
+            }
+        } else {
+            std::cerr << "Error getting statistics: " << pcap_geterr(interface) << std::endl;
+        }
+    } else {
+        std::cerr << "No active interface to get statistics from" << std::endl;
+    }
 }
 
 Sniffer::~Sniffer() {
   // Close pcap
   if (interface != nullptr) {
     pcap_breakloop(interface);
+    printStats();
     pcap_close(interface);
     interface = nullptr;
   }
   // Dump recording
   std::ofstream out("dump.bin", std::ios::binary);
+  std::cout<<""<<std::endl;
   if (!out) {
     throw std::runtime_error("Failed to open file: dump.bin");
   }
