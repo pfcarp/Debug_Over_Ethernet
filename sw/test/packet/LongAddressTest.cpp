@@ -23,6 +23,25 @@ TEST_CASE("LongAddress packet: IS0 4 beat") {
   CHECK(obj.getAddress() == 0x0000000083820200);
 }
 
+TEST_CASE("LongAddress packet: IS0 4 beat") {
+  // Encoding
+  std::vector<uint8_t> encoding = {0x8C, 0x8E, 0x82, 0x83};
+  // Packet under construction
+  Packet::LongAddress obj(0b10011010);
+
+  // During insertion
+  for (uint8_t byte : encoding) {
+    CHECK(!obj.isDone());
+    obj.insert(byte);
+  }
+
+  // Finally ready
+  CHECK(obj.isDone());
+
+  // Check address
+  CHECK(obj.getAddress() == 0x0000000083821C30);
+}
+
 TEST_CASE("LongAddress packet: IS1 4 beat") {
   // Encoding
   std::vector<uint8_t> encoding = {0x80, 0x81, 0x82, 0x83};
