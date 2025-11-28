@@ -628,10 +628,10 @@ inline bool Packet::AddressWithContext::isDone() const {
 void Packet::AddressWithContext::insert(uint8_t byte) {
   if (!addrDone) {
     if (iterator < offset) {
-      A |= (0b01111111 & byte) << (offset+(8*iterator)-iterator);
+      A |= static_cast<uint64_t>(0b01111111 & byte) << (offset+(8*iterator)-iterator);
     }
     else {
-      A |= byte << (8*iterator);
+      A |= static_cast<uint64_t>(byte) << (8*iterator);
     }
     iterator++;
     if (iterator == length) {
@@ -666,7 +666,19 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
 }
 
 inline std::string Packet::AddressWithContext::asString() const {
-  return std::format("Address with context (0x{:08X})", A);
+  return std::format("Address with context (0x{:016X})", A);
+}
+
+uint64_t Packet::AddressWithContext::getAddress() const {
+  return A;
+}
+
+uint32_t Packet::AddressWithContext::getVmID() const {
+  return VMID;
+}
+
+uint32_t Packet::AddressWithContext::getContextID() const {
+  return CONTEXTID;
 }
 
 
@@ -784,22 +796,23 @@ inline void Packet::Q::insert(uint8_t byte) {
   if (hasAddress) {
     if (!isAddrLong) {
       if (iterator == 0) {
-        address |= (0b01111111 & byte) << offset;
+        address |= static_cast<uint64_t>(0b01111111 & byte) << offset;
+        offset--;
         hasAddress = (byte >= 128);
         iterator++;
       }
       else {
-        address |= byte << (8+offset);
+        address |= static_cast<uint64_t>(byte) << (8+offset);
         hasAddress = false;
         iterator = 0;
       }
     }
     else {
       if (iterator < offset) {
-        address |= (0b01111111 & byte) << (offset+(8*iterator)-iterator);
+        address |= static_cast<uint64_t>(0b01111111 & byte) << (offset+(8*iterator)-iterator);
       }
       else {
-        address |= byte << (8*iterator);
+        address |= static_cast<uint64_t>(byte) << (8*iterator);
       }
       iterator++;
       hasAddress = (iterator != 4);
@@ -813,6 +826,10 @@ inline void Packet::Q::insert(uint8_t byte) {
 
 inline std::string Packet::Q::asString() const {
   return std::format("Q (Address = {:016X}, #Counts = {})", address, count.size());
+}
+
+uint64_t Packet::Q::getAddress() const {
+  return address;
 }
 
 

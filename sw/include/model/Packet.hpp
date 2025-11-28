@@ -450,6 +450,9 @@ namespace Packet {
       virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
+      uint64_t getAddress() const;
+      uint32_t getVmID() const;
+      uint32_t getContextID() const;
 
   };
 
@@ -528,6 +531,7 @@ namespace Packet {
       virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
+      uint64_t getAddress() const;
 
   };
 
