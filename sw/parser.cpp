@@ -22,7 +22,7 @@ int main() {
   std::vector<uint8_t> buffer((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
 
   // Process each byte
-  Deformatter deformatter;
+  DeformatterVector deformatter;
   for (uint8_t byte : buffer) {
     deformatter.insert(byte);
   }
@@ -30,7 +30,7 @@ int main() {
   // Print trace
   for (const auto& stream : deformatter.streams) {
     std::cout << "STREAM -----------------------" << std::endl;
-    for (const auto& packet : stream.packets)
+    for (const auto& packet : stream->packets)
       std::cout << packet->asString() << std::endl;
   }
 

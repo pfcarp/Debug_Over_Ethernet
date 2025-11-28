@@ -3,27 +3,27 @@
 #include <cstdint>
 #include <format>
 
-inline bool Packet::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) {
+bool Packet::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) {
   return (lower <= a) && (a <= upper);
 }
 
-inline uint8_t Packet::Base::getIterator() const {
+uint8_t Packet::Base::getIterator() const {
   return iterator;
 }
 
 
-inline bool Packet::Base::isDone() const {
+bool Packet::Base::isDone() const {
   return false;
 }
 
-inline void Packet::Base::insert(uint8_t byte) {}
+void Packet::Base::insert(uint8_t byte) {}
 
-inline std::string Packet::Base::asString() const {
+std::string Packet::Base::asString() const {
   return "";
 }
 
 
-inline bool Packet::Extension::isDone() const {
+bool Packet::Extension::isDone() const {
   switch (type) {
     case Extension::Ext::ASync:             return iterator == 11;
     case Extension::Ext::Discard:           return iterator ==  1;
@@ -64,7 +64,7 @@ std::string Packet::Extension::asString() const {
 }
 
 
-inline bool Packet::TraceInfo::isDone() const {
+bool Packet::TraceInfo::isDone() const {
   return iterator == 5;
 }
 
@@ -122,7 +122,7 @@ void Packet::TraceInfo::insert(uint8_t byte) {
   }
 }
 
-inline std::string Packet::TraceInfo::asString() const {
+std::string Packet::TraceInfo::asString() const {
   std::string base = "Trace info";
   if (hasInfo) {
     for (uint8_t inf : info) {
@@ -146,7 +146,7 @@ inline std::string Packet::TraceInfo::asString() const {
 }
 
 
-inline bool Packet::Timestamp::isDone() const {
+bool Packet::Timestamp::isDone() const {
   return !(hasCountFlag || timestampFlag);
 }
 
@@ -186,52 +186,52 @@ void Packet::Timestamp::insert(uint8_t byte) {
   }
 }
 
-inline std::string Packet::Timestamp::asString() const {
+std::string Packet::Timestamp::asString() const {
   return std::format("Timestamp (TS = {}, COUNT = {})", TS, COUNT);
 }
 
 
-inline bool Packet::TraceOn::isDone() const {
+bool Packet::TraceOn::isDone() const {
   return true;
 }
 
-inline std::string Packet::TraceOn::asString() const {
+std::string Packet::TraceOn::asString() const {
   return "Trace on.";
 }
 
 
-inline bool Packet::FunctionReturn::isDone() const {
+bool Packet::FunctionReturn::isDone() const {
   return true;
 }
 
-inline std::string Packet::FunctionReturn::asString() const {
+std::string Packet::FunctionReturn::asString() const {
   return "Function return.";
 }
 
 
-inline bool Packet::ExceptionReturn::isDone() const {
+bool Packet::ExceptionReturn::isDone() const {
   return true;
 }
 
-inline std::string Packet::ExceptionReturn::asString() const {
+std::string Packet::ExceptionReturn::asString() const {
   return "Exception return.";
 }
 
 
-inline bool Packet::Resynchronization::isDone() const {
+bool Packet::Resynchronization::isDone() const {
   return true;
 }
 
-inline std::string Packet::Resynchronization::asString() const {
+std::string Packet::Resynchronization::asString() const {
   return "Resynchronization.";
 }
 
 
-inline bool Packet::Reserved::isDone() const {
+bool Packet::Reserved::isDone() const {
   return true;
 }
 
-inline std::string Packet::Reserved::asString() const {
+std::string Packet::Reserved::asString() const {
   return "Reserved.";
 }
 
@@ -240,7 +240,7 @@ Packet::CycleCountFormat2::CycleCountFormat2(uint8_t header) {
   F = 0b00000001 & header;
 }
 
-inline bool Packet::CycleCountFormat2::isDone() const {
+bool Packet::CycleCountFormat2::isDone() const {
   return iterator == 1;
 }
 
@@ -250,7 +250,7 @@ void Packet::CycleCountFormat2::insert(uint8_t byte) {
   iterator++;
 }
 
-inline std::string Packet::CycleCountFormat2::asString() const {
+std::string Packet::CycleCountFormat2::asString() const {
   return "Cycle count format 2.";
 }
 
@@ -259,7 +259,7 @@ Packet::CycleCountFormat1::CycleCountFormat1(uint8_t header) {
   U = header & 0b00000001;
 }
 
-inline bool Packet::CycleCountFormat1::isDone() const {
+bool Packet::CycleCountFormat1::isDone() const {
   return iterator == 4;
 }
 
@@ -283,7 +283,7 @@ void Packet::CycleCountFormat1::insert(uint8_t byte) {
   }
 }
 
-inline std::string Packet::CycleCountFormat1::asString() const {
+std::string Packet::CycleCountFormat1::asString() const {
   return "Cycle count format 1.";
 }
 
@@ -293,11 +293,11 @@ Packet::CycleCountFormat3::CycleCountFormat3(uint8_t header) {
   bb = (0b00000011 & header);
 }
 
-inline bool Packet::CycleCountFormat3::isDone() const {
+bool Packet::CycleCountFormat3::isDone() const {
   return true;
 }
 
-inline std::string Packet::CycleCountFormat3::asString() const {
+std::string Packet::CycleCountFormat3::asString() const {
   return "Cycle count format 3.";
 }
 
@@ -306,11 +306,11 @@ Packet::NumberedDataSyncMark::NumberedDataSyncMark(uint8_t header) {
   NUM = 0b00000111 & header;
 }
 
-inline bool Packet::NumberedDataSyncMark::isDone() const {
+bool Packet::NumberedDataSyncMark::isDone() const {
   return true;
 }
 
-inline std::string Packet::NumberedDataSyncMark::asString() const {
+std::string Packet::NumberedDataSyncMark::asString() const {
   return "Numbered data sync mark.";
 }
 
@@ -319,25 +319,25 @@ Packet::UnnumberedDataSyncMark::UnnumberedDataSyncMark(uint8_t header) {
   A = 0b00000111 & header;
 }
 
-inline bool Packet::UnnumberedDataSyncMark::isDone() const {
+bool Packet::UnnumberedDataSyncMark::isDone() const {
   return true;
 }
 
-inline std::string Packet::UnnumberedDataSyncMark::asString() const {
+std::string Packet::UnnumberedDataSyncMark::asString() const {
   return "Unnumbered data sync mark.";
 }
 
 
-inline bool Packet::Commit::isDone() const {
+bool Packet::Commit::isDone() const {
   return done;
 }
 
-inline void Packet::Commit::insert(uint8_t byte) {
+void Packet::Commit::insert(uint8_t byte) {
   commit.push_back(0b01111111 & byte);
   done = (byte < 128);
 }
 
-inline std::string Packet::Commit::asString() const {
+std::string Packet::Commit::asString() const {
   return "Commit.";
 }
 
@@ -346,16 +346,16 @@ Packet::CancelFormat1::CancelFormat1(uint8_t header) {
   M = 0b00000001 & header;
 }
 
-inline bool Packet::CancelFormat1::isDone() const {
+bool Packet::CancelFormat1::isDone() const {
   return done;
 }
 
-inline void Packet::CancelFormat1::insert(uint8_t byte) {
+void Packet::CancelFormat1::insert(uint8_t byte) {
   cancel.push_back(0b01111111 & byte);
   done = (byte < 128);
 }
 
-inline std::string Packet::CancelFormat1::asString() const {
+std::string Packet::CancelFormat1::asString() const {
   return "Cancel format 1.";
 }
 
@@ -364,11 +364,11 @@ Packet::Mispredict::Mispredict(uint8_t header) {
   A = 0b00000011 & header;
 }
   
-inline bool Packet::Mispredict::isDone() const {
+bool Packet::Mispredict::isDone() const {
   return true;
 }
 
-inline std::string Packet::Mispredict::asString() const {
+std::string Packet::Mispredict::asString() const {
   return "Mispredict (A = "+std::to_string(static_cast<int>(A))+")";
 }
 
@@ -377,11 +377,11 @@ Packet::CancelFormat2::CancelFormat2(uint8_t header) {
   A = 0b00000011 & header;
 }
   
-inline bool Packet::CancelFormat2::isDone() const {
+bool Packet::CancelFormat2::isDone() const {
   return true;
 }
 
-inline std::string Packet::CancelFormat2::asString() const {
+std::string Packet::CancelFormat2::asString() const {
   return "CancelFormat2 (A = "+std::to_string(static_cast<int>(A))+")";
 }
 
@@ -391,11 +391,11 @@ Packet::CancelFormat3::CancelFormat3(uint8_t header) {
   A  = 0b00000001 & header;
 }
   
-inline bool Packet::CancelFormat3::isDone() const {
+bool Packet::CancelFormat3::isDone() const {
   return true;
 }
 
-inline std::string Packet::CancelFormat3::asString() const {
+std::string Packet::CancelFormat3::asString() const {
   return "CancelFormat3 (CC = "+std::to_string(static_cast<int>(CC))+", A = "+std::to_string(static_cast<int>(A))+")";
 }
 
@@ -404,20 +404,20 @@ Packet::ConditionalInstructionFormat2::ConditionalInstructionFormat2(uint8_t hea
   CI = 0b00000011 & header;
 }
   
-inline bool Packet::ConditionalInstructionFormat2::isDone() const {
+bool Packet::ConditionalInstructionFormat2::isDone() const {
   return true;
 }
 
-inline std::string Packet::ConditionalInstructionFormat2::asString() const {
+std::string Packet::ConditionalInstructionFormat2::asString() const {
   return "Conditional instruction format 2 (CI = "+std::to_string(static_cast<int>(CI))+")";
 }
 
 
-inline bool Packet::ConditionalFlush::isDone() const {
+bool Packet::ConditionalFlush::isDone() const {
   return true;
 }
 
-inline std::string Packet::ConditionalFlush::asString() const {
+std::string Packet::ConditionalFlush::asString() const {
   return "Conditional flush.";
 }
 
@@ -426,11 +426,11 @@ Packet::ConditionalResultFormat4::ConditionalResultFormat4(uint8_t header) {
   T = 0b00000011 & header;
 }
   
-inline bool Packet::ConditionalResultFormat4::isDone() const {
+bool Packet::ConditionalResultFormat4::isDone() const {
   return true;
 }
 
-inline std::string Packet::ConditionalResultFormat4::asString() const {
+std::string Packet::ConditionalResultFormat4::asString() const {
   return std::format("Conditional result format 4 (TOKEN = {})", T);
 }
 
@@ -440,11 +440,11 @@ Packet::ConditionalResultFormat2::ConditionalResultFormat2(uint8_t header) {
   K = (0b00000100 & header) >> 2;
 }
   
-inline bool Packet::ConditionalResultFormat2::isDone() const {
+bool Packet::ConditionalResultFormat2::isDone() const {
   return true;
 }
 
-inline std::string Packet::ConditionalResultFormat2::asString() const {
+std::string Packet::ConditionalResultFormat2::asString() const {
   return "Condition result format 2.";
 }
 
@@ -453,16 +453,16 @@ Packet::ConditionalResultFormat3::ConditionalResultFormat3(uint8_t header) {
   TOKEN |= (0b00001111 & header) << 8;
 }
   
-inline bool Packet::ConditionalResultFormat3::isDone() const {
+bool Packet::ConditionalResultFormat3::isDone() const {
   return iterator == 1;
 }
 
-inline void Packet::ConditionalResultFormat3::insert(uint8_t byte) {
+void Packet::ConditionalResultFormat3::insert(uint8_t byte) {
   TOKEN |= byte;
   iterator++;
 }
 
-inline std::string Packet::ConditionalResultFormat3::asString() const {
+std::string Packet::ConditionalResultFormat3::asString() const {
   return "Condition result format 3.";
 }
 
@@ -474,7 +474,7 @@ Packet::ConditionalResultFormat1::ConditionalResultFormat1(uint8_t header) {
     CI1 = (0b00000010 & header) >> 1;
 }
   
-inline bool Packet::ConditionalResultFormat1::isDone() const {
+bool Packet::ConditionalResultFormat1::isDone() const {
   return (single)? iterator == 1 : iterator == 2;
 }
 
@@ -505,69 +505,69 @@ void Packet::ConditionalResultFormat1::insert(uint8_t byte) {
   }
 }
 
-inline std::string Packet::ConditionalResultFormat1::asString() const {
+std::string Packet::ConditionalResultFormat1::asString() const {
   return "Conditional result format 1.";
 }
 
 
-inline bool Packet::ConditionalInstructionFormat1::isDone() const {
+bool Packet::ConditionalInstructionFormat1::isDone() const {
   return done;
 }
 
-inline void Packet::ConditionalInstructionFormat1::insert(uint8_t byte) {
+void Packet::ConditionalInstructionFormat1::insert(uint8_t byte) {
   KEY.push_back(0b01111111 & byte);
   done = (byte < 128);
 }
 
-inline std::string Packet::ConditionalInstructionFormat1::asString() const {
+std::string Packet::ConditionalInstructionFormat1::asString() const {
   return "Conditional instruction format 1.";
 }
 
 
-inline bool Packet::ConditionalInstructionFormat3::isDone() const {
+bool Packet::ConditionalInstructionFormat3::isDone() const {
   return iterator == 1;
 }
 
-inline void Packet::ConditionalInstructionFormat3::insert(uint8_t byte) {
+void Packet::ConditionalInstructionFormat3::insert(uint8_t byte) {
   Z = 0b00000001 & byte;
   NUM = (0b01111110 & byte) >> 1;
   iterator++;
 }
 
-inline std::string Packet::ConditionalInstructionFormat3::asString() const {
+std::string Packet::ConditionalInstructionFormat3::asString() const {
   return "Condition instruction format 3.";
 }
 
 
-inline bool Packet::Ignore::isDone() const {
+bool Packet::Ignore::isDone() const {
   return true;
 }
 
-inline std::string Packet::Ignore::asString() const {
+std::string Packet::Ignore::asString() const {
   return "Ignore.";
 }
 
 
 Packet::Event::Event(uint8_t header) {
-  for (size_t i = 0; i < events.size(); i++) {
-    events[i] = ((0b00000001 << i) & header) >> i;
-  }
+  events = header & 0b00001111;
 }
   
-inline bool Packet::Event::isDone() const {
+bool Packet::Event::isDone() const {
   return true;
 }
 
-inline std::string Packet::Event::asString() const {
-  return "Event (#0 = "+std::to_string(static_cast<int>(events[0]))+", #1 = "+std::to_string(static_cast<int>(events[1]))+", #2 = "+std::to_string(static_cast<int>(events[2]))+", #3 = "+std::to_string(static_cast<int>(events[3]))+").";
+std::string Packet::Event::asString() const {
+  return "Event (#0 = "+std::to_string(static_cast<int>(hasEvent(0)))+", #1 = "+std::to_string(static_cast<int>(hasEvent(1)))+", #2 = "+std::to_string(static_cast<int>(hasEvent(2)))+", #3 = "+std::to_string(static_cast<int>(hasEvent(3)))+").";
 }
 
 bool Packet::Event::hasEvent(uint8_t index) const {
-  if (index < events.size()) {
-    return events[index];
+  switch (index) {
+    case 0 : return (0b00000001 & events) == 0b00000001;
+    case 1 : return (0b00000010 & events) == 0b00000010;
+    case 2 : return (0b00000100 & events) == 0b00000100;
+    case 3 : return (0b00001000 & events) == 0b00001000;
+    default: return false;
   }
-  // throw warning
-  return false;
 }
 
 
@@ -575,7 +575,7 @@ Packet::Context::Context(uint8_t header) {
   P = header & 0b00000001;
 }
 
-inline bool Packet::Context::isDone() const {
+bool Packet::Context::isDone() const {
   return (P)? headerDone && (!(hasVirt || hasCont)) : true;
 }
 
@@ -606,7 +606,7 @@ void Packet::Context::insert(uint8_t byte) {
   }
 }
 
-inline std::string Packet::Context::asString() const {
+std::string Packet::Context::asString() const {
   return std::format("Context (P = {}, EL = {}, SF = {}, NS = {}, VMID = 0x{:016X}, CONTEXTID = 0x{:016X})", P, EL, SF, NS, VMID, CONTEXTID);
 }
 
@@ -621,7 +621,7 @@ Packet::AddressWithContext::AddressWithContext(uint8_t header) {
   }
 }
   
-inline bool Packet::AddressWithContext::isDone() const {
+bool Packet::AddressWithContext::isDone() const {
   return addrDone && headerDone && !(hasVirt || hasCont);
 }
 
@@ -665,7 +665,7 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
   }
 }
 
-inline std::string Packet::AddressWithContext::asString() const {
+std::string Packet::AddressWithContext::asString() const {
   return std::format("Address with context (0x{:016X})", A);
 }
 
@@ -682,11 +682,11 @@ uint32_t Packet::AddressWithContext::getContextID() const {
 }
 
 
-inline bool Packet::TimestampMarker::isDone() const {
+bool Packet::TimestampMarker::isDone() const {
   return true;
 }
 
-inline std::string Packet::TimestampMarker::asString() const {
+std::string Packet::TimestampMarker::asString() const {
   return "Timestamp marker.";
 }
 
@@ -695,11 +695,11 @@ Packet::ExactMatchAddress::ExactMatchAddress(uint8_t header) {
   QE = 0b00000011 && header;
 }
   
-inline bool Packet::ExactMatchAddress::isDone() const {
+bool Packet::ExactMatchAddress::isDone() const {
   return true;
 }
 
-inline std::string Packet::ExactMatchAddress::asString() const {
+std::string Packet::ExactMatchAddress::asString() const {
   return "exact match address.";
 }
 
@@ -712,7 +712,7 @@ Packet::ShortAddress::ShortAddress(uint8_t header) {
   }
 }
   
-inline bool Packet::ShortAddress::isDone() const {
+bool Packet::ShortAddress::isDone() const {
   return done;
 }
 
@@ -729,7 +729,7 @@ void Packet::ShortAddress::insert(uint8_t byte) {
   iterator++;
 }
 
-inline std::string Packet::ShortAddress::asString() const {
+std::string Packet::ShortAddress::asString() const {
   //return "Short address.";
   return std::format("Short address (0x{:04X})", address);
 }
@@ -749,7 +749,7 @@ Packet::LongAddress::LongAddress(uint8_t header) {
   }
 }
   
-inline bool Packet::LongAddress::isDone() const {
+bool Packet::LongAddress::isDone() const {
   return iterator == length;
 }
 
@@ -763,7 +763,7 @@ void Packet::LongAddress::insert(uint8_t byte) {
   iterator += iterator < length;
 }
 
-inline std::string Packet::LongAddress::asString() const {
+std::string Packet::LongAddress::asString() const {
   return std::format("Long address (0x{:016X})", address);
 }
 
@@ -788,11 +788,11 @@ Packet::Q::Q(uint8_t header) {
   }
 }
 
-inline bool Packet::Q::isDone() const {
+bool Packet::Q::isDone() const {
   return !(hasAddress || hasCount);
 }
 
-inline void Packet::Q::insert(uint8_t byte) {
+void Packet::Q::insert(uint8_t byte) {
   if (hasAddress) {
     if (!isAddrLong) {
       if (iterator == 0) {
@@ -824,7 +824,7 @@ inline void Packet::Q::insert(uint8_t byte) {
   }
 }
 
-inline std::string Packet::Q::asString() const {
+std::string Packet::Q::asString() const {
   return std::format("Q (Address = {:016X}, #Counts = {})", address, count.size());
 }
 
@@ -837,11 +837,11 @@ Packet::AtomFormat1::AtomFormat1(uint8_t header) {
   a = 0b00000001 | header;
 }
 
-inline bool Packet::AtomFormat1::isDone() const {
+bool Packet::AtomFormat1::isDone() const {
   return true;
 }
 
-inline std::string Packet::AtomFormat1::asString() const {
+std::string Packet::AtomFormat1::asString() const {
   return "Atom format 1.";
 }
 
@@ -850,11 +850,11 @@ Packet::AtomFormat2::AtomFormat2(uint8_t header) {
   a = 0b00000011 | header;
 }
 
-inline bool Packet::AtomFormat2::isDone() const {
+bool Packet::AtomFormat2::isDone() const {
   return true;
 }
 
-inline std::string Packet::AtomFormat2::asString() const {
+std::string Packet::AtomFormat2::asString() const {
   return "Atom formt 2.";
 }
 
@@ -863,11 +863,11 @@ Packet::AtomFormat3::AtomFormat3(uint8_t header) {
   a = 0b00000111 & header;
 }
   
-inline bool Packet::AtomFormat3::isDone() const {
+bool Packet::AtomFormat3::isDone() const {
   return true;
 }
 
-inline std::string Packet::AtomFormat3::asString() const {
+std::string Packet::AtomFormat3::asString() const {
   return "Atom format 3 (A = "+std::format("0x{:02X}", a)+")";
 }
 
@@ -876,11 +876,11 @@ Packet::AtomFormat4::AtomFormat4(uint8_t header) {
   a = 0b00000011 | header;
 }
 
-inline bool Packet::AtomFormat4::isDone() const {
+bool Packet::AtomFormat4::isDone() const {
   return true;
 }
 
-inline std::string Packet::AtomFormat4::asString() const {
+std::string Packet::AtomFormat4::asString() const {
   return "Atom formt 4.";
 }
 
@@ -889,11 +889,11 @@ Packet::AtomFormat5::AtomFormat5(uint8_t header) {
   abc = ((0b00100000 & header) >> 3) | (0b00000011 & header);
 }
   
-inline bool Packet::AtomFormat5::isDone() const {
+bool Packet::AtomFormat5::isDone() const {
   return true;
 }
 
-inline std::string Packet::AtomFormat5::asString() const {
+std::string Packet::AtomFormat5::asString() const {
   return "Atom formt 5.";
 }
 
@@ -903,16 +903,16 @@ Packet::AtomFormat6::AtomFormat6(uint8_t header) {
   COUNT = 0b00011111 & header;
 }
 
-inline bool Packet::AtomFormat6::isDone() const {
+bool Packet::AtomFormat6::isDone() const {
   return true;
 }
 
-inline std::string Packet::AtomFormat6::asString() const {
+std::string Packet::AtomFormat6::asString() const {
   return "Atom format 6 (COUNT = "+std::format("0x{:02X}", COUNT)+")";
 }
 
 
-inline bool Packet::Exception::isDone() const {
+bool Packet::Exception::isDone() const {
   return headerDone && (!hasAddress);
 }
 
@@ -962,7 +962,7 @@ void Packet::Exception::insert(uint8_t byte) {
   }
 }
       
-inline std::string Packet::Exception::asString() const {
+std::string Packet::Exception::asString() const {
   std::string base = std::format("Exception (TYPE = {}, P = {})", type, p);
   if (hasAddress)
     base += " ("+address->asString()+")";

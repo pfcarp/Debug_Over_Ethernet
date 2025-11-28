@@ -91,7 +91,7 @@ Dispatcher.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/Dispatcher.cpp -o $(OBJ)/Dispatcher.o $(CXXFLAGS)
 
 
-parser: PacketFactory.o Packet.o Stream.o Deformatter.o
+parser: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) parser.cpp $(OBJ)/*.o -o parser.out $(CXXFLAGS)
 
 online: PacketFactory.o Packet.o Stream.o Deformatter.o Sniffer.o Dispatcher.o

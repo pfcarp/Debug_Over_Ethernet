@@ -393,7 +393,7 @@ namespace Packet {
 
     private:
       // Attributes
-      std::vector<bool> events = std::vector<bool>(4);
+      uint8_t events = 0;
   
     public:
       // Methods
