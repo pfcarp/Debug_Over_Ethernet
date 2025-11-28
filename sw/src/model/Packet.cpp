@@ -666,7 +666,7 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
 }
 
 inline std::string Packet::AddressWithContext::asString() const {
-  return std::format("Address with context (0x{:016X})", A);
+  return std::format("Address with context (0x{:016X},{})", A,CONTEXTID);
 }
 
 uint64_t Packet::AddressWithContext::getAddress() const {
