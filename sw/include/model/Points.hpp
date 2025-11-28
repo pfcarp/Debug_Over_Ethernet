@@ -28,5 +28,6 @@ class Points: public Collection {
     void push(int source, Packet::ShortAddress& packet) override;
     void push(int source, Packet::LongAddress& packet) override;
     void push(int source, Packet::Event& packet) override;
+    void push(int source, Packet::AddressWithContext& packet) override;
 
 };

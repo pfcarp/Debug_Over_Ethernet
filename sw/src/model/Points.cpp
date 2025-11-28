@@ -35,8 +35,6 @@ Points::~Points() {
 }
 
 Buffer* Points::operator[](size_t index) {
-  if (std::rand()%100 == 0)
-    archives();
   return buffers[index];
 }
 
@@ -63,6 +61,17 @@ void Points::push(int source, Packet::ShortAddress& packet) {
 }
 
 void Points::push(int source, Packet::LongAddress& packet) {
+  for (size_t i = 0; i < watchpoints.size(); i++) {
+    if (watchpoints[i]->matches(packet.getAddress())) {
+      if (watchpoints[i] != buffers[2]->event) {
+        archives();
+        buffers[2]->event = watchpoints[i];
+      }
+    }
+  }
+}
+
+void Points::push(int source, Packet::AddressWithContext& packet) {
   for (size_t i = 0; i < watchpoints.size(); i++) {
     if (watchpoints[i]->matches(packet.getAddress())) {
       if (watchpoints[i] != buffers[2]->event) {

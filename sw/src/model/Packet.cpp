@@ -961,7 +961,7 @@ void Packet::Exception::insert(uint8_t byte) {
     }
   }
 }
-      
+ 
 std::string Packet::Exception::asString() const {
   std::string base = std::format("Exception (TYPE = {}, P = {})", type, p);
   if (hasAddress)

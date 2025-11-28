@@ -25,6 +25,7 @@ class Collection {
     virtual void push(int source, Packet::Base& packet) {};
     virtual void push(int source, Packet::ShortAddress& packet) {};
     virtual void push(int source, Packet::LongAddress& packet) {};
+    virtual void push(int source, Packet::AddressWithContext& packet) {};
     virtual void push(int source, Packet::Event& packet) {};
 
 };

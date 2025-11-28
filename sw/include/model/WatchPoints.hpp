@@ -16,5 +16,6 @@ class WatchPoints: public Collection {
     void push(int source, Packet::Base& packet) override;
     void push(int source, Packet::ShortAddress& packet) override;
     void push(int source, Packet::LongAddress& packet) override;
+    void push(int source, Packet::AddressWithContext& packet) override;
 
 };
