@@ -14,8 +14,8 @@ class PacketFactory {
     // Attributes
     std::unique_ptr<Packet::Base> current = nullptr;
     // Methods
-    inline bool isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper);
-    void identify(uint8_t id);
+    constexpr bool isInInclusiveRange(const uint8_t& a, const uint8_t& lower, const uint8_t& upper) const;
+    constexpr void identify(const uint8_t& id);
 
   public:
     // Methods

@@ -7,12 +7,12 @@
 #include "Packet.hpp"
 
 
-inline bool PacketFactory::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) {
+constexpr bool PacketFactory::isInInclusiveRange(const uint8_t& a, const uint8_t& lower, const uint8_t& upper) const {
   return (lower <= a) && (a <= upper);
 }
 
 
-void PacketFactory::identify(uint8_t id) {
+constexpr void PacketFactory::identify(const uint8_t& id) {
   if (id == 0b00000000)
     current = std::make_unique<Packet::Extension>();
   else if (id == 0b00000001)

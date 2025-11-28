@@ -2,7 +2,7 @@ CXXFLAGS=-lm -std=c++20 -Wall -Wextra
 GTK4FLAGS=`pkg-config --cflags --libs gtk4`
 PCAPFLAGS=`pkg-config --cflags --libs libpcap`
 GRAPHVIZFLAGS=-lgvc -lcgraph
-OPT=-O0
+OPT=-O0 #-O2 -march=native -flto
 DEBUG=-g
 
 MODEL=src/model
