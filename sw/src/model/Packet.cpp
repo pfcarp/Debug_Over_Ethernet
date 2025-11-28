@@ -666,7 +666,7 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
 }
 
 std::string Packet::AddressWithContext::asString() const {
-  return std::format("Address with context (0x{:016X})", A);
+  return std::format("Address with context (A = 0x{:016X}, Context ID = {})", A, CONTEXTID);
 }
 
 uint64_t Packet::AddressWithContext::getAddress() const {
@@ -730,7 +730,6 @@ void Packet::ShortAddress::insert(uint8_t byte) {
 }
 
 std::string Packet::ShortAddress::asString() const {
-  //return "Short address.";
   return std::format("Short address (0x{:04X})", address);
 }
 
