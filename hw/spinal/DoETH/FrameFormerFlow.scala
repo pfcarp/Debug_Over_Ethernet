@@ -11,7 +11,6 @@ import spinal.lib.bus.amba4.axis._
 import spinal.lib.bus.amba4.axi._
 import spinal.core
 import spinal.lib.SlicesOrder
-
 //import spinal.core.sim._
 //import spinal.core
 
@@ -157,7 +156,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
 
   //SubordinateDomain.setSynchronousWith(ManagerDomain)
 
-  val Previous = Bits(32 bits)
+  
 
   val BufferQueue = new StreamFifoCC(
     dataType = Bits(Input_Width bits),
@@ -168,6 +167,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   )
 
   val subordinateClockArea = new ClockingArea(SubordinateDomain) {
+    val timeStamp = Reg(UInt(32 bits)) init(0)
     
     val configPort = Axi4SlaveFactory(io.axiSub)
 
@@ -188,8 +188,8 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     when(!(io.Subordinate.payload === 0x7fffffff || io.Subordinate.payload === 0x7fff7fff) & inputs_debug.FFSisFull){
       Overflow:=Overflow+1
     }
-  // BufferQueue.io.push << io.Subordinate.toStream.resized //Subordinate should feed directly into the queue
 
+    
   //now recieving is a state machine based on the recieving of the full sync word then expected subsequent data burst 
   //if the packet is a halfword sync then ignore the data and stay within state
   //only consume data if there data beat is within 4 beats from the full sync
@@ -200,7 +200,11 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   val Idle: State = new State with EntryPoint{
     whenIsActive{
       when(io.Subordinate.payload === 0x7fffffff){
+        BufferQueue.io.push.payload := timeStamp.asBits
+        BufferQueue.io.push.valid := True
         goto(recieving1stBeat)
+      }otherwise{
+        BufferQueue.io.push.valid := False
       }
     }
   }
@@ -265,8 +269,13 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
     }
   }
  }
-
   
+  
+  when(RecievingFSM.isActive(RecievingFSM.recieving1stBeat)){
+      timeStamp:=0
+    }otherwise{
+      timeStamp:=timeStamp+1
+    }
   inputs_debug.FFSisFull := BufferQueue.io.pushOccupancy === Max_Internal_Space
   inputs_debug.FFSisEmpty := BufferQueue.io.pushOccupancy === 0
 
