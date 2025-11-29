@@ -167,7 +167,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   )
 
   val subordinateClockArea = new ClockingArea(SubordinateDomain) {
-    val timeStamp = Reg(UInt(32 bits)) init(0)
+    
     
     val configPort = Axi4SlaveFactory(io.axiSub)
 
@@ -200,11 +200,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   val Idle: State = new State with EntryPoint{
     whenIsActive{
       when(io.Subordinate.payload === 0x7fffffff){
-        BufferQueue.io.push.payload := timeStamp.asBits
-        BufferQueue.io.push.valid := True
         goto(recieving1stBeat)
-      }otherwise{
-        BufferQueue.io.push.valid := False
       }
     }
   }
@@ -271,12 +267,7 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
  }
   
   
-  when(RecievingFSM.isExiting(RecievingFSM.Idle)){
-      timeStamp:=0
-    }otherwise{
-      timeStamp:=timeStamp+1
-    }
-
+  
   inputs_debug.FFSisFull := BufferQueue.io.pushOccupancy === Max_Internal_Space
   inputs_debug.FFSisEmpty := BufferQueue.io.pushOccupancy === 0
 
@@ -285,6 +276,8 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
   }
 
 val managerClockArea = new ClockingArea(ManagerDomain) {
+    val timeStamp = Reg(UInt(64 bits)) init(0)
+
     val configPort = Axi4SlaveFactory(io.axiMan)
 
     val packetThreshold = Reg(UInt(32 bits)) init(0)
@@ -340,9 +333,10 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
   inputs_debug.FFMQueueTail := BufferQueue.io.popOccupancy.resized //this is the current occupancy of the queue
   
+  val counter = Reg(UInt(8 bits)) init(0)
+
 
   val SendingFSM = new StateMachine{// I can already see a potential bug because it is checking if fired but the delay between states make put duplicates 
-    val counter = Reg(UInt(8 bits)) init(0)
     val timeOutCounter = Reg(UInt(32 bits)) init(timeOut)
     val flushTimerCounter = Reg(UInt(32 bits)) init(flushTimer)
 
@@ -410,7 +404,14 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
         //just an otherwise statement 
         .elsewhen(EthernetQueue.io.occupancy=/=0 & EthernetQueue.io.pop.valid & io.Manager.fire){
-          io.Manager.payload.data := EthernetQueue.io.pop.payload //pop from the queue and send to the manager
+          when(EthernetQueue.io.pop.ready){
+            io.Manager.payload.data := EthernetQueue.io.pop.payload //pop from the queue and send to the manager
+            timeStamp:=timeStamp+1
+          }otherwise{
+            io.Manager.payload.data := timeStamp.asBits
+            timeStamp:=0
+          }
+          
           //BufferQueue.io.pop.ready := True
           counter:= counter + 1
         }
@@ -447,7 +448,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
     }
   }
   
-  EthernetQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & EthernetQueue.io.occupancy=/=0
+  EthernetQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & EthernetQueue.io.occupancy=/=0 & counter%3=/=0
 
   inputs_debug.FFMisReady := SendingFSM.isActive(SendingFSM.Payload) & io.Manager.isFree
 }
