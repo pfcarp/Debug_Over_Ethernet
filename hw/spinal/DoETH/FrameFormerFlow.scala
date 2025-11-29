@@ -351,6 +351,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
     val Idle: State = new State with EntryPoint{
       whenIsActive{
+        timeStamp:=timeStamp+1
         // io.Manager.payload := B(0).resized
         io.Manager.valid := False
         io.Manager.payload.last := False
@@ -370,6 +371,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
     val HeaderPart1: State = new State{
       whenIsActive{
+        timeStamp:=timeStamp+1
         io.Manager.payload.data := Cat(inputs_debug.Source(0, 16 bits),inputs_debug.Destination)
         io.Manager.valid := True
         io.Manager.payload.last := False
@@ -382,6 +384,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
     val HeaderPart2: State = new State{
       whenIsActive{
+        timeStamp:=timeStamp+1
         io.Manager.payload.data := Cat(inputs_debug.StartWord,inputs_debug.LinkType,inputs_debug.Source(16, 32 bits))
         io.Manager.valid := True
         when(io.Manager.fire){
@@ -420,6 +423,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
           //BufferQueue.io.pop.ready := False
           io.Manager.payload.data := B(1)#*Output_Width//make this the correct type
           counter:= counter + 1
+          timeStamp:=timeStamp+1
         } 
 
         // .otherwise{
@@ -430,6 +434,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
     val Footer: State = new State{
       whenIsActive{
+        timeStamp:=timeStamp+1
         io.Manager.payload.data:= inputs_debug.EndWord.resized
         io.Manager.payload.last := True
         io.Manager.valid := True
