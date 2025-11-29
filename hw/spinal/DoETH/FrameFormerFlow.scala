@@ -271,11 +271,12 @@ class FrameFormerFlow(Input_Width: Int, Output_Width: Int, Max_Internal_Space: I
  }
   
   
-  when(RecievingFSM.isActive(RecievingFSM.recieving1stBeat)){
+  when(RecievingFSM.isExiting(RecievingFSM.Idle)){
       timeStamp:=0
     }otherwise{
       timeStamp:=timeStamp+1
     }
+
   inputs_debug.FFSisFull := BufferQueue.io.pushOccupancy === Max_Internal_Space
   inputs_debug.FFSisEmpty := BufferQueue.io.pushOccupancy === 0
 

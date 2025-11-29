@@ -226,6 +226,7 @@ object FrameFormerFlowSim extends App {
         dut.ManagerDomain.waitRisingEdge()
 
         dut.sendPayloadFromFile("/home/Patrick/packetParsingDebug/ConfirmBeforeFF.csv")
+        dut.waitForIdleAgain()
 
         //we want to create random payload but also vary the timings of transactions to see the following scenarios
         //1. a singlepayload entering
