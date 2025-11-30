@@ -1,12 +1,27 @@
-#include <opencv2/opencv.hpp>
+#include <cstdint>
 #include <iostream>
-#include <chrono>
 #include <cstdlib>
 
+#include <opencv2/opencv.hpp>
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/system_setup.h"
+#include "model_settings.h"
+#include "person_detect_model_data.h"
+#include "gen_micro_mutable_op_resolver.h"
+
+
+constexpr int kTensorArenaSize = 1024*1024;
 
 class Pipeline {
 
   private:
+    // Tensorflow
+    const tflite::Model* model = nullptr;
+    tflite::MicroInterpreter* interpreter = nullptr;
+    TfLiteTensor* input = nullptr;
+    int in_h, in_w, in_c;
+    uint8_t tensor_arena[kTensorArenaSize];
+    uint64_t image_size;
     // Create VideoCapture with a backend (optional but safer)
     cv::VideoCapture cap;
     // Frames
@@ -22,6 +37,7 @@ class Pipeline {
     Pipeline(int index);
     bool capture();
     void filter(int mode);
+    bool detect();
     void display();
     void release();
 
@@ -35,6 +51,38 @@ Pipeline::Pipeline(int index) {
   if (!cap.isOpened()) {
     // TODO: switch to throw
     std::cerr << "Error: Could not open camera." << std::endl;
+  }
+  // Tensorflow
+  tflite::InitializeTarget();
+  model = tflite::GetModel(person_detect_tflite);
+  if (model->version() != TFLITE_SCHEMA_VERSION) {
+    std::cerr << "Model version mismatch!" << std::endl;
+    return;
+  }
+  std::cout << "Model version: " << model->version() << std::endl;
+  auto op_resolver = get_resolver();
+  interpreter= new tflite::MicroInterpreter(model, op_resolver, tensor_arena, kTensorArenaSize);
+  TfLiteStatus allocate_status = interpreter->AllocateTensors();
+  if (allocate_status != kTfLiteOk) {
+    std::cerr << "AllocateTensors() failed" << std::endl;
+    return;
+  }
+  std::cout << "Arena used: " << interpreter->arena_used_bytes() << " bytes" << std::endl;
+  input = interpreter->input(0);
+  in_h = input->dims->data[1];
+  in_w = input->dims->data[2];
+  in_c = input->dims->data[3];
+  std::cout << "Input type: " << input->type << std::endl;
+  std::cout << "Input dims: " << input->dims->data[0] << ", " << input->dims->data[1] << ", " << input->dims->data[2] << ", " << input->dims->data[3] << std::endl;
+  // OPS
+  auto opcodes = model->operator_codes();
+  for (int i = 0; i < opcodes->Length(); i++) {
+    auto opcode = opcodes->Get(i);
+    auto custom = opcode->custom_code();
+    if (custom)
+      std::cout << "CUSTOM OP: " << custom->str() << std::endl;
+    else
+      std::cout << "CUSTOM OP (no name)" << std::endl;
   }
 }
 
@@ -87,6 +135,28 @@ void Pipeline::filter(int mode) {
   }
 }
 
+bool Pipeline::detect() {
+  // Preprocess: resize + RGB
+  cv::Mat gray, resized;
+  cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
+  cv::resize(gray, resized, cv::Size(in_w, in_h));
+  // Transfer
+  memcpy(input->data.uint8, resized.data, in_w*in_h);
+  // Inference
+  std::cout << "Inference!" << std::endl;
+  if (kTfLiteOk != interpreter->Invoke()) {
+    std::cerr << "Inference failed." << std::endl;
+    return false;
+  }
+  // Get output
+  std::cout << "Get output" << std::endl;
+  TfLiteTensor* output = interpreter->output(0);
+  int8_t person_score = output->data.uint8[kPersonIndex];
+  int8_t no_person_score = output->data.uint8[kNotAPersonIndex];
+  MicroPrintf("Score: %u, %u\n", person_score, no_person_score);
+  return person_score > 128;
+}
+
 void Pipeline::display() {
   cv::imshow("Webcam Feed", filtered);
 }
@@ -120,11 +190,11 @@ int main(int argc, char** argv) {
     if (pipeline.capture()) {
       break;
     }
-    //if (pipeline.detect()) {
+    if (pipeline.detect()) {
       pipeline.filter(mode);
       //pipeline.compress();
       //pipeline.store();
-    //}
+    }
     pipeline.display();
   }
 
