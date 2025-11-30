@@ -9,61 +9,66 @@
 #include "person_detect_model_data.h"
 #include "gen_micro_mutable_op_resolver.h"
 
+constexpr int kTensorArenaSize = 1024 * 1024;
 
-constexpr int kTensorArenaSize = 1024*1024;
+class Pipeline
+{
 
-class Pipeline {
+private:
+  // Tensorflow
+  const tflite::Model *model = nullptr;
+  tflite::MicroInterpreter *interpreter = nullptr;
+  TfLiteTensor *input = nullptr;
+  int in_h, in_w, in_c;
+  uint8_t tensor_arena[kTensorArenaSize];
+  uint64_t image_size;
+  // Create VideoCapture with a backend (optional but safer)
+  cv::VideoCapture cap;
+  // Frames
+  cv::Mat frame;
+  cv::Mat filtered;
+  // Filters
+  void sepia();
+  void sobel();
+  void threshold();
+  void duplicate();
 
-  private:
-    // Tensorflow
-    const tflite::Model* model = nullptr;
-    tflite::MicroInterpreter* interpreter = nullptr;
-    TfLiteTensor* input = nullptr;
-    int in_h, in_w, in_c;
-    uint8_t tensor_arena[kTensorArenaSize];
-    uint64_t image_size;
-    // Create VideoCapture with a backend (optional but safer)
-    cv::VideoCapture cap;
-    // Frames
-    cv::Mat frame;
-    cv::Mat filtered;
-    // Filters
-    void sepia();
-    void sobel();
-    void threshold();
-    void duplicate();
-  
-  public:
-    Pipeline(int index);
-    bool capture();
-    void filter(int mode);
-    bool detect();
-    void display();
-    void release();
-
+public:
+  Pipeline(int index);
+  bool capture();
+  void filter(int mode);
+  bool detect();
+  void display();
+  void release();
 };
 
-Pipeline::Pipeline(int index) {
+Pipeline::Pipeline(int index)
+{
   // Create a resizable window
   cv::namedWindow("Webcam Feed", cv::WINDOW_NORMAL);
   // Create VideoCapture with a backend (optional but safer)
   cap = cv::VideoCapture(index);
-  if (!cap.isOpened()) {
+  if (!cap.isOpened())
+  {
     // TODO: switch to throw
     std::cerr << "Error: Could not open camera." << std::endl;
   }
   // Tensorflow
   tflite::InitializeTarget();
   model = tflite::GetModel(person_detect_tflite);
-  if (model->version() != TFLITE_SCHEMA_VERSION) {
+  if (model->version() != TFLITE_SCHEMA_VERSION)
+  {
     std::cerr << "Model version mismatch!" << std::endl;
     return;
   }
   std::cout << "Model version: " << model->version() << std::endl;
-  auto op_resolver = get_resolver();
-  interpreter= new tflite::MicroInterpreter(model, op_resolver, tensor_arena, kTensorArenaSize);
+  static auto op_resolver = get_resolver();
+  static tflite::MicroInterpreter static_interpreter(
+      model, op_resolver, tensor_arena, kTensorArenaSize);
+  interpreter = &static_interpreter;
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
-  if (allocate_status != kTfLiteOk) {
+  if (allocate_status != kTfLiteOk)
+  {
     std::cerr << "AllocateTensors() failed" << std::endl;
     return;
   }
@@ -76,7 +81,8 @@ Pipeline::Pipeline(int index) {
   std::cout << "Input dims: " << input->dims->data[0] << ", " << input->dims->data[1] << ", " << input->dims->data[2] << ", " << input->dims->data[3] << std::endl;
   // OPS
   auto opcodes = model->operator_codes();
-  for (int i = 0; i < opcodes->Length(); i++) {
+  for (int i = 0; i < opcodes->Length(); i++)
+  {
     auto opcode = opcodes->Get(i);
     auto custom = opcode->custom_code();
     if (custom)
@@ -86,18 +92,21 @@ Pipeline::Pipeline(int index) {
   }
 }
 
-bool Pipeline::capture() {
-  cap >> frame;
+bool Pipeline::capture()
+{
+  cap.read(frame);
   return frame.empty();
 }
 
-void Pipeline::sepia() {
-  cv::Mat kernel = (cv::Mat_<float>(3,3) << 0.272, 0.534, 0.131, 0.349, 0.686, 0.168, 0.393, 0.769, 0.189);
+void Pipeline::sepia()
+{
+  cv::Mat kernel = (cv::Mat_<float>(3, 3) << 0.272, 0.534, 0.131, 0.349, 0.686, 0.168, 0.393, 0.769, 0.189);
   cv::transform(frame, filtered, kernel);
   cv::convertScaleAbs(filtered, filtered);
 }
 
-void Pipeline::sobel() {
+void Pipeline::sobel()
+{
   cv::Mat gray, gx, gy;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   cv::Sobel(gray, gx, CV_16S, 1, 0);
@@ -108,68 +117,91 @@ void Pipeline::sobel() {
   cv::cvtColor(filtered, filtered, cv::COLOR_GRAY2BGR);
 }
 
-void Pipeline::threshold() {
+void Pipeline::threshold()
+{
   cv::Mat gray;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   cv::threshold(gray, filtered, 100, 255, cv::THRESH_BINARY);
   cv::cvtColor(filtered, filtered, cv::COLOR_GRAY2BGR);
 }
 
-void Pipeline::duplicate() {
-  filtered = frame.clone();
+void Pipeline::duplicate()
+{
+  printf("No filter applied.\n");
+  frame.copyTo(filtered);
 }
 
-void Pipeline::filter(int mode) {
-  switch (mode) {
-    case 1:
-      sepia();
-      break;
-    case 2:
-      sobel();
-      break;
-    case 3:
-      threshold();
-      break;
-    default:
-      duplicate();
+void Pipeline::filter(int mode)
+{
+  switch (mode)
+  {
+  case 1:
+    sepia();
+    break;
+  case 2:
+    sobel();
+    break;
+  case 3:
+    threshold();
+    break;
+  default:
+    duplicate();
   }
 }
 
-bool Pipeline::detect() {
+bool Pipeline::detect()
+{
   // Preprocess: resize + RGB
-  cv::Mat gray, resized;
+  cv::Mat gray, resized, normalized, int8_image;
   cv::cvtColor(frame, gray, cv::COLOR_BGR2GRAY);
   cv::resize(gray, resized, cv::Size(in_w, in_h));
+  //omitting weird normalization for int8 model
   // Transfer
-  memcpy(input->data.uint8, resized.data, in_w*in_h);
+  memcpy(input->data.int8, resized.data, in_w * in_h);
   // Inference
+  if (input->bytes != in_w * in_h)
+  {
+    printf("Wrong image size: expected %d, got %zu", input->bytes, in_w * in_h);
+    // return {0, 0};
+  }
   std::cout << "Inference!" << std::endl;
-  if (kTfLiteOk != interpreter->Invoke()) {
+  if (kTfLiteOk != interpreter->Invoke())
+  {
     std::cerr << "Inference failed." << std::endl;
     return false;
   }
   // Get output
   std::cout << "Get output" << std::endl;
-  TfLiteTensor* output = interpreter->output(0);
-  int8_t person_score = output->data.uint8[kPersonIndex];
-  int8_t no_person_score = output->data.uint8[kNotAPersonIndex];
+  TfLiteTensor *output = interpreter->output(0);
+  uint8_t person_score = output->data.uint8[kPersonIndex];
+  uint8_t no_person_score = output->data.uint8[kNotAPersonIndex];
   MicroPrintf("Score: %u, %u\n", person_score, no_person_score);
-  return person_score > 128;
+  printf("this evals to %d\n", person_score > 128);
+  return (int(person_score) > 128);
 }
 
-void Pipeline::display() {
+void Pipeline::display()
+{
+  if (filtered.empty())
+  {
+    printf("No frame to display.!!!!!!!!!!!!!!!!!!!!!!!!!!!\n");
+    return;
+  }
+  
   cv::imshow("Webcam Feed", filtered);
 }
 
-void Pipeline::release() {
+void Pipeline::release()
+{
   cap.release();
 }
 
+int main(int argc, char **argv)
+{
 
-int main(int argc, char** argv) {
-    
   int camIndex = 0;
-  if (argc > 1) {
+  if (argc > 1)
+  {
     camIndex = std::atoi(argv[1]);
   }
 
@@ -178,23 +210,34 @@ int main(int argc, char** argv) {
 
   Pipeline pipeline(camIndex);
 
-  while (true) {
-    
+  while (true)
+  {
+
     char key = (char)cv::waitKey(1);
-    if (key == 'q') break;
-    else if (key == '1') mode = 1;
-    else if (key == '2') mode = 2;
-    else if (key == '3') mode = 3;
-    else if (key == '0') mode = 0;
-    
-    if (pipeline.capture()) {
+    if (key == 'q')
+      break;
+    else if (key == '1')
+      mode = 1;
+    else if (key == '2')
+      mode = 2;
+    else if (key == '3')
+      mode = 3;
+    else if (key == '0')
+      mode = 0;
+
+    if (pipeline.capture())
+    {
       break;
     }
-    if (pipeline.detect()) {
-      pipeline.filter(mode);
-      //pipeline.compress();
-      //pipeline.store();
-    }
+    // if (pipeline.detect())
+    // {
+    //   // printf("Person detected!\n");
+    //   pipeline.filter(mode);
+    //   // pipeline.compress();
+    //   // pipeline.store();
+    // }
+    pipeline.detect();
+    pipeline.filter(mode);
     pipeline.display();
   }
 
@@ -202,4 +245,3 @@ int main(int argc, char** argv) {
 
   return 0;
 }
-
