@@ -1,3 +1,6 @@
 [submodule "demo/rtss25/tflite-micro"]
 	path = demo/rtss25/tflite-micro
 	url = https://github.com/tensorflow/tflite-micro.git
+[submodule "demo/tflm/extern/tflite-micro"]
+	path = demo/tflm/extern/tflite-micro
+	url = https://github.com/tensorflow/tflite-micro.git

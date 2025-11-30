@@ -105,6 +105,6 @@ gui: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuff
 
 
 clean:
-	rm -f doeth.out parser.out tests.out
+	rm -f doeth.out parser.out tests.out online.out
 	rm -f $(OBJ)/*.o
 
