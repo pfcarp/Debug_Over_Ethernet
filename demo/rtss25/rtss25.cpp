@@ -3,15 +3,11 @@
 #include <cstdlib>
 
 #include <opencv2/opencv.hpp>
-#include "tensorflow/lite/micro/examples/person_detection/detection_responder.h"
-#include "tensorflow/lite/micro/examples/person_detection/image_provider.h"
-#include "tensorflow/lite/micro/examples/person_detection/model_settings.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
-#include "tensorflow/lite/micro/micro_log.h"
-#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
-#include "tensorflow/lite/micro/models/person_detect_model_data.h"
 #include "tensorflow/lite/micro/system_setup.h"
-#include "tensorflow/lite/schema/schema_generated.h"
+#include "model_settings.h"
+#include "gen/include/person_detect_model_data.h"
+#include "gen/include/gen_micro_mutable_op_resolver.h"
 
 constexpr int kTensorArenaSize = 1024*1024;
 alignas(16) static uint8_t tensor_arena[kTensorArenaSize];
@@ -61,7 +57,7 @@ Pipeline::Pipeline(int index) {
 
   // Map the model into a usable data structure. This doesn't involve any
   // copying or parsing, it's a very lightweight operation.
-  model = tflite::GetModel(g_person_detect_model_data);
+  model = tflite::GetModel(person_detect_tflite);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
     MicroPrintf(
         "Model provided is schema version %d not equal "
@@ -202,11 +198,11 @@ int main(int argc, char** argv) {
     if (pipeline.capture()) {
       break;
     }
-    if (pipeline.detect()) {
+    //if (pipeline.detect()) {
       pipeline.filter(mode);
       //pipeline.compress();
       //pipeline.store();
-    }
+    //}
     pipeline.display();
   }
 
