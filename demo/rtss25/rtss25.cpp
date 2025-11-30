@@ -3,14 +3,18 @@
 #include <cstdlib>
 
 #include <opencv2/opencv.hpp>
+#include "tensorflow/lite/micro/examples/person_detection/detection_responder.h"
+#include "tensorflow/lite/micro/examples/person_detection/image_provider.h"
+#include "tensorflow/lite/micro/examples/person_detection/model_settings.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/micro/micro_log.h"
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/micro/models/person_detect_model_data.h"
 #include "tensorflow/lite/micro/system_setup.h"
-#include "model_settings.h"
-#include "person_detect_model_data.h"
-#include "gen_micro_mutable_op_resolver.h"
-
+#include "tensorflow/lite/schema/schema_generated.h"
 
 constexpr int kTensorArenaSize = 1024*1024;
+alignas(16) static uint8_t tensor_arena[kTensorArenaSize];
 
 class Pipeline {
 
@@ -19,8 +23,8 @@ class Pipeline {
     const tflite::Model* model = nullptr;
     tflite::MicroInterpreter* interpreter = nullptr;
     TfLiteTensor* input = nullptr;
+
     int in_h, in_w, in_c;
-    uint8_t tensor_arena[kTensorArenaSize];
     uint64_t image_size;
     // Create VideoCapture with a backend (optional but safer)
     cv::VideoCapture cap;
@@ -54,36 +58,44 @@ Pipeline::Pipeline(int index) {
   }
   // Tensorflow
   tflite::InitializeTarget();
-  model = tflite::GetModel(person_detect_tflite);
+
+  // Map the model into a usable data structure. This doesn't involve any
+  // copying or parsing, it's a very lightweight operation.
+  model = tflite::GetModel(g_person_detect_model_data);
   if (model->version() != TFLITE_SCHEMA_VERSION) {
-    std::cerr << "Model version mismatch!" << std::endl;
+    MicroPrintf(
+        "Model provided is schema version %d not equal "
+        "to supported version %d.",
+        model->version(), TFLITE_SCHEMA_VERSION);
     return;
   }
-  std::cout << "Model version: " << model->version() << std::endl;
-  auto op_resolver = get_resolver();
-  interpreter= new tflite::MicroInterpreter(model, op_resolver, tensor_arena, kTensorArenaSize);
+
+  // Pull in only the operation implementations we need.
+  // This relies on a complete list of all the ops needed by this graph.
+
+  // NOLINTNEXTLINE(runtime-global-variables)
+  static tflite::MicroMutableOpResolver<5> micro_op_resolver;
+  micro_op_resolver.AddAveragePool2D(tflite::Register_AVERAGE_POOL_2D_INT8());
+  micro_op_resolver.AddConv2D(tflite::Register_CONV_2D_INT8());
+  micro_op_resolver.AddDepthwiseConv2D(tflite::Register_DEPTHWISE_CONV_2D_INT8());
+  micro_op_resolver.AddReshape();
+  micro_op_resolver.AddSoftmax(tflite::Register_SOFTMAX_INT8());
+
+  // Build an interpreter to run the model with.
+  // NOLINTNEXTLINE(runtime-global-variables)
+  static tflite::MicroInterpreter static_interpreter(
+      model, micro_op_resolver, tensor_arena, kTensorArenaSize);
+  interpreter = &static_interpreter;
+
+  // Allocate memory from the tensor_arena for the model's tensors.
   TfLiteStatus allocate_status = interpreter->AllocateTensors();
   if (allocate_status != kTfLiteOk) {
-    std::cerr << "AllocateTensors() failed" << std::endl;
+    MicroPrintf("AllocateTensors() failed");
     return;
   }
-  std::cout << "Arena used: " << interpreter->arena_used_bytes() << " bytes" << std::endl;
+
+  // Get information about the memory area to use for the model's input.
   input = interpreter->input(0);
-  in_h = input->dims->data[1];
-  in_w = input->dims->data[2];
-  in_c = input->dims->data[3];
-  std::cout << "Input type: " << input->type << std::endl;
-  std::cout << "Input dims: " << input->dims->data[0] << ", " << input->dims->data[1] << ", " << input->dims->data[2] << ", " << input->dims->data[3] << std::endl;
-  // OPS
-  auto opcodes = model->operator_codes();
-  for (int i = 0; i < opcodes->Length(); i++) {
-    auto opcode = opcodes->Get(i);
-    auto custom = opcode->custom_code();
-    if (custom)
-      std::cout << "CUSTOM OP: " << custom->str() << std::endl;
-    else
-      std::cout << "CUSTOM OP (no name)" << std::endl;
-  }
 }
 
 bool Pipeline::capture() {

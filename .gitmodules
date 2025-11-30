@@ -4,3 +4,9 @@
 [submodule "demo/tflm/extern/tflite-micro"]
 	path = demo/tflm/extern/tflite-micro
 	url = https://github.com/tensorflow/tflite-micro.git
+[submodule "demo/tflm/extern/extern/flatbuffers"]
+	path = demo/tflm/extern/extern/flatbuffers
+	url = https://github.com/google/flatbuffers.git
+[submodule "demo/tflm/extern/gemmlowp"]
+	path = demo/tflm/extern/gemmlowp
+	url = https://github.com/google/gemmlowp.git
