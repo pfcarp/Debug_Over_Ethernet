@@ -423,6 +423,8 @@ namespace Packet {
       virtual bool isDone() const override;
       virtual void insert(uint8_t byte) override;
       virtual std::string asString() const override;
+      uint32_t getVmID() const;
+      uint32_t getContextID() const;
 
   };
 

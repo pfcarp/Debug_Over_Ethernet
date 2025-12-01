@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <iostream>
 
 bool Packet::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) {
   return (lower <= a) && (a <= upper);
@@ -36,18 +37,19 @@ bool Packet::Extension::isDone() const {
 void Packet::Extension::insert(uint8_t byte) {
   if (iterator == 0) {
     switch (byte) {
-      case 0b00000000:
-        type = Extension::Ext::ASync;
-        break;
-      case 0b00000011:
-        type = Extension::Ext::Discard;
-        break;
-      case 0b00000101:
-        type = Extension::Ext::Overflow;
-        break;
-      case 0b00000111:
-        type = Extension::Ext::BranchFutureFlush;
-        break;
+      case 0b00000000: type = Extension::Ext::ASync            ; break;
+      case 0b00000011: type = Extension::Ext::Discard          ; break;
+      case 0b00000101: type = Extension::Ext::Overflow         ; break;
+      case 0b00000111: type = Extension::Ext::BranchFutureFlush; break;
+    }
+  }
+  else {
+    if ((iterator == 10) && (byte != 0x80)) {
+      // throw;
+      std::cerr << "ASync sequence should end with 0x80 but " << static_cast<int>(byte) << " gotten!" << std::endl;
+    }
+    else if ((iterator < 10) && (byte != 0x00)) {
+      std::cerr << "ASync content should be 0x00 but " << static_cast<int>(byte) << " gotten at step #" << static_cast<int>(iterator) << "!" << std::endl;
     }
   }
   iterator++;
@@ -68,6 +70,7 @@ bool Packet::TraceInfo::isDone() const {
   return iterator == 5;
 }
 
+// NOTE: Can be optimized by commenting the push_back calls.
 void Packet::TraceInfo::insert(uint8_t byte) {
   if (iterator == 0) { // PLCTL
     hasInfo = (0b00000001 & byte);
@@ -158,7 +161,7 @@ Packet::Timestamp::Timestamp(uint8_t header) {
 void Packet::Timestamp::insert(uint8_t byte) {
   if (timestampFlag) {
     if (iterator < 7) {
-      TS |= (0b01111111 & byte) << (iterator*7);
+      TS |= static_cast<uint64_t>(0b01111111 & byte) << (iterator*7);
       iterator++;
       if (byte < 128) {
         iterator = 0;
@@ -166,21 +169,21 @@ void Packet::Timestamp::insert(uint8_t byte) {
       }
     }
     else {
-      TS |= byte << (iterator*7);
+      TS |= static_cast<uint64_t>(byte) << (iterator*7);
       iterator = 0;
       timestampFlag = false;
     }
   }
   else if (hasCountFlag) {
     if (iterator < 2) {
-      COUNT |= (0b01111111 & byte) << (iterator*7);
+      COUNT |= static_cast<uint32_t>(0b01111111 & byte) << (iterator*7);
       iterator++;
       if (byte < 128) {
         hasCountFlag = false;
       }
     }
     else {
-      COUNT |= (0b00111111 & byte) << (iterator*7);
+      COUNT |= static_cast<uint32_t>(0b00111111 & byte) << (iterator*7);
       hasCountFlag = false;
     }
   }
@@ -271,11 +274,11 @@ void Packet::CycleCountFormat1::insert(uint8_t byte) {
   }
   else if ((0 < iterator) && (iterator < 4)) {
     if (iterator == 3) {
-      count |= (0b00111111 & byte) << ((iterator-1)*7);
+      count |= static_cast<uint32_t>(0b00111111 & byte) << ((iterator-1)*7);
       iterator = 4;
     }
     else {
-      count |= (0b01111111 & byte) << ((iterator-1)*7);
+      count |= static_cast<uint32_t>(0b01111111 & byte) << ((iterator-1)*7);
       iterator++;
       if (byte < 128)
         iterator = 4;
@@ -450,7 +453,7 @@ std::string Packet::ConditionalResultFormat2::asString() const {
 
 
 Packet::ConditionalResultFormat3::ConditionalResultFormat3(uint8_t header) {
-  TOKEN |= (0b00001111 & header) << 8;
+  TOKEN |= static_cast<uint16_t>(0b00001111 & header) << 8;
 }
   
 bool Packet::ConditionalResultFormat3::isDone() const {
@@ -458,7 +461,7 @@ bool Packet::ConditionalResultFormat3::isDone() const {
 }
 
 void Packet::ConditionalResultFormat3::insert(uint8_t byte) {
-  TOKEN |= byte;
+  TOKEN |= static_cast<uint16_t>(byte);
   iterator++;
 }
 
@@ -582,15 +585,15 @@ bool Packet::Context::isDone() const {
 void Packet::Context::insert(uint8_t byte) {
   if (!headerDone) {
     EL = 0b00000011 & byte;
-    SF = (0b00010000 & byte) >> 4;
-    NS = (0b00100000 & byte) >> 5;
-    hasVirt = (0b01000000 & byte) >> 6;
-    hasCont = (0b10000000 & byte) >> 7;
+    SF = (0b00010000 & byte) == 0b00010000;
+    NS = (0b00100000 & byte) == 0b00100000;
+    hasVirt = (0b01000000 & byte) == 0b01000000;
+    hasCont = (0b10000000 & byte) == 0b10000000;
     headerDone = true;
     iterator = 0;
   }
   else if (hasVirt) {
-    VMID |= byte << (8*iterator);
+    VMID |= static_cast<uint32_t>(byte) << (8*iterator);
     iterator++;
     if (iterator == 4) {
       iterator = 0;
@@ -598,7 +601,7 @@ void Packet::Context::insert(uint8_t byte) {
     }
   }
   else if (hasCont) {
-    CONTEXTID |= byte << (8*(iterator-4));
+    CONTEXTID |= static_cast<uint32_t>(byte) << (8*iterator);
     iterator++;
     if (iterator == 4) {
       hasCont = false;
@@ -608,6 +611,14 @@ void Packet::Context::insert(uint8_t byte) {
 
 std::string Packet::Context::asString() const {
   return std::format("Context (P = {}, EL = {}, SF = {}, NS = {}, VMID = 0x{:016X}, CONTEXTID = 0x{:016X})", P, EL, SF, NS, VMID, CONTEXTID);
+}
+
+uint32_t Packet::Context::getVmID() const {
+  return VMID;
+}
+
+uint32_t Packet::Context::getContextID() const {
+  return CONTEXTID;
 }
 
 
@@ -649,7 +660,7 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
     iterator = 0;
   }
   else if (hasVirt) {
-    VMID |= byte << (8*iterator);
+    VMID |= static_cast<uint32_t>(byte) << (8*iterator);
     iterator++;
     if (iterator == 4) {
       iterator = 0;
@@ -657,7 +668,7 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
     }
   }
   else if (hasCont) {
-    CONTEXTID |= byte << (8*(iterator-4));
+    CONTEXTID |= static_cast<uint32_t>(byte) << (8*iterator);
     iterator++;
     if (iterator == 4) {
       hasCont = false;
