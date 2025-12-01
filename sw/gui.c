@@ -107,6 +107,13 @@ static void on_switch_toggled(GObject *gobject, GParamSpec *pspec, gpointer user
   gtk_widget_queue_draw(hist->parent);
 }
 
+static void on_switch_toggled_event(GObject *gobject, GParamSpec *pspec, gpointer user_data) {
+  for (int i = 0; i < traces->amount(); i++) {
+    (*traces)[i]->cumulative = gtk_switch_get_active(GTK_SWITCH(gobject));
+  }
+  gtk_widget_queue_draw(plot->parent);
+}
+
 
 /**
  * Called once at the startup.
@@ -149,6 +156,15 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
   // Bottom horizontal bar
   GtkWidget* traceControlBar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   gtk_box_append(GTK_BOX(vbox), traceControlBar);
+  // Bottom horizontal bar
+  GtkWidget* cdfBoxTrace = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+  gtk_box_append(GTK_BOX(traceControlBar), cdfBoxTrace);
+  GtkWidget* cdfLabelTrace = gtk_label_new("CDF?");
+  gtk_box_append(GTK_BOX(cdfBoxTrace), cdfLabelTrace);
+  GtkWidget* cumulativeSwitchTrace = gtk_switch_new();
+  gtk_switch_set_active(GTK_SWITCH(cumulativeSwitchTrace), FALSE);
+  g_signal_connect(cumulativeSwitchTrace, "notify::active", G_CALLBACK(on_switch_toggled_event), NULL);
+  gtk_box_append(GTK_BOX(cdfBoxTrace), cumulativeSwitchTrace);
   //// Add all controls+DataBuffer
   for (int i = 0; i < traces->amount(); i++) {
     // Add separator

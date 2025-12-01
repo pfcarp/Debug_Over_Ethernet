@@ -4,12 +4,19 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numeric>
 
 
 DataBuffer::DataBuffer(Event* event, std::string style): Buffer(event, style) {}
 
 TimedData DataBuffer::at(size_t index) const {
-  TimedData res = {.time = data.x[index], .value = data.y[index]};
+  auto it = data.y.begin();
+  std::advance(it, index);
+  TimedData res = {.time = data.x[index], .value = 0};
+  if (cumulative)
+    res.value = std::accumulate(data.y.begin(), it, 0, [](uint32_t sum, const auto& item) { return sum + item; });
+  else
+    res.value = data.y[index];
   return res;
 }
 
@@ -28,9 +35,14 @@ double DataBuffer::ymin() const {
 }
 
 double DataBuffer::ymax() const {
-  if (data.y.empty())
-    return 1;
-  return y.max;
+  double res = 1;
+  if (cumulative) {
+    res = std::accumulate(data.y.begin(), data.y.end(), 0, [](double sum, const auto& item) { return sum + item; });
+  }
+  else if (!data.y.empty()) {
+    res = y.max;
+  }
+  return res;
 }
 
 double DataBuffer::xmin() const {
