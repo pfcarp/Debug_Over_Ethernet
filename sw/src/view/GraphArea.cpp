@@ -35,8 +35,12 @@ void GraphArea::drawNodes() {
     cairo_arc(cairo, n.x, n.y, radius, 0, 2*M_PI);
     cairo_set_source_rgb(cairo, n.color.red, n.color.green, n.color.blue);
     cairo_fill_preserve(cairo);
-    cairo_set_source_rgb(cairo, 0.1, 0.1, 0.4);
-    cairo_stroke(cairo);
+    // draw circle frame
+    if (n.current) {
+      cairo_set_source_rgb(cairo, 1.0, 0.0, 0.0);   // red border
+      cairo_set_line_width(cairo, 3.0);
+      cairo_stroke(cairo);
+    }
 
     cairo_save(cairo);
     cairo_scale(cairo, 1, -1);

@@ -29,10 +29,15 @@ Graph::Graph(std::string filename) {
   width = bb.UR.x-bb.LL.x;
   height = bb.UR.y-bb.LL.y;
 
+  bool first = true;
   // --- Extract nodes ---
   for (Agnode_t* n = agfstnode(g); n; n = agnxtnode(g, n)) {
     uint64_t address = 0;
     nodes.push_back(GraphNode(std::string(agnameof(n)), address, ND_coord(n).x, ND_coord(n).y, ND_width(n)*72/2, ND_height(n)*72/2));
+    if (first) {
+      nodes.back().setAsCurrent();
+      first = false;
+    }
   }
 
   // --- Extract edges ---
