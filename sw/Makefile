@@ -2,7 +2,7 @@ CXXFLAGS=-lm -std=c++20 -Wall -Wextra
 GTK4FLAGS=`pkg-config --cflags --libs gtk4`
 PCAPFLAGS=`pkg-config --cflags --libs libpcap`
 GRAPHVIZFLAGS=-lgvc -lcgraph
-OPT=-O0 #-O2 -march=native -flto
+OPT=-O2 -march=native -flto
 DEBUG=-g
 
 MODEL=src/model
@@ -98,7 +98,7 @@ online: PacketFactory.o Packet.o Stream.o Deformatter.o Sniffer.o Dispatcher.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) online.cpp $(OBJ)/*.o -o online.out $(CXXFLAGS) $(PCAPFLAGS)
 
 tests: Dispatcher.o Packet.o Deformatter.o Stream.o PacketFactory.o
-	g++ $(OPT) $(INCLUDE) tests.cpp $(TEST)/packet/*.cpp $(TEST)/deformatter/*.cpp $(OBJ)/*.o -o tests.out $(CXXFLAGS)
+	g++ $(OPT) $(INCLUDE) tests.cpp $(wildcard test/packet/*.cpp) $(wildcard test/deformatter/*.cpp) $(OBJ)/*.o -o tests.out $(CXXFLAGS)
 
 gui: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(wildcard object/*.o) -o doeth.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
