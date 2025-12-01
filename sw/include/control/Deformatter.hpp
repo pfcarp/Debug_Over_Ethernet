@@ -27,7 +27,7 @@ class Deformatter {
     std::vector<uint8_t> frame = std::vector<uint8_t>(16); // Needed for tests...
     // Methods
     bool insert(uint8_t byte);
-    bool toInsertInPrevious(const uint8_t aux, const uint8_t offset) const;
+    virtual bool toInsertInPrevious(const uint8_t aux, const uint8_t offset) const;
 
 };
 
