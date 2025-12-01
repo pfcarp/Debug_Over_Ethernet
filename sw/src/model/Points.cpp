@@ -54,6 +54,10 @@ void Points::push(int source, Packet::ShortAddress& packet) {
     if (watchpoints[i]->matches(packet.getAddress())) {
       if (watchpoints[i] != buffers[2]->event) {
         archives();
+        // mark previous 'current event' as not current
+        buffers[2]->event->setAsNotCurrent();
+        watchpoints[i]->setAsCurrent();
+        // Swap
         buffers[2]->event = watchpoints[i];
       }
     }
