@@ -74,9 +74,9 @@ bool Packet::TraceInfo::isDone() const {
 void Packet::TraceInfo::insert(uint8_t byte) {
   if (iterator == 0) { // PLCTL
     hasInfo = (0b00000001 & byte);
-    hasKey  = (0b00000010 & byte) >> 1;
-    hasSpec = (0b00000100 & byte) >> 2;
-    hasCyct = (0b00001000 & byte) >> 3;
+    hasKey  = (0b00000010 & byte) == 0b00000010;
+    hasSpec = (0b00000100 & byte) == 0b00000100;
+    hasCyct = (0b00001000 & byte) == 0b00001000;
     if (byte < 128) {
       if (hasInfo)      { iterator = 1; }
       else if (hasKey)  { iterator = 2; }
@@ -652,10 +652,10 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
   }
   else if (!headerDone) {
     EL = 0b00000011 & byte;
-    SF = (0b00010000 & byte) >> 4;
-    NS = (0b00100000 & byte) >> 5;
-    hasVirt = (0b01000000 & byte) >> 6;
-    hasCont = (0b10000000 & byte) >> 7;
+    SF = (0b00010000 & byte) == 0b00010000;
+    NS = (0b00100000 & byte) == 0b00100000;
+    hasVirt = (0b01000000 & byte) == 0b01000000;
+    hasCont = (0b10000000 & byte) == 0b10000000;
     headerDone = true;
     iterator = 0;
   }
@@ -755,7 +755,7 @@ Packet::LongAddress::LongAddress(uint8_t header) {
     case 0b00000011: offset = 1; length = 4; break;
     case 0b00000101: offset = 2; length = 8; break;
     case 0b00000110: offset = 1; length = 8; break;
-    default        : offset = 0; length = 0; break;
+    default        : throw; break; // TODO: undefined header subtype
   }
 }
   
@@ -909,7 +909,7 @@ std::string Packet::AtomFormat5::asString() const {
 
 
 Packet::AtomFormat6::AtomFormat6(uint8_t header) {
-  A = (0b00100000 & header) >> 5;
+  A = (0b00100000 & header) == 0b00100000;
   COUNT = 0b00011111 & header;
 }
 
@@ -934,7 +934,7 @@ void Packet::Exception::insert(uint8_t byte) {
         case 0b01000000: hasAddress = true ; break;
         default        : hasAddress = false; break;
       }
-      type = (byte & 0b00111110) >> 1;
+      type = static_cast<uint16_t>(byte & 0b00111110) >> 1;
       if (byte >= 128) { 
         iterator++;
       }
@@ -944,8 +944,8 @@ void Packet::Exception::insert(uint8_t byte) {
       }
     }
     else {
-      type |= (byte & 0b00011111) << 5;
-      p = (byte & 0b00100000) >> 5;
+      type |= static_cast<uint16_t>(byte & 0b00011111) << 5;
+      p = (byte & 0b00100000) == 0b00100000;
       iterator = 0;
       headerDone = true;
     }
