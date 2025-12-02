@@ -280,9 +280,9 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
     val configPort = Axi4SlaveFactory(io.axiMan)
 
-    val packetThreshold = Reg(UInt(32 bits)) init(0)
+    val packetThreshold = Reg(UInt(32 bits)) init(1)
 
-    val timeOut = Reg(UInt(32 bits)) init(20)
+    val timeOut = Reg(UInt(32 bits)) init(0)
 
     val flushTimer = Reg(UInt(32 bits)) init(0)
 
