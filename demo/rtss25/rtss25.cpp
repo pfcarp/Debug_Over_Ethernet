@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <iostream>
+#include <fstream>
 #include <cstdlib>
 
 #include <opencv2/opencv.hpp>
@@ -28,6 +29,7 @@ private:
   cv::Mat filtered;
   // Control
   bool human = false;
+  std::vector<uchar> compressed;
   // Filters
   void sepia();
   void sobel();
@@ -39,6 +41,8 @@ public:
   bool capture();
   void filter(int mode);
   bool detect();
+  void compress();
+  void store();
   void display();
   void release();
 };
@@ -161,8 +165,21 @@ bool Pipeline::detect() {
   return human;
 }
 
-void Pipeline::display()
-{
+void Pipeline::compress() {
+  // JPEG compression level: 0 = max compression, 100 = max quality
+  std::vector<int> params = { cv::IMWRITE_JPEG_QUALITY, 80 };
+  cv::imencode(".jpg", filtered, compressed, params);
+}
+
+void Pipeline::store() {
+  std::ofstream out("/tmp/dump.jpeg", std::ios::binary);
+  if (!out)
+    std::cerr << "Error: cannot open /tmp/dup.jpeg for writing\n";
+  out.write(reinterpret_cast<const char*>(compressed.data()), compressed.size());
+  out.close();
+}
+
+void Pipeline::display() {
   if (filtered.empty()) {
     std::cerr << "No frame to display!" << std::endl;
     return;
@@ -211,9 +228,9 @@ int main(int argc, char **argv)
       break;
     }
     if (pipeline.detect()) {
-       pipeline.filter(mode);
-    //   // pipeline.compress();
-    //   // pipeline.store();
+      pipeline.filter(mode);
+      pipeline.compress();
+      pipeline.store();
     }
     pipeline.display();
   }
