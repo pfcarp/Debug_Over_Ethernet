@@ -30,6 +30,7 @@ class Deformatter {
     bool insert(uint8_t byte);
     virtual bool toInsertInPrevious(const uint8_t aux, const uint8_t offset) const;
     void setTimestamp(uint64_t t);
+    virtual ~Deformatter();
 
 };
 
