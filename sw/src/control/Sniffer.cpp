@@ -2,6 +2,7 @@
 
 
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 #include <fstream>
 #include <format>
@@ -33,10 +34,22 @@ void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
       for (size_t i = 2+headerOffset; i < header->len-8; i += 8) {
         // If next four byte do not compose 0xffffffff, do not skip
         if (!areNext8BytesAllSet(&packet[i])) {
-          for (int j = 0; j < 8; j++) {
-            deformatter.insert(packet[i+j]);
-            recording.push_back(packet[i+j]);
+          // Check if timestamp packet index
+          if (goodput%5) {
+            uint64_t relative = static_cast<uint64_t>(packet[i]);
+            for (int j = 1; j < 8; j++)
+              relative |= static_cast<uint64_t>(packet[i+j]) << 8*j;
+            timestamp += relative;
+            deformatter.setTimestamp(timestamp);
           }
+          else {
+            for (int j = 0; j < 8; j++) {
+              deformatter.insert(packet[i+j]);
+              recording.push_back(packet[i+j]);
+            }
+          }
+          // Increment goodput counter
+          goodput++;
         }
       }
     }

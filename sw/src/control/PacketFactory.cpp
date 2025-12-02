@@ -107,6 +107,7 @@ constexpr void PacketFactory::identify(const uint8_t& id) {
     current = std::make_unique<Packet::AtomFormat3>(id);
   else
     current = std::make_unique<Packet::Reserved>();
+  current->setTimestamp(timestamp);
 }
 
 std::ostream& operator<<(std::ostream& os, const Packet::Base& e) {
@@ -130,4 +131,8 @@ void PacketFactory::consume() {
 
 std::unique_ptr<Packet::Base> PacketFactory::get() {
   return std::move(current);
+}
+
+void PacketFactory::setTimestamp(uint64_t t) {
+  timestamp = t;
 }

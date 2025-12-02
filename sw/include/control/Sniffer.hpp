@@ -20,6 +20,8 @@ class Sniffer {
     char errbuf[PCAP_ERRBUF_SIZE];
     Deformatter& deformatter;
     std::vector<uint8_t> recording;
+    uint32_t goodput = 0;
+    uint64_t timestamp = 0;
     // Methods
     void onPacket(const pcap_pkthdr* header, const u_char* packet);
     static void dispatch(u_char* user, const pcap_pkthdr* header, const u_char* packet);
