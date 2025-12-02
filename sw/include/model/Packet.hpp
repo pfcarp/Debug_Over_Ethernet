@@ -14,6 +14,7 @@ namespace Packet {
     
     protected:
       uint8_t iterator = 0;
+      uint64_t timestamp = 0;
 
     public:
 
@@ -22,6 +23,7 @@ namespace Packet {
       virtual std::string asString() const;
       virtual ~Base() = default;
       virtual uint8_t getIterator() const;
+      virtual void setTimestamp(uint64_t t);
 
   };
   

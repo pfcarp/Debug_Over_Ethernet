@@ -1,0 +1,9 @@
+digraph CFG {
+  Capture -> Detect;
+  Detect -> Display;
+  Detect -> Filter;
+  Filter -> Compress;
+  Compress -> Store;
+  Store -> Display;
+  Display -> Capture;
+}

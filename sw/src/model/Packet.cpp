@@ -20,7 +20,11 @@ bool Packet::Base::isDone() const {
 void Packet::Base::insert(uint8_t byte) {}
 
 std::string Packet::Base::asString() const {
-  return "";
+  return std::format("[@{}] ", timestamp);
+}
+
+void Packet::Base::setTimestamp(uint64_t t) {
+  timestamp = t;
 }
 
 
@@ -57,11 +61,11 @@ void Packet::Extension::insert(uint8_t byte) {
 
 std::string Packet::Extension::asString() const {
   switch (type) {
-    case Extension::Ext::ASync:             return "ASync.";
-    case Extension::Ext::Discard:           return "Discard.";
-    case Extension::Ext::Overflow:          return "Overflow";
-    case Extension::Ext::BranchFutureFlush: return "BranchFutureFlush";
-    default: return "No match found!";
+    case Extension::Ext::ASync:             return Packet::Base::asString()+"ASync.";
+    case Extension::Ext::Discard:           return Packet::Base::asString()+"Discard.";
+    case Extension::Ext::Overflow:          return Packet::Base::asString()+"Overflow";
+    case Extension::Ext::BranchFutureFlush: return Packet::Base::asString()+"BranchFutureFlush";
+    default: return Packet::Base::asString()+"No match found!";
   }
 }
 
@@ -126,7 +130,7 @@ void Packet::TraceInfo::insert(uint8_t byte) {
 }
 
 std::string Packet::TraceInfo::asString() const {
-  std::string base = "Trace info";
+  std::string base = Packet::Base::asString()+"Trace info";
   if (hasInfo) {
     for (uint8_t inf : info) {
       bool cc_enabled = inf & 0b00000001;
@@ -190,7 +194,7 @@ void Packet::Timestamp::insert(uint8_t byte) {
 }
 
 std::string Packet::Timestamp::asString() const {
-  return std::format("Timestamp (TS = {}, COUNT = {})", TS, COUNT);
+  return Packet::Base::asString()+std::format("Timestamp (TS = {}, COUNT = {})", TS, COUNT);
 }
 
 
@@ -199,7 +203,7 @@ bool Packet::TraceOn::isDone() const {
 }
 
 std::string Packet::TraceOn::asString() const {
-  return "Trace on.";
+  return Packet::Base::asString()+"Trace on.";
 }
 
 
@@ -208,7 +212,7 @@ bool Packet::FunctionReturn::isDone() const {
 }
 
 std::string Packet::FunctionReturn::asString() const {
-  return "Function return.";
+  return Packet::Base::asString()+"Function return.";
 }
 
 
@@ -217,7 +221,7 @@ bool Packet::ExceptionReturn::isDone() const {
 }
 
 std::string Packet::ExceptionReturn::asString() const {
-  return "Exception return.";
+  return Packet::Base::asString()+"Exception return.";
 }
 
 
@@ -226,7 +230,7 @@ bool Packet::Resynchronization::isDone() const {
 }
 
 std::string Packet::Resynchronization::asString() const {
-  return "Resynchronization.";
+  return Packet::Base::asString()+"Resynchronization.";
 }
 
 
@@ -235,7 +239,7 @@ bool Packet::Reserved::isDone() const {
 }
 
 std::string Packet::Reserved::asString() const {
-  return "Reserved.";
+  return Packet::Base::asString()+"Reserved.";
 }
 
 
@@ -254,7 +258,7 @@ void Packet::CycleCountFormat2::insert(uint8_t byte) {
 }
 
 std::string Packet::CycleCountFormat2::asString() const {
-  return "Cycle count format 2.";
+  return Packet::Base::asString()+"Cycle count format 2.";
 }
 
 
@@ -287,7 +291,7 @@ void Packet::CycleCountFormat1::insert(uint8_t byte) {
 }
 
 std::string Packet::CycleCountFormat1::asString() const {
-  return "Cycle count format 1.";
+  return Packet::Base::asString()+"Cycle count format 1.";
 }
 
 
@@ -301,7 +305,7 @@ bool Packet::CycleCountFormat3::isDone() const {
 }
 
 std::string Packet::CycleCountFormat3::asString() const {
-  return "Cycle count format 3.";
+  return Packet::Base::asString()+"Cycle count format 3.";
 }
 
 
@@ -314,7 +318,7 @@ bool Packet::NumberedDataSyncMark::isDone() const {
 }
 
 std::string Packet::NumberedDataSyncMark::asString() const {
-  return "Numbered data sync mark.";
+  return Packet::Base::asString()+"Numbered data sync mark.";
 }
 
 
@@ -327,7 +331,7 @@ bool Packet::UnnumberedDataSyncMark::isDone() const {
 }
 
 std::string Packet::UnnumberedDataSyncMark::asString() const {
-  return "Unnumbered data sync mark.";
+  return Packet::Base::asString()+"Unnumbered data sync mark.";
 }
 
 
@@ -341,7 +345,7 @@ void Packet::Commit::insert(uint8_t byte) {
 }
 
 std::string Packet::Commit::asString() const {
-  return "Commit.";
+  return Packet::Base::asString()+"Commit.";
 }
 
 
@@ -359,7 +363,7 @@ void Packet::CancelFormat1::insert(uint8_t byte) {
 }
 
 std::string Packet::CancelFormat1::asString() const {
-  return "Cancel format 1.";
+  return Packet::Base::asString()+"Cancel format 1.";
 }
 
 
@@ -372,7 +376,7 @@ bool Packet::Mispredict::isDone() const {
 }
 
 std::string Packet::Mispredict::asString() const {
-  return "Mispredict (A = "+std::to_string(static_cast<int>(A))+")";
+  return Packet::Base::asString()+"Mispredict (A = "+std::to_string(static_cast<int>(A))+")";
 }
 
 
@@ -385,7 +389,7 @@ bool Packet::CancelFormat2::isDone() const {
 }
 
 std::string Packet::CancelFormat2::asString() const {
-  return "CancelFormat2 (A = "+std::to_string(static_cast<int>(A))+")";
+  return Packet::Base::asString()+"CancelFormat2 (A = "+std::to_string(static_cast<int>(A))+")";
 }
 
 
@@ -399,7 +403,7 @@ bool Packet::CancelFormat3::isDone() const {
 }
 
 std::string Packet::CancelFormat3::asString() const {
-  return "CancelFormat3 (CC = "+std::to_string(static_cast<int>(CC))+", A = "+std::to_string(static_cast<int>(A))+")";
+  return Packet::Base::asString()+"CancelFormat3 (CC = "+std::to_string(static_cast<int>(CC))+", A = "+std::to_string(static_cast<int>(A))+")";
 }
 
 
@@ -412,7 +416,7 @@ bool Packet::ConditionalInstructionFormat2::isDone() const {
 }
 
 std::string Packet::ConditionalInstructionFormat2::asString() const {
-  return "Conditional instruction format 2 (CI = "+std::to_string(static_cast<int>(CI))+")";
+  return Packet::Base::asString()+"Conditional instruction format 2 (CI = "+std::to_string(static_cast<int>(CI))+")";
 }
 
 
@@ -421,7 +425,7 @@ bool Packet::ConditionalFlush::isDone() const {
 }
 
 std::string Packet::ConditionalFlush::asString() const {
-  return "Conditional flush.";
+  return Packet::Base::asString()+"Conditional flush.";
 }
 
 
@@ -434,7 +438,7 @@ bool Packet::ConditionalResultFormat4::isDone() const {
 }
 
 std::string Packet::ConditionalResultFormat4::asString() const {
-  return std::format("Conditional result format 4 (TOKEN = {})", T);
+  return Packet::Base::asString()+std::format("Conditional result format 4 (TOKEN = {})", T);
 }
 
 
@@ -448,7 +452,7 @@ bool Packet::ConditionalResultFormat2::isDone() const {
 }
 
 std::string Packet::ConditionalResultFormat2::asString() const {
-  return "Condition result format 2.";
+  return Packet::Base::asString()+"Condition result format 2.";
 }
 
 
@@ -466,7 +470,7 @@ void Packet::ConditionalResultFormat3::insert(uint8_t byte) {
 }
 
 std::string Packet::ConditionalResultFormat3::asString() const {
-  return "Condition result format 3.";
+  return Packet::Base::asString()+"Condition result format 3.";
 }
 
 
@@ -509,7 +513,7 @@ void Packet::ConditionalResultFormat1::insert(uint8_t byte) {
 }
 
 std::string Packet::ConditionalResultFormat1::asString() const {
-  return "Conditional result format 1.";
+  return Packet::Base::asString()+"Conditional result format 1.";
 }
 
 
@@ -523,7 +527,7 @@ void Packet::ConditionalInstructionFormat1::insert(uint8_t byte) {
 }
 
 std::string Packet::ConditionalInstructionFormat1::asString() const {
-  return "Conditional instruction format 1.";
+  return Packet::Base::asString()+"Conditional instruction format 1.";
 }
 
 
@@ -538,7 +542,7 @@ void Packet::ConditionalInstructionFormat3::insert(uint8_t byte) {
 }
 
 std::string Packet::ConditionalInstructionFormat3::asString() const {
-  return "Condition instruction format 3.";
+  return Packet::Base::asString()+"Condition instruction format 3.";
 }
 
 
@@ -547,7 +551,7 @@ bool Packet::Ignore::isDone() const {
 }
 
 std::string Packet::Ignore::asString() const {
-  return "Ignore.";
+  return Packet::Base::asString()+"Ignore.";
 }
 
 
@@ -560,7 +564,7 @@ bool Packet::Event::isDone() const {
 }
 
 std::string Packet::Event::asString() const {
-  return "Event (#0 = "+std::to_string(static_cast<int>(hasEvent(0)))+", #1 = "+std::to_string(static_cast<int>(hasEvent(1)))+", #2 = "+std::to_string(static_cast<int>(hasEvent(2)))+", #3 = "+std::to_string(static_cast<int>(hasEvent(3)))+").";
+  return Packet::Base::asString()+"Event (#0 = "+std::to_string(static_cast<int>(hasEvent(0)))+", #1 = "+std::to_string(static_cast<int>(hasEvent(1)))+", #2 = "+std::to_string(static_cast<int>(hasEvent(2)))+", #3 = "+std::to_string(static_cast<int>(hasEvent(3)))+").";
 }
 
 bool Packet::Event::hasEvent(uint8_t index) const {
@@ -610,7 +614,7 @@ void Packet::Context::insert(uint8_t byte) {
 }
 
 std::string Packet::Context::asString() const {
-  return std::format("Context (P = {}, EL = {}, SF = {}, NS = {}, VMID = 0x{:016X}, CONTEXTID = 0x{:016X})", P, EL, SF, NS, VMID, CONTEXTID);
+  return Packet::Base::asString()+std::format("Context (P = {}, EL = {}, SF = {}, NS = {}, VMID = 0x{:016X}, CONTEXTID = 0x{:016X})", P, EL, SF, NS, VMID, CONTEXTID);
 }
 
 uint32_t Packet::Context::getVmID() const {
@@ -677,7 +681,7 @@ void Packet::AddressWithContext::insert(uint8_t byte) {
 }
 
 std::string Packet::AddressWithContext::asString() const {
-  return std::format("Address with context (A = 0x{:016X}, Context ID = {})", A, CONTEXTID);
+  return Packet::Base::asString()+std::format("Address with context (A = 0x{:016X}, Context ID = {})", A, CONTEXTID);
 }
 
 uint64_t Packet::AddressWithContext::getAddress() const {
@@ -698,7 +702,7 @@ bool Packet::TimestampMarker::isDone() const {
 }
 
 std::string Packet::TimestampMarker::asString() const {
-  return "Timestamp marker.";
+  return Packet::Base::asString()+"Timestamp marker.";
 }
 
 
@@ -711,7 +715,7 @@ bool Packet::ExactMatchAddress::isDone() const {
 }
 
 std::string Packet::ExactMatchAddress::asString() const {
-  return "exact match address.";
+  return Packet::Base::asString()+"exact match address.";
 }
 
 
@@ -741,7 +745,7 @@ void Packet::ShortAddress::insert(uint8_t byte) {
 }
 
 std::string Packet::ShortAddress::asString() const {
-  return std::format("Short address (0x{:04X})", address);
+  return Packet::Base::asString()+std::format("Short address (0x{:04X})", address);
 }
 
 uint32_t Packet::ShortAddress::getAddress() const {
@@ -774,7 +778,7 @@ void Packet::LongAddress::insert(uint8_t byte) {
 }
 
 std::string Packet::LongAddress::asString() const {
-  return std::format("Long address (0x{:016X})", address);
+  return Packet::Base::asString()+std::format("Long address (0x{:016X})", address);
 }
 
 uint64_t Packet::LongAddress::getAddress() const {
@@ -835,7 +839,7 @@ void Packet::Q::insert(uint8_t byte) {
 }
 
 std::string Packet::Q::asString() const {
-  return std::format("Q (Address = {:016X}, #Counts = {})", address, count.size());
+  return Packet::Base::asString()+std::format("Q (Address = {:016X}, #Counts = {})", address, count.size());
 }
 
 uint64_t Packet::Q::getAddress() const {
@@ -852,7 +856,7 @@ bool Packet::AtomFormat1::isDone() const {
 }
 
 std::string Packet::AtomFormat1::asString() const {
-  return "Atom format 1.";
+  return Packet::Base::asString()+"Atom format 1.";
 }
 
 
@@ -865,7 +869,7 @@ bool Packet::AtomFormat2::isDone() const {
 }
 
 std::string Packet::AtomFormat2::asString() const {
-  return "Atom formt 2.";
+  return Packet::Base::asString()+"Atom formt 2.";
 }
 
 
@@ -878,7 +882,7 @@ bool Packet::AtomFormat3::isDone() const {
 }
 
 std::string Packet::AtomFormat3::asString() const {
-  return "Atom format 3 (A = "+std::format("0x{:02X}", a)+")";
+  return Packet::Base::asString()+"Atom format 3 (A = "+std::format("0x{:02X}", a)+")";
 }
 
 
@@ -891,7 +895,7 @@ bool Packet::AtomFormat4::isDone() const {
 }
 
 std::string Packet::AtomFormat4::asString() const {
-  return "Atom formt 4.";
+  return Packet::Base::asString()+"Atom formt 4.";
 }
 
 
@@ -904,7 +908,7 @@ bool Packet::AtomFormat5::isDone() const {
 }
 
 std::string Packet::AtomFormat5::asString() const {
-  return "Atom formt 5.";
+  return Packet::Base::asString()+"Atom formt 5.";
 }
 
 
@@ -918,7 +922,7 @@ bool Packet::AtomFormat6::isDone() const {
 }
 
 std::string Packet::AtomFormat6::asString() const {
-  return "Atom format 6 (COUNT = "+std::format("0x{:02X}", COUNT)+")";
+  return Packet::Base::asString()+"Atom format 6 (COUNT = "+std::format("0x{:02X}", COUNT)+")";
 }
 
 
@@ -973,7 +977,7 @@ void Packet::Exception::insert(uint8_t byte) {
 }
  
 std::string Packet::Exception::asString() const {
-  std::string base = std::format("Exception (TYPE = {}, P = {})", type, p);
+  std::string base = Packet::Base::asString()+std::format("Exception (TYPE = {}, P = {})", type, p);
   if (hasAddress)
     base += " ("+address->asString()+")";
   return base;

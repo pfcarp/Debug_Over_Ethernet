@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
 
   eventsPerf = {new Event("Inst. retired"), new Event("L1 refills"), new Event("L2 refills"), new Event("DTLB refills")};
 
-  graph = new Graph("inputs/toy_example.dot");
+  graph = new Graph("inputs/rtss25.dot");
 
   traces = new Events(eventsPerf);
   watchpoints = new WatchPoints(graph->asWatchPoints());

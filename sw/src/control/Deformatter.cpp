@@ -60,6 +60,12 @@ void Deformatter::clean() {
   frame.assign(frame.size(), 0);
 }
 
+void Deformatter::setTimestamp(uint64_t t) {
+  for (size_t i = 0; i < 4; i++) {
+    streams[i]->factory.setTimestamp(t);
+  }
+}
+
 
 DeformatterVector::DeformatterVector() {
   for (size_t i = 0; i < 4; i++) {
@@ -85,4 +91,3 @@ DeformatterDispatcher::~DeformatterDispatcher() {
     delete streams[i];
   }
 }
-

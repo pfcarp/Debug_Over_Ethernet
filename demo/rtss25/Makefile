@@ -17,7 +17,7 @@ LIB := $(GENDIR)/libtflm.a
 
 # Flags
 COMMON_FLAGS := -DTF_LITE_STATIC_MEMORY -ffunction-sections -fdata-sections -fmessage-length=0 -fno-strict-aliasing
-CXXFLAGS := -std=c++11 -fno-rtti -fno-exceptions -fno-threadsafe-statics $(COMMON_FLAGS)
+CXXFLAGS := -std=c++11 -O3 -ftree-vectorize -march=native -fopt-info-vec -fno-rtti -fno-exceptions -fno-threadsafe-statics $(COMMON_FLAGS)
 CCFLAGS := -std=c11 $(COMMON_FLAGS)
 ARFLAGS := -r
 GTK4FLAGS := `pkg-config --cflags --libs opencv4`
@@ -95,6 +95,7 @@ UNENCRYPTED_SRCS := src/model_settings.cc rtss25.cpp
 
 # Base flags without RTTI restrictions
 BASE_CXXFLAGS := -std=c++11 \
+								 -O3 -ftree-vectorize -march=native -fopt-info-vec \
                  -fno-exceptions \
                  -fno-threadsafe-statics \
                  -DTF_LITE_STATIC_MEMORY \
