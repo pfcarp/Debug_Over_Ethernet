@@ -15,5 +15,5 @@ class GraphNode: public WatchPoint {
     double width;
     double height;
     
-    GraphNode(std::string name = "", uint64_t address = 0, double x = 0.0, double y = 0.0, double width = 1.0, double height = 1.0);
+    GraphNode(std::string name = "", uint64_t lower = 0, uint64_t upper = 0, double x = 0.0, double y = 0.0, double width = 1.0, double height = 1.0);
 };
