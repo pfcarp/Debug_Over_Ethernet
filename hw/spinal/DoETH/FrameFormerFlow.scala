@@ -319,7 +319,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
 
   val EthernetQueue = new StreamFifo(
     dataType = Bits(Output_Width bits),
-    depth = 40
+    depth = 60
   )
   val EthernetQueueAdapter = StreamWidthAdapter(BufferQueue.io.pop, EthernetQueue.io.push)
 
