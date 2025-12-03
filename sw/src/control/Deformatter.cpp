@@ -65,7 +65,7 @@ void Deformatter::clean() {
 }
 
 void Deformatter::setTimestamp(uint64_t t) {
-  printf("stream size is %d", streams.size());
+  // printf("stream size is %d", streams.size());
   for (size_t i = 0; i < streams.size(); i++) {
     streams[i]->factory.setTimestamp(t);
   }

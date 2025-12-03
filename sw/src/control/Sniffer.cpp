@@ -6,10 +6,11 @@
 #include <iostream>
 #include <fstream>
 #include <format>
+#include <cstring>
 
 
 Sniffer::Sniffer(Deformatter& deformatter): deformatter(deformatter) {
-  recording.resize(1024*1024);
+  recording.resize(10*1024);
 }
 
 inline bool Sniffer::hasHeader(const u_char* packet) const {
@@ -34,17 +35,25 @@ void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
     if (hasHeader(&packet[headerOffset]) && hasFooter(&packet[header->len-8])) {
       // From here, jump 8 byte by 8 byte (lower half: data, upper half: zeroes)
       // printf("Valid header and footer found\n");
-      for (size_t i = 2+headerOffset; i < header->len-4; i += 4) {
+      for (size_t i = 2+headerOffset; i < header->len-8; i += 4) {
         // If next four byte do not compose 0xffffffff, do not skip
-        if (!(areNext4BytesAllSet(&packet[i]) && (i%2) && areNext4BytesAllSet(&packet[i+4]))) {
+        // printf("index: %d  packet_size is %d\n",i,header->len);
+        // printf("0x%x\n",packet[i]);
+        if (!(areNext4BytesAllSet(&packet[i]) && areNext4BytesAllSet(&packet[i+4]))) {
+        
           // printf("1\n");
           // Check if timestamp packet index
+
           if (goodput%5 == 0) {
+          // printf("Timestamp packet found at index %d\n", (goodput));
           // if (false) {
             // printf("2\n");
+            // printf("0x%x\n",packet[i]);
             uint64_t relative = static_cast<uint64_t>(packet[i]);
-            for (int j = 1; j < 4; j++)
+            for (int j = 1; j < 4; j++){
               relative |= static_cast<uint64_t>(packet[i+j]) << 8*j;
+              // printf("0x%x\n",packet[i+j]);
+            }
             timestamp += relative;
             // printf("Setting timestamp to %llu\n", timestamp);
             deformatter.setTimestamp(timestamp);
@@ -53,11 +62,17 @@ void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
             // printf("3\n");
             for (int j = 0; j < 4; j++) {
               deformatter.insert(packet[i+j]);
+              // printf("0x%x\n",packet[i+j]);
               // recording.push_back(packet[i+j]);
             }
           }
           // Increment goodput counter
+          // recording.push_back(packet[i]);
           goodput++;
+        }
+        else {
+          // printf("Skipping 4 bytes at index %d\n", i);
+          i += 4;
         }
       }
     }
@@ -110,7 +125,8 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
   pcap_activate(interface);
 
   // Start sniffing
-  captureThread = std::thread(&Sniffer::captureLoop, this);
+  // captureThread = std::thread(&Sniffer::captureLoop, this);
+  captureLoop();
 }
 
 void Sniffer::captureLoop() {
@@ -120,8 +136,8 @@ void Sniffer::captureLoop() {
 void Sniffer::unpickDevice() {
   if (interface != nullptr) {
     pcap_breakloop(interface);
-    if (captureThread.joinable())
-      captureThread.join();
+    // if (captureThread.joinable())
+    //   captureThread.join();
     printStats();
     pcap_close(interface);
     interface = nullptr;
