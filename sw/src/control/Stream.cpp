@@ -36,8 +36,17 @@ StreamDispatcher::StreamDispatcher(Dispatcher& dispatcher): Stream(), dispatcher
 void StreamDispatcher::insert(uint8_t byte) {
   if (factory.insert(byte)) {
     std::unique_ptr<Packet::Base> packet = factory.get();
-    dispatcher.push(0, *packet);
-    packet.reset();
+    // std::cout<<packet->asString()<<"a!"<<std::endl;
+    // std::cout<<&dispatcher<<std::endl;
+    if (auto* a = dynamic_cast<Packet::Event*>(packet.get()))
+      dispatcher.push(0, *a);
+    else if (auto* a = dynamic_cast<Packet::LongAddress*>(packet.get()))
+      dispatcher.push(0, *a);
+    if (auto* a = dynamic_cast<Packet::ShortAddress*>(packet.get()))
+      dispatcher.push(0, *a);
+    if (auto* a = dynamic_cast<Packet::AddressWithContext*>(packet.get()))
+      dispatcher.push(0, *a);
+    // packet.reset();
   }
 }
 

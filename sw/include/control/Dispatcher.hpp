@@ -19,5 +19,6 @@ class Dispatcher {
     // Methods
     Dispatcher(WatchPoints& watchpoints, Events& events, Points& points);
     void push(int source, Packet::Base packet);
+    void push(int source, Packet::Event packet);
     
 };
