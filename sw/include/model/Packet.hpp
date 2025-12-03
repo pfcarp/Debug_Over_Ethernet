@@ -14,10 +14,11 @@ namespace Packet {
     
     protected:
       uint8_t iterator = 0;
-      uint64_t timestamp = 0;
 
     public:
-
+      // Attributes
+      uint64_t timestamp = 0;
+      // Methods
       virtual bool isDone() const;
       virtual void insert(uint8_t byte);
       virtual std::string asString() const;

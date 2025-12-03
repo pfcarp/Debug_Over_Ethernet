@@ -14,3 +14,7 @@ void Event::setAsCurrent() {
 void Event::setAsNotCurrent() {
   current = false;
 }
+
+void Event::setFactor(uint32_t f) {
+  factor = f;
+}

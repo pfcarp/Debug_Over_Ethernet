@@ -89,7 +89,6 @@ void Points::push(int source, Packet::AddressWithContext& packet) {
 void Points::push(int source, Packet::Event& packet) {
   instructions += packet.hasEvent(0);
   cacheline_refill += packet.hasEvent(2);
-  time += 1.0; //packet.delta;
-  TimedData res = {.time = instructions/cacheline_refill, .value = instructions/time};
+  TimedData res = {.time = instructions/cacheline_refill, .value = instructions/static_cast<double>(packet.timestamp)};
   buffers[2]->add(res);
 }

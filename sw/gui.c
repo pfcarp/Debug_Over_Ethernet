@@ -215,7 +215,9 @@ int main(int argc, char *argv[]) {
   GtkApplication *app;
   int status;
 
-  eventsPerf = {new Event("Inst. retired"), new Event("L1 refills"), new Event("L2 refills"), new Event("DTLB refills")};
+  eventsPerf = {new Event("Inst. retired"), new Event("L2 refills")};
+  eventsPerf[0]->setFactor(65535);
+  eventsPerf[1]->setFactor(1000);
 
   graph = new Graph("inputs/rtss25.dot");
 

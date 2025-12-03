@@ -12,6 +12,9 @@ class Events: public Collection {
 
 
   public:
+    // Attributes
+    std::vector<Event*> events;
+    // Methods
     Events(std::vector<Event*> events);
     ~Events();
     Buffer* operator[](size_t index) override;

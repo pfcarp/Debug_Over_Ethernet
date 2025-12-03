@@ -12,6 +12,7 @@ class Event {
 
   public:
     bool current = false;
+    uint32_t factor;
     std::string name;
     Color color;
 
@@ -19,5 +20,6 @@ class Event {
     virtual bool matches(uint64_t attempt);
     void setAsCurrent();
     void setAsNotCurrent();
+    void setFactor(uint32_t f);
 
 };

@@ -8,7 +8,7 @@
 #include "DataBuffer.hpp"
 
 
-Events::Events(std::vector<Event*> events): Collection() {
+Events::Events(std::vector<Event*> events): Collection(), events(events) {
   for (Event*& event : events) {
     add(new DataBuffer(event, "-"));
   }
@@ -32,7 +32,7 @@ void Events::push(int source, Packet::Base& packet) {}
 void Events::push(int source, Packet::Event& packet) {
   for (size_t i = 0; i < 4; i++) {
     if (packet.hasEvent(i)) {
-      TimedData res = {.time = 1, .value = 0};
+      TimedData res = {.time = static_cast<double>(packet.timestamp), .value = static_cast<double>(events[i]->factor)};
       buffers[i]->add(res);
     }
   }
