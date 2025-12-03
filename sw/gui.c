@@ -21,7 +21,7 @@
 
 // Model/data
 static Sniffer* sniffer;
-static Deformatter* deformatter;
+static DeformatterDispatcher* deformatter;
 static Dispatcher* dispatcher;
 static Graph* graph = NULL;
 static Events* traces;
@@ -206,7 +206,7 @@ static void on_activate(GtkApplication *app, gpointer user_data) {
   gtk_box_append(GTK_BOX(vbox), roof->parent);
   
   // Refresh and all
-  g_timeout_add(1000/60, update_plot, NULL);
+  g_timeout_add(1000/10, update_plot, NULL);
   gtk_window_present(GTK_WINDOW(window));
 }
 
@@ -225,9 +225,9 @@ int main(int argc, char *argv[]) {
   watchpoints = new WatchPoints(graph->asWatchPoints());
   roofline = new Points(graph->asWatchPoints());
 
+  dispatcher = new Dispatcher(*watchpoints, *traces, *roofline);
   deformatter = new DeformatterDispatcher(*dispatcher);
   sniffer = new Sniffer(*deformatter);
-  dispatcher = new Dispatcher(*watchpoints, *traces, *roofline);
 
   // Generate roofline
   app = gtk_application_new("com.example.LivePlot", G_APPLICATION_DEFAULT_FLAGS);

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <iostream>
 
 
 DataBuffer::DataBuffer(Event* event, std::string style): Buffer(event, style) {}
@@ -25,9 +26,15 @@ void DataBuffer::add(TimedData item) {
   std::lock_guard<std::mutex> lock(m);
   data.x.push_back(item.time);
   data.y.push_back(item.value);
+  if (data.yacc.empty())
+    data.yacc.push_back(item.value);
+  else
+    data.yacc.push_back(data.yacc.back()+item.value);
   // TODO: wrap in a mutex
   y.min = std::min(y.min, item.value);
   y.max = std::max(y.max, item.value);
+  yacc.min = y.min;
+  yacc.max = std::max(yacc.max, data.yacc.back());
 }
 
 double DataBuffer::ymin() {
@@ -41,7 +48,7 @@ double DataBuffer::ymax() {
   std::lock_guard<std::mutex> lock(m);
   double res = 1;
   if (cumulative) {
-    res = std::accumulate(data.y.begin(), data.y.end(), 0, [](double sum, const auto& item) { return sum + item; });
+    res = yacc.max;
   }
   else if (!data.y.empty()) {
     res = y.max;
@@ -72,6 +79,9 @@ void DataBuffer::clear() {
   std::lock_guard<std::mutex> lock(m);
   data.x.clear();
   data.y.clear();
+  data.yacc.clear();
   y.min = INFINITY;
   y.max = -INFINITY;
+  yacc.min = INFINITY;
+  yacc.max = -INFINITY;
 }

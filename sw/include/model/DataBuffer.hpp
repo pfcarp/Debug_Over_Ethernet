@@ -16,12 +16,17 @@ class DataBuffer: public Buffer {
   protected:
     struct {
       std::vector<double> x;
+      std::vector<double> yacc;
       std::vector<double> y;
     } data;
     struct {
       double min =  INFINITY;
       double max = -INFINITY;
     } y;
+    struct {
+      double min =  INFINITY;
+      double max = -INFINITY;
+    } yacc;
 
   public:
 

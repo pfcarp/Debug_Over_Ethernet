@@ -27,9 +27,12 @@ Buffer* Events::operator[](size_t index) {
   return buffers[index];
 }
 
-void Events::push(int source, Packet::Base& packet) {}
+void Events::push(int source, Packet::Base& packet) {
+  // std::cout<<"hello!"<<std::endl;
+}
 
 void Events::push(int source, Packet::Event& packet) {
+  // std::cout<<"an event!"<<std::endl;
   for (size_t i = 0; i < 4; i++) {
     if (packet.hasEvent(i)) {
       TimedData res = {.time = static_cast<double>(packet.timestamp), .value = static_cast<double>(events[i]->factor)};
