@@ -8,7 +8,9 @@
 #include <format>
 
 
-Sniffer::Sniffer(Deformatter& deformatter): deformatter(deformatter) {}
+Sniffer::Sniffer(Deformatter& deformatter): deformatter(deformatter) {
+  recording.resize(1024*1024);
+}
 
 inline bool Sniffer::hasHeader(const u_char* packet) const {
   return (packet[0] == 0xab) && (packet[1] == 0xba);
@@ -105,7 +107,7 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
   pcap_set_snaplen(interface, 65535);
   pcap_set_promisc(interface, 1);
   pcap_set_timeout(interface, 10);
-  pcap_set_buffer_size(interface, 256*1024*1024);
+  pcap_set_buffer_size(interface, 1024*1024*1024);
   pcap_activate(interface);
 
   // Start sniffing
