@@ -10,7 +10,7 @@
 
 
 static Sniffer* sniffer;
-static Deformatter* deformatter;
+static DeformatterVector* deformatter;
 
 
 static void handle_sigint(int) {
@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
   // CTRL+C handler
   std::signal(SIGINT, handle_sigint);
 
-  deformatter = new Deformatter();
+  deformatter = new DeformatterVector();
   sniffer = new Sniffer(*deformatter);
 
   if (argc != 2) {

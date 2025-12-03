@@ -6,7 +6,9 @@
 
 
 void StreamVector::insert(uint8_t byte) {
+  // printf("SV insert method\n");
   if (factory.insert(byte)) {
+    // printf("SV insert method inside if\n");
     packets.push_back(factory.get());
   }
 }
@@ -20,6 +22,13 @@ StreamVector::~StreamVector() {
   for (const auto& packet : packets)
     std::cout << packet->asString() << std::endl;
 }
+
+Stream::~Stream() {
+  std::cout << "STREAM -----------------------" << std::endl;
+  for (const auto& packet : packets)
+    std::cout << packet->asString() << std::endl;
+}
+
 
 
 StreamDispatcher::StreamDispatcher(Dispatcher& dispatcher): Stream(), dispatcher(dispatcher) {}

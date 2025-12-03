@@ -21,6 +21,7 @@ class Stream {
     // Methods
     virtual void insert(uint8_t byte) = 0;
     virtual size_t size() = 0;
+    ~Stream();
 
 };
 

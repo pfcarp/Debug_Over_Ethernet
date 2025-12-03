@@ -8,7 +8,9 @@
 #include <format>
 
 
-Sniffer::Sniffer(Deformatter& deformatter): deformatter(deformatter) {}
+Sniffer::Sniffer(Deformatter& deformatter): deformatter(deformatter) {
+  recording.resize(1024*1024);
+}
 
 inline bool Sniffer::hasHeader(const u_char* packet) const {
   return (packet[0] == 0xab) && (packet[1] == 0xba);
@@ -28,24 +30,31 @@ inline bool Sniffer::areNext8BytesAllSet(const u_char* packet) const {
 
 void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
   // Must be larger than 2+8 (i.e., 0xABBA+0xEBBE000000000000)
+  // printf("Packet length: %u\n", header->len);
   if (header->len > 10+headerOffset) {
     if (hasHeader(&packet[headerOffset]) && hasFooter(&packet[header->len-8])) {
       // From here, jump 8 byte by 8 byte (lower half: data, upper half: zeroes)
+      // printf("Valid header and footer found\n");
       for (size_t i = 2+headerOffset; i < header->len-8; i += 8) {
         // If next four byte do not compose 0xffffffff, do not skip
         if (!areNext8BytesAllSet(&packet[i])) {
+          // printf("1\n");
           // Check if timestamp packet index
           if (goodput%3 == 0) {
+          // if (false) {
+            // printf("2\n");
             uint64_t relative = static_cast<uint64_t>(packet[i]);
             for (int j = 1; j < 8; j++)
               relative |= static_cast<uint64_t>(packet[i+j]) << 8*j;
             timestamp += relative;
+            // printf("Setting timestamp to %llu\n", timestamp);
             deformatter.setTimestamp(timestamp);
           }
           else {
+            // printf("3\n");
             for (int j = 0; j < 8; j++) {
               deformatter.insert(packet[i+j]);
-              recording.push_back(packet[i+j]);
+              // recording.push_back(packet[i+j]);
             }
           }
           // Increment goodput counter
@@ -98,7 +107,7 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
   pcap_set_snaplen(interface, 65535);
   pcap_set_promisc(interface, 1);
   pcap_set_timeout(interface, 10);
-  pcap_set_buffer_size(interface, 256*1024*1024);
+  pcap_set_buffer_size(interface, 1024*1024*1024);
   pcap_activate(interface);
 
   // Start sniffing

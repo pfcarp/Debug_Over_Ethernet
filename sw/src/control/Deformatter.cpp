@@ -16,7 +16,9 @@ bool Deformatter::insert(uint8_t byte) {
   // If frame size reached
   if (counter == 15) {
     // Format frame
+    // printf("Formatting frame and counter is %d\n", counter);
     format();
+    // printf("Formatted frame\n");
     clean();
     return true;
   }
@@ -37,9 +39,11 @@ void Deformatter::format() {
       if (frame[i]%2) {
         previous = current;
         current = frame[i] >> 1;
+        // printf("Switching to stream %d  %d\n", current, streams.size());
         insertInPrevious = toInsertInPrevious(frame[15], i/2);
       }
       else {
+        // printf("Staying in stream %d  %d\n", current, streams.size());
         streams[current]->insert((frame[i] & 0xfe) | ((frame[15] >> (i/2)) & 0x01));
       }
     }
@@ -61,7 +65,8 @@ void Deformatter::clean() {
 }
 
 void Deformatter::setTimestamp(uint64_t t) {
-  for (size_t i = 0; i < 4; i++) {
+  printf("stream size is %d", streams.size());
+  for (size_t i = 0; i < streams.size(); i++) {
     streams[i]->factory.setTimestamp(t);
   }
 }
@@ -87,6 +92,12 @@ DeformatterDispatcher::DeformatterDispatcher(Dispatcher& dispatcher): dispatcher
 }
 
 DeformatterDispatcher::~DeformatterDispatcher() {
+  for (size_t i = 0; i < streams.size(); i++) {
+    delete streams[i];
+  }
+}
+
+Deformatter::~Deformatter() {
   for (size_t i = 0; i < streams.size(); i++) {
     delete streams[i];
   }

@@ -50,10 +50,10 @@ void Packet::Extension::insert(uint8_t byte) {
   else {
     if ((iterator == 10) && (byte != 0x80)) {
       // throw;
-      std::cerr << "ASync sequence should end with 0x80 but " << static_cast<int>(byte) << " gotten!" << std::endl;
+      // std::cerr << "ASync sequence should end with 0x80 but " << static_cast<int>(byte) << " gotten!" << std::endl;
     }
     else if ((iterator < 10) && (byte != 0x00)) {
-      std::cerr << "ASync content should be 0x00 but " << static_cast<int>(byte) << " gotten at step #" << static_cast<int>(iterator) << "!" << std::endl;
+      // std::cerr << "ASync content should be 0x00 but " << static_cast<int>(byte) << " gotten at step #" << static_cast<int>(iterator) << "!" << std::endl;
     }
   }
   iterator++;

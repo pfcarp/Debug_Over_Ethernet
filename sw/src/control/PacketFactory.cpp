@@ -17,10 +17,30 @@ constexpr void PacketFactory::identify(const uint8_t& id) {
     current = std::make_unique<Packet::Extension>();
   else if (id == 0b00000001)
     current = std::make_unique<Packet::TraceInfo>();
-  else if (isInInclusiveRange(id, 0b00000010, 0b00000011))
-    current = std::make_unique<Packet::Timestamp>(id);
+  else if (isInInclusiveRange(id, 0b10000010, 0b10000011)||isInInclusiveRange(id, 0b10000101, 0b10000110))
+    current = std::make_unique<Packet::AddressWithContext>(id);
   else if (id == 0b00000100)
     current = std::make_unique<Packet::TraceOn>();
+  else if ((isInInclusiveRange(id, 0b11000000, 0b11010100))||isInInclusiveRange(id, 0b11100000, 0b11110100))
+    current = std::make_unique<Packet::AtomFormat6>(id);
+  else if (isInInclusiveRange(id, 0b11010101, 0b11010111)||(id == 0b11110101))
+    current = std::make_unique<Packet::AtomFormat5>(id);
+  else if (isInInclusiveRange(id, 0b11011000, 0b11011011))
+    current = std::make_unique<Packet::AtomFormat2>(id);
+  else if (isInInclusiveRange(id, 0b11011100, 0b11011111))
+    current = std::make_unique<Packet::AtomFormat4>(id);
+  else if (isInInclusiveRange(id, 0b11110110, 0b11110111))
+    current = std::make_unique<Packet::AtomFormat1>(id);
+  else if (isInInclusiveRange(id, 0b11111000, 0b11111111))
+    current = std::make_unique<Packet::AtomFormat3>(id);
+  else if (isInInclusiveRange(id, 0b10010000, 0b10010010))
+    current = std::make_unique<Packet::ExactMatchAddress>(id);
+  else if (isInInclusiveRange(id, 0b10010101, 0b10010110))
+    current = std::make_unique<Packet::ShortAddress>(id);
+  else if (isInInclusiveRange(id, 0b10011010, 0b10011011)||isInInclusiveRange(id, 0b10011101, 0b10011110))
+    current = std::make_unique<Packet::LongAddress>(id);
+  else if (isInInclusiveRange(id, 0b01110001, 0b01111111))
+    current = std::make_unique<Packet::Event>(id);
   else if (id == 0b00000101)
     current = std::make_unique<Packet::FunctionReturn>();
   else if (id == 0b00000110)
@@ -69,42 +89,14 @@ constexpr void PacketFactory::identify(const uint8_t& id) {
     current = std::make_unique<Packet::ConditionalInstructionFormat3>();
   else if (id == 0b01110000)
     current = std::make_unique<Packet::Ignore>();
-  else if (isInInclusiveRange(id, 0b01110001, 0b01111111))
-    current = std::make_unique<Packet::Event>(id);
   else if (isInInclusiveRange(id, 0b10000000, 0b10000001))
     current = std::make_unique<Packet::Context>(id);
-  else if (isInInclusiveRange(id, 0b10000010, 0b10000011))
-    current = std::make_unique<Packet::AddressWithContext>(id);
-  else if (isInInclusiveRange(id, 0b10000101, 0b10000110))
-    current = std::make_unique<Packet::AddressWithContext>(id);
   else if (id == 0b10001000)
     current = std::make_unique<Packet::TimestampMarker>();
-  else if (isInInclusiveRange(id, 0b10010000, 0b10010010))
-    current = std::make_unique<Packet::ExactMatchAddress>(id);
-  else if (isInInclusiveRange(id, 0b10010101, 0b10010110))
-    current = std::make_unique<Packet::ShortAddress>(id);
-  else if (isInInclusiveRange(id, 0b10011010, 0b10011011))
-    current = std::make_unique<Packet::LongAddress>(id);
-  else if (isInInclusiveRange(id, 0b10011101, 0b10011110))
-    current = std::make_unique<Packet::LongAddress>(id);
   else if (isInInclusiveRange(id, 0b10100000, 0b10101111))
     current = std::make_unique<Packet::Q>(id);
-  else if (isInInclusiveRange(id, 0b11000000, 0b11010100))
-    current = std::make_unique<Packet::AtomFormat6>(id);
-  else if (isInInclusiveRange(id, 0b11010101, 0b11010111))
-    current = std::make_unique<Packet::AtomFormat5>(id);
-  else if (isInInclusiveRange(id, 0b11011000, 0b11011011))
-    current = std::make_unique<Packet::AtomFormat2>(id);
-  else if (isInInclusiveRange(id, 0b11011100, 0b11011111))
-    current = std::make_unique<Packet::AtomFormat4>(id);
-  else if (isInInclusiveRange(id, 0b11100000, 0b11110100))
-    current = std::make_unique<Packet::AtomFormat6>(id);
-  else if (id == 0b11110101)
-    current = std::make_unique<Packet::AtomFormat5>(id);
-  else if (isInInclusiveRange(id, 0b11110110, 0b11110111))
-    current = std::make_unique<Packet::AtomFormat1>(id);
-  else if (isInInclusiveRange(id, 0b11111000, 0b11111111))
-    current = std::make_unique<Packet::AtomFormat3>(id);
+  else if (isInInclusiveRange(id, 0b00000010, 0b00000011))
+    current = std::make_unique<Packet::Timestamp>(id);
   else
     current = std::make_unique<Packet::Reserved>();
   current->setTimestamp(timestamp);
