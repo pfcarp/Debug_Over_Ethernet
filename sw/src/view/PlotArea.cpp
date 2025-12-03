@@ -2,6 +2,8 @@
 
 
 #include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <iostream>
 
 
@@ -46,13 +48,17 @@ void PlotArea::setBackground() {
 void PlotArea::plotCurve(Buffer* buffer) {
   // Define line setup
   cairo_set_source_rgba(cairo, buffer->event->color.red, buffer->event->color.green, buffer->event->color.blue, buffer->event->color.alpha);
-  cairo_set_line_width(cairo, 5.0);
+  cairo_set_line_width(cairo, 2.0);
+  // Down sampling
+  size_t step = 1;
   // Draw each curve
   if (buffer->size()) {
-    TimedData coord = buffer->at(0);
+    const TimedData& coord = buffer->at(0);
     cairo_move_to(cairo, adaptX(coord.time), adaptY(coord.value));
-    for (int i = 1; i < buffer->size(); i++) {
-      TimedData coord = buffer->at(i);
+    if (buffer->size() > 200)
+      step = buffer->size()/100;
+    for (int i = 1; i < buffer->size(); i+=step) {
+      const TimedData& coord = buffer->at(i);
       cairo_line_to(cairo, adaptX(coord.time), adaptY(coord.value));
     }
   }
@@ -65,8 +71,8 @@ void PlotArea::plotScatter(Buffer* buffer) {
   cairo_set_source_rgba(cairo, buffer->event->color.red, buffer->event->color.green, buffer->event->color.blue, buffer->event->color.alpha);
   // Draw each curve
   for (int i = 0; i < buffer->size(); i++) {
-    TimedData coord = buffer->at(i);
-    cairo_arc(cairo, adaptX(coord.time), adaptY(coord.value), 5.0, 0, 2*M_PI);
+    const TimedData& coord = buffer->at(i);
+    cairo_arc(cairo, adaptX(coord.time), adaptY(coord.value), 2.0, 0, 2*M_PI);
     cairo_fill(cairo);
   }
   // Actually draw
