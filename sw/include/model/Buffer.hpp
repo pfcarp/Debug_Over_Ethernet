@@ -2,6 +2,7 @@
 
 
 #include <string>
+#include <mutex>
 
 
 #include "TimedData.hpp"
@@ -9,6 +10,9 @@
 
 
 class Buffer {
+
+  protected:
+    std::mutex m;
 
   public:
     Event* event = NULL; 
@@ -21,12 +25,12 @@ class Buffer {
       show = true;
     }
     virtual ~Buffer() = default;
-    virtual TimedData at(size_t index) const = 0;
+    virtual TimedData at(size_t index) = 0;
     virtual void add(TimedData item) = 0;
-    virtual double ymin() const = 0;
-    virtual double ymax() const = 0;
-    virtual double xmin() const = 0;
-    virtual double xmax() const = 0;
-    virtual size_t size() const = 0;
+    virtual double ymin() = 0;
+    virtual double ymax() = 0;
+    virtual double xmin() = 0;
+    virtual double xmax() = 0;
+    virtual size_t size() = 0;
     virtual void clear() = 0;
 };

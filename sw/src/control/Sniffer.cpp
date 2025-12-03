@@ -35,7 +35,7 @@ void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
         // If next four byte do not compose 0xffffffff, do not skip
         if (!areNext8BytesAllSet(&packet[i])) {
           // Check if timestamp packet index
-          if (goodput%5) {
+          if (goodput%3 == 0) {
             uint64_t relative = static_cast<uint64_t>(packet[i]);
             for (int j = 1; j < 8; j++)
               relative |= static_cast<uint64_t>(packet[i+j]) << 8*j;
@@ -102,12 +102,18 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
   pcap_activate(interface);
 
   // Start sniffing
+  captureThread = std::thread(&Sniffer::captureLoop, this);
+}
+
+void Sniffer::captureLoop() {
   pcap_loop(interface, 0, Sniffer::dispatch, (u_char*)this);
 }
 
 void Sniffer::unpickDevice() {
   if (interface != nullptr) {
     pcap_breakloop(interface);
+    if (captureThread.joinable())
+      captureThread.join();
     printStats();
     pcap_close(interface);
     interface = nullptr;

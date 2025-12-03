@@ -18,12 +18,12 @@ class Point: public Buffer {
 
   public:
     Point(Event* event);
-    TimedData at(size_t index) const override;
+    TimedData at(size_t index) override;
     void add(TimedData item) override;
-    virtual double ymin() const override;
-    virtual double ymax() const override;
-    double xmin() const override;
-    double xmax() const override;
-    size_t size() const override;
+    virtual double ymin() override;
+    virtual double ymax() override;
+    double xmin() override;
+    double xmax() override;
+    size_t size() override;
     void clear() override;
 };

@@ -10,7 +10,8 @@
 HistogramBuffer::HistogramBuffer(Event* event): Buffer(event) {}
 
 
-TimedData HistogramBuffer::at(size_t index) const {
+TimedData HistogramBuffer::at(size_t index) {
+  std::lock_guard<std::mutex> lock(m);
   auto it = data.begin();
   std::advance(it, index);
   TimedData res = {.time = it->first, .value = 0};
@@ -22,14 +23,16 @@ TimedData HistogramBuffer::at(size_t index) const {
 }
 
 void HistogramBuffer::add(TimedData item) {
+  std::lock_guard<std::mutex> lock(m);
   data[item.time]++;
 }
 
-double HistogramBuffer::ymin() const {
+double HistogramBuffer::ymin() {
   return 0;
 }
 
-double HistogramBuffer::ymax() const {
+double HistogramBuffer::ymax() {
+  std::lock_guard<std::mutex> lock(m);
   double res = 1;
   if (cumulative) {
     res = std::accumulate(data.begin(), data.end(), 0, [](double sum, const auto& item) { return sum + item.second; });
@@ -40,22 +43,26 @@ double HistogramBuffer::ymax() const {
   return res;
 }
 
-double HistogramBuffer::xmin() const {
+double HistogramBuffer::xmin() {
+  std::lock_guard<std::mutex> lock(m);
   if (data.empty())
     return 0;
   return data.begin()->first;
 }
 
-double HistogramBuffer::xmax() const {
+double HistogramBuffer::xmax() {
+  std::lock_guard<std::mutex> lock(m);
   if (data.empty())
     return 1;
   return data.rbegin()->first;
 }
 
-size_t HistogramBuffer::size() const {
+size_t HistogramBuffer::size() {
+  std::lock_guard<std::mutex> lock(m);
   return data.size();
 }
 
 void HistogramBuffer::clear() {
+  std::lock_guard<std::mutex> lock(m);
   data.clear();
 }

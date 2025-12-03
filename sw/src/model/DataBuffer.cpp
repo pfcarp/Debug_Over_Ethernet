@@ -9,7 +9,8 @@
 
 DataBuffer::DataBuffer(Event* event, std::string style): Buffer(event, style) {}
 
-TimedData DataBuffer::at(size_t index) const {
+TimedData DataBuffer::at(size_t index) {
+  std::lock_guard<std::mutex> lock(m);
   auto it = data.y.begin();
   std::advance(it, index);
   TimedData res = {.time = data.x[index], .value = 0};
@@ -21,6 +22,7 @@ TimedData DataBuffer::at(size_t index) const {
 }
 
 void DataBuffer::add(TimedData item) {
+  std::lock_guard<std::mutex> lock(m);
   data.x.push_back(item.time);
   data.y.push_back(item.value);
   // TODO: wrap in a mutex
@@ -28,13 +30,15 @@ void DataBuffer::add(TimedData item) {
   y.max = std::max(y.max, item.value);
 }
 
-double DataBuffer::ymin() const {
+double DataBuffer::ymin() {
+  std::lock_guard<std::mutex> lock(m);
   if (data.y.empty())
     return 0;
   return y.min;
 }
 
-double DataBuffer::ymax() const {
+double DataBuffer::ymax() {
+  std::lock_guard<std::mutex> lock(m);
   double res = 1;
   if (cumulative) {
     res = std::accumulate(data.y.begin(), data.y.end(), 0, [](double sum, const auto& item) { return sum + item; });
@@ -45,23 +49,27 @@ double DataBuffer::ymax() const {
   return res;
 }
 
-double DataBuffer::xmin() const {
+double DataBuffer::xmin() {
+  std::lock_guard<std::mutex> lock(m);
   if (data.x.empty())
     return 0;
   return *data.x.begin();
 }
 
-double DataBuffer::xmax() const {
+double DataBuffer::xmax() {
+  std::lock_guard<std::mutex> lock(m);
   if (data.x.empty())
     return 1;
   return *data.x.rbegin();
 }
 
-size_t DataBuffer::size() const {
+size_t DataBuffer::size() {
+  std::lock_guard<std::mutex> lock(m);
   return data.x.size();
 }
 
 void DataBuffer::clear() {
+  std::lock_guard<std::mutex> lock(m);
   data.x.clear();
   data.y.clear();
   y.min = INFINITY;
