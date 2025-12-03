@@ -1,4 +1,11 @@
 digraph CFG {
+  Capture [addr_low="0x1000", addr_high="0x1010"]
+  Detect [addr_low="0x2000", addr_high="0x2010"]
+  Display [addr_low="0x3000", addr_high="0x3010"]
+  Filter [addr_low="0x4000", addr_high="0x4010"]
+  Compress [addr_low="0x5000", addr_high="0x5010"]
+  Store [addr_low="0x6000", addr_high="0x6010"]
+
   Capture -> Detect;
   Detect -> Display;
   Detect -> Filter;

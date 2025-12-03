@@ -17,10 +17,22 @@ static void handle_sigint(int) {
   sniffer->unpickDevice();
 }
 
+void handler(int sig, siginfo_t *info, void *ctx) {
+    write(2, "Segfault detected\n", 18);
+    sniffer->printStats();
+    delete sniffer;
+    _Exit(1);
+
+}
 
 int main(int argc, char* argv[]) {
   // CTRL+C handler
   std::signal(SIGINT, handle_sigint);
+  // Segfault handler
+  struct sigaction sa = {0};
+  sa.sa_sigaction = handler;
+  sa.sa_flags = SA_SIGINFO;
+  sigaction(SIGSEGV, &sa, NULL);
 
   deformatter = new DeformatterVector();
   sniffer = new Sniffer(*deformatter);

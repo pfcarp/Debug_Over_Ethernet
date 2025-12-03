@@ -12,6 +12,8 @@ const char* xlabel = "Time (CC)";
 
 PlotArea::PlotArea(unsigned width, unsigned height): dimensions({width, height}) {
   parent = gtk_drawing_area_new();
+  gtk_widget_set_hexpand(parent, TRUE);
+  gtk_widget_set_vexpand(parent, TRUE);
   gtk_widget_set_size_request(parent, width, height);
   gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(parent), cOnDraw, this, NULL);
 }
