@@ -293,6 +293,8 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
     val succesfultransfers = Reg(UInt(32 bits)) init(0)
     val EthernetWordsGood = Reg(UInt(32 bits)) init(0)
 
+    val timeStampInject=Reg(UInt(2 bits)) init(0)
+
     //packets recieved
     //fs during 
     //packets in the queue
@@ -340,9 +342,10 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
     val timeOutCounter = Reg(UInt(32 bits)) init(timeOut)
     val flushTimerCounter = Reg(UInt(32 bits)) init(flushTimer)
 
-    io.Manager.payload.data := B(1)#*Output_Width
+    io.Manager.payload.data := BigInt("deadbeef", 16) //B(1)#*Output_Width
     io.Manager.valid := False
     io.Manager.payload.last := False
+    
     //BufferQueue.io.pop.ready := False       
 
     //val arbiteredStream = StreamArbiterFactory.lowerFirst.transactionLock.onArgs(BufferQueue.io.pop.haltWhen(inputs_debug.FFSisEmpty | counter === inputs_debug.PacketSize),EmptyStream)
@@ -353,6 +356,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
       whenIsActive{
         timeStamp:=timeStamp+1
         // io.Manager.payload := B(0).resized
+        io.Manager.payload.data := BigInt("fedcba9876543210", 16) //B(1)#*Output_Width
         io.Manager.valid := False
         io.Manager.payload.last := False
         when((EthernetQueue.io.occupancy>=packetThreshold & timeOutCounter===0)||(EthernetQueue.io.occupancy=/=0 & timeOutCounter===0 & flushTimerCounter===0)){
@@ -387,6 +391,8 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
         timeStamp:=timeStamp+1
         io.Manager.payload.data := Cat(inputs_debug.StartWord,inputs_debug.LinkType,inputs_debug.Source(16, 32 bits))
         io.Manager.valid := True
+    
+        io.Manager.payload.last := False
         when(io.Manager.fire){
           goto(Payload)
         }
@@ -399,22 +405,34 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
       whenIsActive{//I feel like there is a smarter way of doing this
         //io.Manager << arbiteredStream
         //BufferQueue.io.pop.ready := False 
-        io.Manager.valid := True      
+        io.Manager.payload.data :=  B(1)#*Output_Width //BigInt("0123456789abcdef", 16) //B(1)#*Output_Width
+        io.Manager.valid := True
+        io.Manager.payload.last := False
+        
         when(counter === inputs_debug.PacketSize){
+          // io.Manager.payload.data := BigInt("cafecafecafe", 16)
           goto(Footer)
           
         }
 
         //just an otherwise statement 
-        .elsewhen(EthernetQueue.io.occupancy=/=0 & EthernetQueue.io.pop.valid & io.Manager.fire){
-          when(EthernetQueue.io.pop.ready){
-            io.Manager.payload.data := EthernetQueue.io.pop.payload //pop from the queue and send to the manager
-            timeStamp:=timeStamp+1
-          }otherwise{
+        .elsewhen((EthernetQueue.io.occupancy=/=0) & EthernetQueue.io.pop.valid & io.Manager.fire){
+          when(timeStampInject===0){
+
             io.Manager.payload.data := timeStamp.asBits
             timeStamp:=0
+            
+            
+          }otherwise{
+            io.Manager.payload.data := EthernetQueue.io.pop.payload //pop from the queue and send to the manager
+            timeStamp:=timeStamp+1
+            
           }
-          
+          when(timeStampInject===2){
+            timeStampInject:=0
+          }otherwise{
+            timeStampInject:=timeStampInject+1
+          }
           //BufferQueue.io.pop.ready := True
           counter:= counter + 1
         }
@@ -425,7 +443,8 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
           counter:= counter + 1
           timeStamp:=timeStamp+1
         } 
-
+        
+        
         // .otherwise{
         //   io.Manager.payload := Mux(inputs_debug.FFSisEmpty,B(0).resized,BufferQueue.io.pop.payload)
         // }
@@ -453,7 +472,7 @@ val managerClockArea = new ClockingArea(ManagerDomain) {
     }
   }
   
-  EthernetQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload)) & io.Manager.isFree & EthernetQueue.io.occupancy=/=0 & counter%3=/=0
+  EthernetQueue.io.pop.ready := (SendingFSM.isActive(SendingFSM.Payload) & !SendingFSM.isExiting(SendingFSM.Payload)) & io.Manager.isFree & EthernetQueue.io.occupancy=/=0 & timeStampInject=/=0
 
   inputs_debug.FFMisReady := SendingFSM.isActive(SendingFSM.Payload) & io.Manager.isFree
 }
