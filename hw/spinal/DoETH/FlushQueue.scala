@@ -17,14 +17,14 @@ case class FlushQueue(dataWidth: Int, depth: Int) extends Component {
   val fsm = new StateMachine {
     val insert: State = new State with EntryPoint {
       whenIsActive {
-        when (head === depth-1) {
+        when (io.push.fire && (head === depth-1)) {
           goto(flush)
         }
       }
     }
     val flush: State = new State {
       whenIsActive {
-        when (tail === depth-1) {
+        when (io.pop.fire && (tail === depth-1)) {
           tail.clear()
           head.clear()
           goto(insert)

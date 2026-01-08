@@ -14,7 +14,7 @@ object FlushQueueSim extends App {
     val dut = FlushQueue(32, 8)
     dut
   }).doSim { dut =>
-    SimTimeout(10000)
+    SimTimeout(1000000)
 
     val scoreboard = ScoreboardInOrder[BigInt]()
     
@@ -22,7 +22,7 @@ object FlushQueueSim extends App {
     StreamDriver(dut.io.push, dut.clockDomain) { payload =>
       payload.randomize()
       true
-    }.setFactor(1.0f)
+    }.setFactor(0.5f)
 
     /* Simulate randomly available target */
     StreamReadyRandomizer(dut.io.pop, dut.clockDomain).setFactor(1.0f)
