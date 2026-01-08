@@ -6,18 +6,29 @@ import spinal.lib._
 import spinal.lib.fsm._
 
 
-case class FlushQueue(dataWidth: Int, depth: Int) extends Component {
+case class FlushQueue(dataWidth: Int, depth: Int, timeout: Int) extends Component {
 
   val io = new Bundle {
-    val push =  slave(Stream(Bits(dataWidth bits)))
-    val pop  = master(Stream(Bits(dataWidth bits)))
+    val enable =     in(Bool())
+    val push   =  slave(Stream(Bits(dataWidth bits)))
+    val pop    = master(Stream(Bits(dataWidth bits)))
   }
 
-  // State
+  // Timer
+  val timer = Timeout(timeout)
+
+  // Registers
+  val head  = Counter(depth+1, io.push.fire)
+  val tail  = Counter(depth  , io.pop.fire )
+  
+  // Memory buffer
+  val buffer = Mem(Bits(dataWidth bits), depth)
+
+  // Finite State Machine
   val fsm = new StateMachine {
     val insert: State = new State with EntryPoint {
       whenIsActive {
-        when (io.push.fire && (head === depth-1)) {
+        when (timer || (io.push.fire && (head === depth-1))) {
           goto(flush)
         }
       }
@@ -33,12 +44,8 @@ case class FlushQueue(dataWidth: Int, depth: Int) extends Component {
     }
   }
 
-  // Registers
-  val head  = Counter(depth+1, io.push.fire)
-  val tail  = Counter(depth  , io.pop.fire )
-  
-  // Memory buffer
-  val buffer = Mem(Bits(dataWidth bits), depth)
+  // Timer control
+  timer.clearWhen(io.enable && fsm.isActive(fsm.flush))
 
   // Push
   io.push.ready  := fsm.isActive(fsm.insert)
@@ -46,6 +53,6 @@ case class FlushQueue(dataWidth: Int, depth: Int) extends Component {
 
   // Pop
   io.pop.valid   := fsm.isActive(fsm.flush)
-  io.pop.payload := buffer.readAsync(tail.resized)
+  io.pop.payload := Mux(tail >= head, B(dataWidth bits, default -> True), buffer.readAsync(tail.resized))
 
 }
