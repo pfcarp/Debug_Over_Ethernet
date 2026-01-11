@@ -1,4 +1,3 @@
-
 package doeth
 
 
@@ -24,7 +23,7 @@ object FlushQueueSim extends App {
     StreamDriver(dut.io.push, dut.clockDomain) { payload =>
       payload.randomize()
       true
-    }.setFactor(0.0f)
+    }.setFactor(0.4f)
 
     /* Simulate randomly available target */
     StreamReadyRandomizer(dut.io.pop, dut.clockDomain).setFactor(1.0f)

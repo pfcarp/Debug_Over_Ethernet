@@ -45,7 +45,7 @@ case class FlushQueue(dataWidth: Int, depth: Int, timeout: Int) extends Componen
   }
 
   // Timer control
-  timer.clearWhen(io.enable && fsm.isActive(fsm.flush))
+  timer.clearWhen((!io.enable) || (io.enable && (head === 0) && fsm.isActive(fsm.insert)) || (io.enable && fsm.isActive(fsm.flush)))
 
   // Push
   io.push.ready  := fsm.isActive(fsm.insert)

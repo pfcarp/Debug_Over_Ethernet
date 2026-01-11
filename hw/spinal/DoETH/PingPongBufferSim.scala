@@ -10,7 +10,7 @@ import spinal.lib.sim.{StreamMonitor, StreamDriver, StreamReadyRandomizer, Score
 object PingPongBufferSim extends App {
 
   Config.sim.compile({
-    val dut = PingPongBuffer(32, 8)
+    val dut = PingPongBuffer(32, 8, 20)
     dut
   }).doSim { dut =>
     SimTimeout(10000)
@@ -33,7 +33,9 @@ object PingPongBufferSim extends App {
 
     /*  */
     StreamMonitor(dut.io.pop, dut.clockDomain) { payload =>
-      scoreboard.pushDut(payload.toBigInt)
+      if (payload.toBigInt != BigInt("FFFFFFFF", 16)) {
+        scoreboard.pushDut(payload.toBigInt)
+      }
     }
 
     dut.clockDomain.forkStimulus(10)

@@ -6,7 +6,7 @@ import spinal.lib._
 import spinal.lib.fsm._
 
 
-case class PingPongBuffer(dataWidth: Int, depth: Int) extends Component {
+case class PingPongBuffer(dataWidth: Int, depth: Int, timeout: Int) extends Component {
 
   val io = new Bundle {
     val push =  slave(Stream(Bits(dataWidth bits)))
@@ -15,7 +15,7 @@ case class PingPongBuffer(dataWidth: Int, depth: Int) extends Component {
 
   val insert  = UInt(1 bits)
   val extract = UInt(1 bits)
-  val buffers = Seq.fill(2)(MemQueue(dataWidth, depth))
+  val buffers = Seq.fill(2)(FlushQueue(dataWidth, depth, timeout))
 
   val insertionFSM = new StateMachine {
     val waitForPing: State = new State with EntryPoint {
@@ -96,7 +96,9 @@ case class PingPongBuffer(dataWidth: Int, depth: Int) extends Component {
 
   insert := Mux(insertionFSM.isActive(insertionFSM.ping), U(0), U(1))
   buffers(0).io.push << demux(0)
+  buffers(0).io.enable := insertionFSM.isActive(insertionFSM.ping)
   buffers(1).io.push << demux(1)
+  buffers(1).io.enable := insertionFSM.isActive(insertionFSM.pong)
   extract := Mux(extractionFSM.isActive(extractionFSM.ping), U(0), U(1))
   io.pop << mux.haltWhen(extractionFSM.isActive(extractionFSM.waitForPing) || extractionFSM.isActive(extractionFSM.waitForPong))
 
