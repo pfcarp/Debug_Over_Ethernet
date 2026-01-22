@@ -39,7 +39,7 @@ case class DoEth(ingressWidth: Int, outgressWidth: Int) extends Component {
     )
   )
   
-  val cdc    = new StreamFifoCC(Bits(outgressWidth bits), 2, subordinateDomain, primaryDomain)
+  val cdc = new StreamFifoCC(Bits(outgressWidth bits), 2, subordinateDomain, primaryDomain)
 
   val scd = new ClockingArea(subordinateDomain) {
     val filter = TPIUFilter(ingressWidth)
