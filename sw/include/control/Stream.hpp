@@ -32,6 +32,7 @@ class StreamVector: public Stream {
     // Attributes
 
   public:
+    StreamVector();
     void insert(uint8_t byte) override;
     size_t size() override;
     ~StreamVector();

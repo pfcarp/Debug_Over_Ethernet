@@ -5,10 +5,10 @@
 #include <memory>
 
 
+StreamVector::StreamVector(): Stream() {}
+
 void StreamVector::insert(uint8_t byte) {
-  // printf("SV insert method\n");
   if (factory.insert(byte)) {
-    // printf("SV insert method inside if\n");
     packets.push_back(factory.get());
   }
 }
@@ -18,16 +18,11 @@ size_t StreamVector::size() {
 }
 
 StreamVector::~StreamVector() {
-  std::cout << "STREAM -----------------------" << std::endl;
   for (const auto& packet : packets)
     std::cout << packet->asString() << std::endl;
 }
 
-Stream::~Stream() {
-  std::cout << "STREAM -----------------------" << std::endl;
-  for (const auto& packet : packets)
-    std::cout << packet->asString() << std::endl;
-}
+Stream::~Stream() {}
 
 
 
@@ -36,8 +31,6 @@ StreamDispatcher::StreamDispatcher(Dispatcher& dispatcher): Stream(), dispatcher
 void StreamDispatcher::insert(uint8_t byte) {
   if (factory.insert(byte)) {
     std::unique_ptr<Packet::Base> packet = factory.get();
-    // std::cout<<packet->asString()<<"a!"<<std::endl;
-    // std::cout<<&dispatcher<<std::endl;
     if (auto* a = dynamic_cast<Packet::Event*>(packet.get()))
       dispatcher.push(0, *a);
     else if (auto* a = dynamic_cast<Packet::LongAddress*>(packet.get()))
