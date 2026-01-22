@@ -28,6 +28,8 @@ void Packet::Base::setTimestamp(uint64_t t) {
 }
 
 
+Packet::Extension::Extension(uint8_t header) {}
+
 bool Packet::Extension::isDone() const {
   switch (type) {
     case Extension::Ext::ASync:             return iterator == 11;
@@ -69,6 +71,8 @@ std::string Packet::Extension::asString() const {
   }
 }
 
+
+Packet::TraceInfo::TraceInfo(uint8_t header) {}
 
 bool Packet::TraceInfo::isDone() const {
   return iterator == 5;
@@ -155,6 +159,7 @@ std::string Packet::TraceInfo::asString() const {
 
 bool Packet::Timestamp::isDone() const {
   return !(hasCountFlag || timestampFlag);
+  // return (!hasCountFlag) && (!timestampFlag)
 }
 
 Packet::Timestamp::Timestamp(uint8_t header) {
@@ -198,6 +203,8 @@ std::string Packet::Timestamp::asString() const {
 }
 
 
+Packet::TraceOn::TraceOn(uint8_t header) {}
+
 bool Packet::TraceOn::isDone() const {
   return true;
 }
@@ -206,6 +213,8 @@ std::string Packet::TraceOn::asString() const {
   return Packet::Base::asString()+"Trace on.";
 }
 
+
+Packet::FunctionReturn::FunctionReturn(uint8_t header) {}
 
 bool Packet::FunctionReturn::isDone() const {
   return true;
@@ -216,6 +225,8 @@ std::string Packet::FunctionReturn::asString() const {
 }
 
 
+Packet::ExceptionReturn::ExceptionReturn(uint8_t header) {}
+
 bool Packet::ExceptionReturn::isDone() const {
   return true;
 }
@@ -225,6 +236,8 @@ std::string Packet::ExceptionReturn::asString() const {
 }
 
 
+Packet::Resynchronization::Resynchronization(uint8_t header) {}
+
 bool Packet::Resynchronization::isDone() const {
   return true;
 }
@@ -233,6 +246,8 @@ std::string Packet::Resynchronization::asString() const {
   return Packet::Base::asString()+"Resynchronization.";
 }
 
+
+Packet::Reserved::Reserved(uint8_t header) {}
 
 bool Packet::Reserved::isDone() const {
   return true;
@@ -335,6 +350,8 @@ std::string Packet::UnnumberedDataSyncMark::asString() const {
 }
 
 
+Packet::Commit::Commit(uint8_t header) {}
+
 bool Packet::Commit::isDone() const {
   return done;
 }
@@ -419,6 +436,8 @@ std::string Packet::ConditionalInstructionFormat2::asString() const {
   return Packet::Base::asString()+"Conditional instruction format 2 (CI = "+std::to_string(static_cast<int>(CI))+")";
 }
 
+
+Packet::ConditionalFlush::ConditionalFlush(uint8_t header) {}
 
 bool Packet::ConditionalFlush::isDone() const {
   return true;
@@ -517,6 +536,8 @@ std::string Packet::ConditionalResultFormat1::asString() const {
 }
 
 
+Packet::ConditionalInstructionFormat1::ConditionalInstructionFormat1(uint8_t header) {}
+
 bool Packet::ConditionalInstructionFormat1::isDone() const {
   return done;
 }
@@ -530,6 +551,8 @@ std::string Packet::ConditionalInstructionFormat1::asString() const {
   return Packet::Base::asString()+"Conditional instruction format 1.";
 }
 
+
+Packet::ConditionalInstructionFormat3::ConditionalInstructionFormat3(uint8_t header) {}
 
 bool Packet::ConditionalInstructionFormat3::isDone() const {
   return iterator == 1;
@@ -545,6 +568,8 @@ std::string Packet::ConditionalInstructionFormat3::asString() const {
   return Packet::Base::asString()+"Condition instruction format 3.";
 }
 
+
+Packet::Ignore::Ignore(uint8_t header) {}
 
 bool Packet::Ignore::isDone() const {
   return true;
@@ -696,6 +721,8 @@ uint32_t Packet::AddressWithContext::getContextID() const {
   return CONTEXTID;
 }
 
+
+Packet::TimestampMarker::TimestampMarker(uint8_t header) {}
 
 bool Packet::TimestampMarker::isDone() const {
   return true;
@@ -925,6 +952,8 @@ std::string Packet::AtomFormat6::asString() const {
   return Packet::Base::asString()+"Atom format 6 (COUNT = "+std::format("0x{:02X}", COUNT)+")";
 }
 
+
+Packet::Exception::Exception(uint8_t header) {}
 
 bool Packet::Exception::isDone() const {
   return headerDone && (!hasAddress);
