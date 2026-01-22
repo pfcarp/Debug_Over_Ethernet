@@ -2,7 +2,7 @@ CXXFLAGS=-lm -std=c++20 -Wall -Wextra
 GTK4FLAGS=`pkg-config --cflags --libs gtk4`
 PCAPFLAGS=`pkg-config --cflags --libs libpcap`
 GRAPHVIZFLAGS=-lgvc -lcgraph
-OPT=-O2 -march=native -flto
+OPT=-O2 -march=native
 DEBUG=-g
 
 MODEL=src/model
@@ -15,7 +15,7 @@ INCLUDE=-Iinclude/view -Iinclude/model -Iinclude/control
 OBJ=object
 
 
-all: gui parser tests
+all: gui parser tests bench
 
 
 Color.o:
@@ -102,6 +102,12 @@ tests: Dispatcher.o Packet.o Deformatter.o Stream.o PacketFactory.o
 
 gui: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(wildcard object/*.o) -o doeth.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
+
+bench: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) bench.cpp $(OBJ)/*.o -o bench.out $(CXXFLAGS)
+
+factory: PacketFactory.o Packet.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) factory.cpp $(OBJ)/*.o -o factory.out $(CXXFLAGS)
 
 
 clean:
