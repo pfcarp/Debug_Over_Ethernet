@@ -51,15 +51,11 @@ void PlotArea::plotCurve(Buffer* buffer) {
   // Define line setup
   cairo_set_source_rgba(cairo, buffer->event->color.red, buffer->event->color.green, buffer->event->color.blue, buffer->event->color.alpha);
   cairo_set_line_width(cairo, 2.0);
-  // Down sampling
-  size_t step = 1;
   // Draw each curve
   if (buffer->size()) {
     const TimedData& coord = buffer->at(0);
     cairo_move_to(cairo, adaptX(coord.time), adaptY(coord.value));
-    if (buffer->size() > 200)
-      step = buffer->size()/100;
-    for (int i = 1; i < buffer->size(); i+=step) {
+    for (int i = 1; i < buffer->size(); i++) {
       const TimedData& coord = buffer->at(i);
       cairo_line_to(cairo, adaptX(coord.time), adaptY(coord.value));
     }

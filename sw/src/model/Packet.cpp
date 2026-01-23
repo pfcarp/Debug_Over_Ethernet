@@ -4,7 +4,7 @@
 #include <format>
 #include <iostream>
 
-bool Packet::isInInclusiveRange(uint8_t a, uint8_t lower, uint8_t upper) {
+bool Packet::isInInclusiveRange(const uint8_t& a, const uint8_t& lower, const uint8_t& upper) {
   return (lower <= a) && (a <= upper);
 }
 
@@ -17,7 +17,7 @@ bool Packet::Base::isDone() const {
   return false;
 }
 
-void Packet::Base::insert(uint8_t byte) {}
+void Packet::Base::insert(const uint8_t& byte) {}
 
 std::string Packet::Base::asString() const {
   return std::format("[@{}] ", timestamp);
@@ -28,7 +28,7 @@ void Packet::Base::setTimestamp(uint64_t t) {
 }
 
 
-Packet::Extension::Extension(uint8_t header) {}
+Packet::Extension::Extension(const uint8_t& header) {}
 
 bool Packet::Extension::isDone() const {
   switch (type) {
@@ -40,7 +40,7 @@ bool Packet::Extension::isDone() const {
   } 
 }
 
-void Packet::Extension::insert(uint8_t byte) {
+void Packet::Extension::insert(const uint8_t& byte) {
   if (iterator == 0) {
     switch (byte) {
       case 0b00000000: type = Extension::Ext::ASync            ; break;
@@ -72,14 +72,14 @@ std::string Packet::Extension::asString() const {
 }
 
 
-Packet::TraceInfo::TraceInfo(uint8_t header) {}
+Packet::TraceInfo::TraceInfo(const uint8_t& header) {}
 
 bool Packet::TraceInfo::isDone() const {
   return iterator == 5;
 }
 
 // NOTE: Can be optimized by commenting the push_back calls.
-void Packet::TraceInfo::insert(uint8_t byte) {
+void Packet::TraceInfo::insert(const uint8_t& byte) {
   if (iterator == 0) { // PLCTL
     hasInfo = (0b00000001 & byte);
     hasKey  = (0b00000010 & byte) == 0b00000010;
@@ -136,7 +136,7 @@ void Packet::TraceInfo::insert(uint8_t byte) {
 std::string Packet::TraceInfo::asString() const {
   std::string base = Packet::Base::asString()+"Trace info";
   if (hasInfo) {
-    for (uint8_t inf : info) {
+    for (const uint8_t& inf : info) {
       bool cc_enabled = inf & 0b00000001;
       if (cc_enabled)
         base += " (cycle count enabled)";
@@ -162,12 +162,12 @@ bool Packet::Timestamp::isDone() const {
   // return (!hasCountFlag) && (!timestampFlag)
 }
 
-Packet::Timestamp::Timestamp(uint8_t header) {
+Packet::Timestamp::Timestamp(const uint8_t& header) {
   //Page 264: N = 0 -> no count; N = 1 -> count.
   hasCountFlag = header%2;
 }
 
-void Packet::Timestamp::insert(uint8_t byte) {
+void Packet::Timestamp::insert(const uint8_t& byte) {
   if (timestampFlag) {
     if (iterator < 7) {
       TS |= static_cast<uint64_t>(0b01111111 & byte) << (iterator*7);
@@ -203,7 +203,7 @@ std::string Packet::Timestamp::asString() const {
 }
 
 
-Packet::TraceOn::TraceOn(uint8_t header) {}
+Packet::TraceOn::TraceOn(const uint8_t& header) {}
 
 bool Packet::TraceOn::isDone() const {
   return true;
@@ -214,7 +214,7 @@ std::string Packet::TraceOn::asString() const {
 }
 
 
-Packet::FunctionReturn::FunctionReturn(uint8_t header) {}
+Packet::FunctionReturn::FunctionReturn(const uint8_t& header) {}
 
 bool Packet::FunctionReturn::isDone() const {
   return true;
@@ -225,7 +225,7 @@ std::string Packet::FunctionReturn::asString() const {
 }
 
 
-Packet::ExceptionReturn::ExceptionReturn(uint8_t header) {}
+Packet::ExceptionReturn::ExceptionReturn(const uint8_t& header) {}
 
 bool Packet::ExceptionReturn::isDone() const {
   return true;
@@ -236,7 +236,7 @@ std::string Packet::ExceptionReturn::asString() const {
 }
 
 
-Packet::Resynchronization::Resynchronization(uint8_t header) {}
+Packet::Resynchronization::Resynchronization(const uint8_t& header) {}
 
 bool Packet::Resynchronization::isDone() const {
   return true;
@@ -247,7 +247,7 @@ std::string Packet::Resynchronization::asString() const {
 }
 
 
-Packet::Reserved::Reserved(uint8_t header) {}
+Packet::Reserved::Reserved(const uint8_t& header) {}
 
 bool Packet::Reserved::isDone() const {
   return true;
@@ -258,7 +258,7 @@ std::string Packet::Reserved::asString() const {
 }
 
 
-Packet::CycleCountFormat2::CycleCountFormat2(uint8_t header) {
+Packet::CycleCountFormat2::CycleCountFormat2(const uint8_t& header) {
   F = 0b00000001 & header;
 }
 
@@ -266,7 +266,7 @@ bool Packet::CycleCountFormat2::isDone() const {
   return iterator == 1;
 }
 
-void Packet::CycleCountFormat2::insert(uint8_t byte) {
+void Packet::CycleCountFormat2::insert(const uint8_t& byte) {
   aaaa = (0b11110000 && byte) >> 4;
   bbbb = (0b00001111 && byte);
   iterator++;
@@ -277,7 +277,7 @@ std::string Packet::CycleCountFormat2::asString() const {
 }
 
 
-Packet::CycleCountFormat1::CycleCountFormat1(uint8_t header) {
+Packet::CycleCountFormat1::CycleCountFormat1(const uint8_t& header) {
   U = header & 0b00000001;
 }
 
@@ -285,7 +285,7 @@ bool Packet::CycleCountFormat1::isDone() const {
   return iterator == 4;
 }
 
-void Packet::CycleCountFormat1::insert(uint8_t byte) {
+void Packet::CycleCountFormat1::insert(const uint8_t& byte) {
   if (iterator == 0) {
     commit.push_back(byte & 0b01111111);
     if (byte < 128)
@@ -310,7 +310,7 @@ std::string Packet::CycleCountFormat1::asString() const {
 }
 
 
-Packet::CycleCountFormat3::CycleCountFormat3(uint8_t header) {
+Packet::CycleCountFormat3::CycleCountFormat3(const uint8_t& header) {
   aa = (0b00001100 & header) >> 2;
   bb = (0b00000011 & header);
 }
@@ -324,7 +324,7 @@ std::string Packet::CycleCountFormat3::asString() const {
 }
 
 
-Packet::NumberedDataSyncMark::NumberedDataSyncMark(uint8_t header) {
+Packet::NumberedDataSyncMark::NumberedDataSyncMark(const uint8_t& header) {
   NUM = 0b00000111 & header;
 }
 
@@ -337,7 +337,7 @@ std::string Packet::NumberedDataSyncMark::asString() const {
 }
 
 
-Packet::UnnumberedDataSyncMark::UnnumberedDataSyncMark(uint8_t header) {
+Packet::UnnumberedDataSyncMark::UnnumberedDataSyncMark(const uint8_t& header) {
   A = 0b00000111 & header;
 }
 
@@ -350,13 +350,13 @@ std::string Packet::UnnumberedDataSyncMark::asString() const {
 }
 
 
-Packet::Commit::Commit(uint8_t header) {}
+Packet::Commit::Commit(const uint8_t& header) {}
 
 bool Packet::Commit::isDone() const {
   return done;
 }
 
-void Packet::Commit::insert(uint8_t byte) {
+void Packet::Commit::insert(const uint8_t& byte) {
   commit.push_back(0b01111111 & byte);
   done = (byte < 128);
 }
@@ -366,7 +366,7 @@ std::string Packet::Commit::asString() const {
 }
 
 
-Packet::CancelFormat1::CancelFormat1(uint8_t header) {
+Packet::CancelFormat1::CancelFormat1(const uint8_t& header) {
   M = 0b00000001 & header;
 }
 
@@ -374,7 +374,7 @@ bool Packet::CancelFormat1::isDone() const {
   return done;
 }
 
-void Packet::CancelFormat1::insert(uint8_t byte) {
+void Packet::CancelFormat1::insert(const uint8_t& byte) {
   cancel.push_back(0b01111111 & byte);
   done = (byte < 128);
 }
@@ -384,7 +384,7 @@ std::string Packet::CancelFormat1::asString() const {
 }
 
 
-Packet::Mispredict::Mispredict(uint8_t header) {
+Packet::Mispredict::Mispredict(const uint8_t& header) {
   A = 0b00000011 & header;
 }
   
@@ -397,7 +397,7 @@ std::string Packet::Mispredict::asString() const {
 }
 
 
-Packet::CancelFormat2::CancelFormat2(uint8_t header) {
+Packet::CancelFormat2::CancelFormat2(const uint8_t& header) {
   A = 0b00000011 & header;
 }
   
@@ -410,7 +410,7 @@ std::string Packet::CancelFormat2::asString() const {
 }
 
 
-Packet::CancelFormat3::CancelFormat3(uint8_t header) {
+Packet::CancelFormat3::CancelFormat3(const uint8_t& header) {
   CC = 0b00000110 & header;
   A  = 0b00000001 & header;
 }
@@ -424,7 +424,7 @@ std::string Packet::CancelFormat3::asString() const {
 }
 
 
-Packet::ConditionalInstructionFormat2::ConditionalInstructionFormat2(uint8_t header) {
+Packet::ConditionalInstructionFormat2::ConditionalInstructionFormat2(const uint8_t& header) {
   CI = 0b00000011 & header;
 }
   
@@ -437,7 +437,7 @@ std::string Packet::ConditionalInstructionFormat2::asString() const {
 }
 
 
-Packet::ConditionalFlush::ConditionalFlush(uint8_t header) {}
+Packet::ConditionalFlush::ConditionalFlush(const uint8_t& header) {}
 
 bool Packet::ConditionalFlush::isDone() const {
   return true;
@@ -448,7 +448,7 @@ std::string Packet::ConditionalFlush::asString() const {
 }
 
 
-Packet::ConditionalResultFormat4::ConditionalResultFormat4(uint8_t header) {
+Packet::ConditionalResultFormat4::ConditionalResultFormat4(const uint8_t& header) {
   T = 0b00000011 & header;
 }
   
@@ -461,7 +461,7 @@ std::string Packet::ConditionalResultFormat4::asString() const {
 }
 
 
-Packet::ConditionalResultFormat2::ConditionalResultFormat2(uint8_t header) {
+Packet::ConditionalResultFormat2::ConditionalResultFormat2(const uint8_t& header) {
   T = (0b00000011 & header);
   K = (0b00000100 & header) >> 2;
 }
@@ -475,7 +475,7 @@ std::string Packet::ConditionalResultFormat2::asString() const {
 }
 
 
-Packet::ConditionalResultFormat3::ConditionalResultFormat3(uint8_t header) {
+Packet::ConditionalResultFormat3::ConditionalResultFormat3(const uint8_t& header) {
   TOKEN |= static_cast<uint16_t>(0b00001111 & header) << 8;
 }
   
@@ -483,7 +483,7 @@ bool Packet::ConditionalResultFormat3::isDone() const {
   return iterator == 1;
 }
 
-void Packet::ConditionalResultFormat3::insert(uint8_t byte) {
+void Packet::ConditionalResultFormat3::insert(const uint8_t& byte) {
   TOKEN |= static_cast<uint16_t>(byte);
   iterator++;
 }
@@ -493,7 +493,7 @@ std::string Packet::ConditionalResultFormat3::asString() const {
 }
 
 
-Packet::ConditionalResultFormat1::ConditionalResultFormat1(uint8_t header) {
+Packet::ConditionalResultFormat1::ConditionalResultFormat1(const uint8_t& header) {
   single = (0b00000100 & header) >> 2;
   CI0 = 0b00000001 & header;
   if (!single)
@@ -504,7 +504,7 @@ bool Packet::ConditionalResultFormat1::isDone() const {
   return (single)? iterator == 1 : iterator == 2;
 }
 
-void Packet::ConditionalResultFormat1::insert(uint8_t byte) {
+void Packet::ConditionalResultFormat1::insert(const uint8_t& byte) {
   if (iterator == 0) {
     if (header) {
       RESULT0 = 0b00001111 & byte;
@@ -536,13 +536,13 @@ std::string Packet::ConditionalResultFormat1::asString() const {
 }
 
 
-Packet::ConditionalInstructionFormat1::ConditionalInstructionFormat1(uint8_t header) {}
+Packet::ConditionalInstructionFormat1::ConditionalInstructionFormat1(const uint8_t& header) {}
 
 bool Packet::ConditionalInstructionFormat1::isDone() const {
   return done;
 }
 
-void Packet::ConditionalInstructionFormat1::insert(uint8_t byte) {
+void Packet::ConditionalInstructionFormat1::insert(const uint8_t& byte) {
   KEY.push_back(0b01111111 & byte);
   done = (byte < 128);
 }
@@ -552,13 +552,13 @@ std::string Packet::ConditionalInstructionFormat1::asString() const {
 }
 
 
-Packet::ConditionalInstructionFormat3::ConditionalInstructionFormat3(uint8_t header) {}
+Packet::ConditionalInstructionFormat3::ConditionalInstructionFormat3(const uint8_t& header) {}
 
 bool Packet::ConditionalInstructionFormat3::isDone() const {
   return iterator == 1;
 }
 
-void Packet::ConditionalInstructionFormat3::insert(uint8_t byte) {
+void Packet::ConditionalInstructionFormat3::insert(const uint8_t& byte) {
   Z = 0b00000001 & byte;
   NUM = (0b01111110 & byte) >> 1;
   iterator++;
@@ -569,7 +569,7 @@ std::string Packet::ConditionalInstructionFormat3::asString() const {
 }
 
 
-Packet::Ignore::Ignore(uint8_t header) {}
+Packet::Ignore::Ignore(const uint8_t& header) {}
 
 bool Packet::Ignore::isDone() const {
   return true;
@@ -580,7 +580,7 @@ std::string Packet::Ignore::asString() const {
 }
 
 
-Packet::Event::Event(uint8_t header) {
+Packet::Event::Event(const uint8_t& header) {
   events = header & 0b00001111;
 }
   
@@ -592,7 +592,7 @@ std::string Packet::Event::asString() const {
   return Packet::Base::asString()+"Event (#0 = "+std::to_string(static_cast<int>(hasEvent(0)))+", #1 = "+std::to_string(static_cast<int>(hasEvent(1)))+", #2 = "+std::to_string(static_cast<int>(hasEvent(2)))+", #3 = "+std::to_string(static_cast<int>(hasEvent(3)))+").";
 }
 
-bool Packet::Event::hasEvent(uint8_t index) const {
+bool Packet::Event::hasEvent(const uint8_t& index) const {
   switch (index) {
     case 0 : return (0b00000001 & events) == 0b00000001;
     case 1 : return (0b00000010 & events) == 0b00000010;
@@ -603,7 +603,7 @@ bool Packet::Event::hasEvent(uint8_t index) const {
 }
 
 
-Packet::Context::Context(uint8_t header) {
+Packet::Context::Context(const uint8_t& header) {
   P = header & 0b00000001;
 }
 
@@ -611,7 +611,7 @@ bool Packet::Context::isDone() const {
   return (P)? headerDone && (!(hasVirt || hasCont)) : true;
 }
 
-void Packet::Context::insert(uint8_t byte) {
+void Packet::Context::insert(const uint8_t& byte) {
   if (!headerDone) {
     EL = 0b00000011 & byte;
     SF = (0b00010000 & byte) == 0b00010000;
@@ -651,7 +651,7 @@ uint32_t Packet::Context::getContextID() const {
 }
 
 
-Packet::AddressWithContext::AddressWithContext(uint8_t header) {
+Packet::AddressWithContext::AddressWithContext(const uint8_t& header) {
   switch(header & 0b00000111) {
     case 0b00000010: offset = 2; length = 4; break;
     case 0b00000011: offset = 1; length = 4; break;
@@ -665,7 +665,7 @@ bool Packet::AddressWithContext::isDone() const {
   return addrDone && headerDone && !(hasVirt || hasCont);
 }
 
-void Packet::AddressWithContext::insert(uint8_t byte) {
+void Packet::AddressWithContext::insert(const uint8_t& byte) {
   if (!addrDone) {
     if (iterator < offset) {
       A |= static_cast<uint64_t>(0b01111111 & byte) << (offset+(8*iterator)-iterator);
@@ -722,7 +722,7 @@ uint32_t Packet::AddressWithContext::getContextID() const {
 }
 
 
-Packet::TimestampMarker::TimestampMarker(uint8_t header) {}
+Packet::TimestampMarker::TimestampMarker(const uint8_t& header) {}
 
 bool Packet::TimestampMarker::isDone() const {
   return true;
@@ -733,7 +733,7 @@ std::string Packet::TimestampMarker::asString() const {
 }
 
 
-Packet::ExactMatchAddress::ExactMatchAddress(uint8_t header) {
+Packet::ExactMatchAddress::ExactMatchAddress(const uint8_t& header) {
   QE = 0b00000011 && header;
 }
   
@@ -746,7 +746,7 @@ std::string Packet::ExactMatchAddress::asString() const {
 }
 
 
-Packet::ShortAddress::ShortAddress(uint8_t header) {
+Packet::ShortAddress::ShortAddress(const uint8_t& header) {
   switch(header & 0b00000011) {
     case 0b00000001: offset = 2; break;
     case 0b00000010: offset = 1; break;
@@ -758,7 +758,7 @@ bool Packet::ShortAddress::isDone() const {
   return done;
 }
 
-void Packet::ShortAddress::insert(uint8_t byte) {
+void Packet::ShortAddress::insert(const uint8_t& byte) {
   if (iterator == 0) {
     address = static_cast<uint32_t>(0b01111111 & byte) << offset;
     offset--;
@@ -780,7 +780,7 @@ uint32_t Packet::ShortAddress::getAddress() const {
 }
 
 
-Packet::LongAddress::LongAddress(uint8_t header) {
+Packet::LongAddress::LongAddress(const uint8_t& header) {
   switch(header & 0b00000111) {
     case 0b00000010: offset = 2; length = 4; break;
     case 0b00000011: offset = 1; length = 4; break;
@@ -794,7 +794,7 @@ bool Packet::LongAddress::isDone() const {
   return iterator == length;
 }
 
-void Packet::LongAddress::insert(uint8_t byte) {
+void Packet::LongAddress::insert(const uint8_t& byte) {
   if (iterator < offset) {
     address |= static_cast<uint64_t>(0b01111111 & byte) << (offset-iterator+(8*iterator));
   }
@@ -813,7 +813,7 @@ uint64_t Packet::LongAddress::getAddress() const {
 }
 
 
-Packet::Q::Q(uint8_t header) {
+Packet::Q::Q(const uint8_t& header) {
   TYPE = header & 0b00001111;
   switch (TYPE) {
     case 0b0000: hasAddress = false; hasCount = true ; break;
@@ -833,7 +833,7 @@ bool Packet::Q::isDone() const {
   return !(hasAddress || hasCount);
 }
 
-void Packet::Q::insert(uint8_t byte) {
+void Packet::Q::insert(const uint8_t& byte) {
   if (hasAddress) {
     if (!isAddrLong) {
       if (iterator == 0) {
@@ -874,7 +874,7 @@ uint64_t Packet::Q::getAddress() const {
 }
 
 
-Packet::AtomFormat1::AtomFormat1(uint8_t header) {
+Packet::AtomFormat1::AtomFormat1(const uint8_t& header) {
   a = 0b00000001 | header;
 }
 
@@ -887,7 +887,7 @@ std::string Packet::AtomFormat1::asString() const {
 }
 
 
-Packet::AtomFormat2::AtomFormat2(uint8_t header) {
+Packet::AtomFormat2::AtomFormat2(const uint8_t& header) {
   a = 0b00000011 | header;
 }
 
@@ -900,7 +900,7 @@ std::string Packet::AtomFormat2::asString() const {
 }
 
 
-Packet::AtomFormat3::AtomFormat3(uint8_t header) {
+Packet::AtomFormat3::AtomFormat3(const uint8_t& header) {
   a = 0b00000111 & header;
 }
   
@@ -913,7 +913,7 @@ std::string Packet::AtomFormat3::asString() const {
 }
 
 
-Packet::AtomFormat4::AtomFormat4(uint8_t header) {
+Packet::AtomFormat4::AtomFormat4(const uint8_t& header) {
   a = 0b00000011 | header;
 }
 
@@ -926,7 +926,7 @@ std::string Packet::AtomFormat4::asString() const {
 }
 
 
-Packet::AtomFormat5::AtomFormat5(uint8_t header) {
+Packet::AtomFormat5::AtomFormat5(const uint8_t& header) {
   abc = ((0b00100000 & header) >> 3) | (0b00000011 & header);
 }
   
@@ -939,7 +939,7 @@ std::string Packet::AtomFormat5::asString() const {
 }
 
 
-Packet::AtomFormat6::AtomFormat6(uint8_t header) {
+Packet::AtomFormat6::AtomFormat6(const uint8_t& header) {
   A = (0b00100000 & header) == 0b00100000;
   COUNT = 0b00011111 & header;
 }
@@ -953,13 +953,13 @@ std::string Packet::AtomFormat6::asString() const {
 }
 
 
-Packet::Exception::Exception(uint8_t header) {}
+Packet::Exception::Exception(const uint8_t& header) {}
 
 bool Packet::Exception::isDone() const {
   return headerDone && (!hasAddress);
 }
 
-void Packet::Exception::insert(uint8_t byte) {
+void Packet::Exception::insert(const uint8_t& byte) {
   if (!headerDone) {
     if (iterator == 0) {
       switch (byte & 0b01000001) {

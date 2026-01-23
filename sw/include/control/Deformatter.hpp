@@ -20,15 +20,14 @@ class Deformatter {
     uint64_t timestamp = 0;
     // Methods
     void format();
-    void clean();
     
   public:
     // Attributes
-    std::vector<Stream*> streams = std::vector<Stream*>(); // Needed for tests...
-    std::vector<uint8_t> frame = std::vector<uint8_t>(16); // Needed for tests...
+    uint8_t frame[16]; // Needed for tests...
+    Stream* streams[4]; // Needed for tests...
     // Methods
     bool insert(uint8_t byte);
-    virtual bool toInsertInPrevious(const uint8_t aux, const uint8_t offset) const;
+    bool toInsertInPrevious(const uint8_t& aux, const uint8_t& offset) const;
     void setTimestamp(uint64_t t);
     virtual ~Deformatter();
 
