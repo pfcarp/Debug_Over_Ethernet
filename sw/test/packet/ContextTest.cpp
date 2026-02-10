@@ -12,7 +12,7 @@ TEST_CASE("Context packet: no payload") {
 
   // Done/ready upon creation
   CHECK(obj.isDone());
-  CHECK(obj.getVmID() == 0);
+  CHECK(obj.getVMID() == 0);
   CHECK(obj.getContextID() == 0);
 }
 
@@ -30,7 +30,7 @@ TEST_CASE("Context packet: with VMID and CONTEXTID") {
 
   // Finally ready
   CHECK(obj.isDone());
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x87868584);
 }
 
@@ -48,7 +48,7 @@ TEST_CASE("Context packet: no VMID and CONTEXTID") {
 
   // Finally ready
   CHECK(obj.isDone());
-  CHECK(obj.getVmID() == 0);
+  CHECK(obj.getVMID() == 0);
   CHECK(obj.getContextID() == 0);
 }
 
@@ -66,7 +66,7 @@ TEST_CASE("Context packet: with VMID and no CONTEXTID") {
 
   // Finally ready
   CHECK(obj.isDone());
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0);
 }
 
@@ -84,7 +84,7 @@ TEST_CASE("Context packet: no VMID and with CONTEXTID") {
 
   // Finally ready
   CHECK(obj.isDone());
-  CHECK(obj.getVmID() == 0);
+  CHECK(obj.getVMID() == 0);
   CHECK(obj.getContextID() == 0x87868584);
 }
 

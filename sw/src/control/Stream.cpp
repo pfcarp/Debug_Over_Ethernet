@@ -9,17 +9,14 @@ StreamVector::StreamVector(): Stream() {}
 
 void StreamVector::insert(uint8_t byte) {
   if (factory.insert(byte)) {
-    packets.push_back(factory.get());
   }
 }
 
 size_t StreamVector::size() {
-  return packets.size();
+  return 0;
 }
 
 StreamVector::~StreamVector() {
-  for (const auto& packet : packets)
-    std::cout << packet->asString() << std::endl;
 }
 
 Stream::~Stream() {}
@@ -29,6 +26,7 @@ Stream::~Stream() {}
 StreamDispatcher::StreamDispatcher(Dispatcher& dispatcher): Stream(), dispatcher(dispatcher) {}
 
 void StreamDispatcher::insert(uint8_t byte) {
+/*
   if (factory.insert(byte)) {
     std::unique_ptr<Packet::Base> packet = factory.get();
     if (auto* a = dynamic_cast<Packet::Event*>(packet.get()))
@@ -41,6 +39,7 @@ void StreamDispatcher::insert(uint8_t byte) {
       dispatcher.push(0, *a);
     // packet.reset();
   }
+  */
 }
 
 size_t StreamDispatcher::size() {

@@ -5,7 +5,7 @@
 
 
 TEST_CASE("Ignore packets are 'done' right after construction") {
-  Packet::Ignore obj;
+  Packet::Ignore obj(0b01110000);
 
   // Right after creaion
   CHECK(obj.isDone());

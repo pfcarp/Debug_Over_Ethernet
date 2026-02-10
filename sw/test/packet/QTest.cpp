@@ -103,6 +103,7 @@ TEST_CASE("Q packet: short address IS0 (2 beat) and count (v1)") {
   // Finally ready
   CHECK(obj.isDone());
   // Compare address
+  CHECK(obj.getOffset() == 2);
   CHECK(obj.getAddress() == 0x000000000001BFEC);
 }
 

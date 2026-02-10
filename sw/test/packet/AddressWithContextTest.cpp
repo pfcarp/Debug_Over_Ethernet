@@ -24,7 +24,9 @@ TEST_CASE("AddressWithContext packet: short address and no payload") {
   CHECK(obj.isDone());
   // Compare addresses, context id, and vm id
   CHECK(obj.getAddress() == 0x0000000044332222);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getLength() == 4);
+  CHECK(obj.getOffset() == 1);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -44,7 +46,7 @@ TEST_CASE("AddressWithContext packet: short address and no payload") {
   CHECK(obj.isDone());
   // Compare addresses, context id, and vm id
   CHECK(obj.getAddress() == 0x00000000004012A0);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -64,7 +66,7 @@ TEST_CASE("AddressWithContext packet: short address and no payload") {
   CHECK(obj.isDone());
   // Compare addresses, context id, and vm id
   CHECK(obj.getAddress() == 0x00000000004012A0);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -84,7 +86,7 @@ TEST_CASE("AddressWithContext packet: short address, with VMID and CONTEXTID") {
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x0000000044332222);
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x87868584);
 }
 
@@ -104,7 +106,7 @@ TEST_CASE("AddressWithContext packet: short address, with no VMID and no CONTEXT
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x0000000044332222);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -124,7 +126,7 @@ TEST_CASE("AddressWithContext packet: short address, with VMID and no CONTEXTID"
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x0000000044332222);
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -144,7 +146,7 @@ TEST_CASE("AddressWithContext packet: short address, no VMID and with CONTEXTID"
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x0000000044332222);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x87868584);
 }
 
@@ -182,7 +184,7 @@ TEST_CASE("AddressWithContext packet: short address, with VMID and CONTEXTID") {
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x0000000044334444);
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x87868584);
 }
 
@@ -202,7 +204,7 @@ TEST_CASE("AddressWithContext packet: short address, with no VMID and no CONTEXT
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x0000000044334444);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -222,7 +224,7 @@ TEST_CASE("AddressWithContext packet: short address, with VMID and no CONTEXTID"
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x0000000044334444);
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -242,7 +244,7 @@ TEST_CASE("AddressWithContext packet: short address, no VMID and with CONTEXTID"
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x0000000044334444);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x87868584);
 }
 
@@ -262,7 +264,7 @@ TEST_CASE("AddressWithContext packet: long address and no payload") {
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544332222);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -282,7 +284,7 @@ TEST_CASE("AddressWithContext packet: long address and no payload") {
   CHECK(obj.isDone());
   // Compare addresses, context id, and vm id
   CHECK(obj.getAddress() == 0x00000000004012A0);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -302,7 +304,7 @@ TEST_CASE("AddressWithContext packet: short address and no payload") {
   CHECK(obj.isDone());
   // Compare addresses, context id, and vm id
   CHECK(obj.getAddress() == 0x00000000004012A0);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -322,7 +324,7 @@ TEST_CASE("AddressWithContext packet: long address, with VMID and CONTEXTID") {
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544332222);
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x87868584);
 }
 
@@ -342,7 +344,7 @@ TEST_CASE("AddressWithContext packet: long address, with no VMID and no CONTEXTI
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544332222);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -362,7 +364,7 @@ TEST_CASE("AddressWithContext packet: long address, with VMID and no CONTEXTID")
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544332222);
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -382,7 +384,7 @@ TEST_CASE("AddressWithContext packet: long address, no VMID and with CONTEXTID")
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544332222);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x87868584);
 }
 
@@ -402,7 +404,7 @@ TEST_CASE("AddressWithContext packet: long address and no payload") {
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544334444);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -422,7 +424,7 @@ TEST_CASE("AddressWithContext packet: long address, with VMID and CONTEXTID") {
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544334444);
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x87868584);
 }
 
@@ -442,7 +444,7 @@ TEST_CASE("AddressWithContext packet: long address, with no VMID and no CONTEXTI
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544334444);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -462,7 +464,7 @@ TEST_CASE("AddressWithContext packet: long address, with VMID and no CONTEXTID")
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544334444);
-  CHECK(obj.getVmID() == 0x83828180);
+  CHECK(obj.getVMID() == 0x83828180);
   CHECK(obj.getContextID() == 0x00000000);
 }
 
@@ -482,6 +484,6 @@ TEST_CASE("AddressWithContext packet: long address, no VMID and with CONTEXTID")
   CHECK(obj.isDone());
   // Compare addresses
   CHECK(obj.getAddress() == 0x8877665544334444);
-  CHECK(obj.getVmID() == 0x00000000);
+  CHECK(obj.getVMID() == 0x00000000);
   CHECK(obj.getContextID() == 0x87868584);
 }

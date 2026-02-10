@@ -17,7 +17,6 @@ class Stream {
   public:
     // Attributes
     PacketFactory factory = PacketFactory();
-    std::vector<std::unique_ptr<Packet::Base>> packets;
     // Methods
     virtual void insert(uint8_t byte) = 0;
     virtual size_t size() = 0;

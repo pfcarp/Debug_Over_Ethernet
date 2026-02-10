@@ -325,8 +325,11 @@ class PacketFactory {
     }();
 
   public:
+    // Attributes
+    std::vector<std::unique_ptr<Packet::Base>> packets; // Needed for tests...
     // Methods
-    bool insert(uint8_t byte);
+    PacketFactory();
+    bool insert(const uint8_t& byte);
     void consume();
     std::unique_ptr<Packet::Base> get();
     void setTimestamp(uint64_t t);

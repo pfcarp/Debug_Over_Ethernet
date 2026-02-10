@@ -1,12 +1,11 @@
 #pragma once
 
 
-#include <vector>
 #include <cstdint>
 
 
 #include "Dispatcher.hpp"
-#include "Stream.hpp"
+#include "PacketFactory.hpp"
 
 
 class Deformatter {
@@ -24,9 +23,9 @@ class Deformatter {
   public:
     // Attributes
     uint8_t frame[16]; // Needed for tests...
-    Stream* streams[4]; // Needed for tests...
+    PacketFactory factories[4]; // Needed for tests...
     // Methods
-    bool insert(uint8_t byte);
+    bool insert(const uint8_t& byte);
     bool toInsertInPrevious(const uint8_t& aux, const uint8_t& offset) const;
     void setTimestamp(uint64_t t);
     virtual ~Deformatter();

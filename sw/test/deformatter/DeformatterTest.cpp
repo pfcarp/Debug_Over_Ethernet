@@ -67,10 +67,10 @@ TEST_CASE("Insert 15 reserved in source 0.") {
   CHECK(obj.insert(aux));
 
   // Check length of stream 0: must be 15, others must be 0
-  CHECK(obj.streams[0]->size() == 15);
-  CHECK(obj.streams[1]->size() ==  0);
-  CHECK(obj.streams[2]->size() ==  0);
-  CHECK(obj.streams[3]->size() ==  0);
+  CHECK(obj.factories[0].packets.size() == 15);
+  CHECK(obj.factories[1].packets.size() ==  0);
+  CHECK(obj.factories[2].packets.size() ==  0);
+  CHECK(obj.factories[3].packets.size() ==  0);
 }
 
 TEST_CASE("Insert 8 reserved in source 0 and 6 reserved in source 1.") {
@@ -90,11 +90,11 @@ TEST_CASE("Insert 8 reserved in source 0 and 6 reserved in source 1.") {
   // Last byte triggers the defomatting
   CHECK(obj.insert(aux));
 
-  // Check length of streams
-  CHECK(obj.streams[0]->size() ==  8);
-  CHECK(obj.streams[1]->size() ==  6);
-  CHECK(obj.streams[2]->size() ==  0);
-  CHECK(obj.streams[3]->size() ==  0);
+  // Check length of factories
+  CHECK(obj.factories[0].packets.size() ==  8);
+  CHECK(obj.factories[1].packets.size() ==  6);
+  CHECK(obj.factories[2].packets.size() ==  0);
+  CHECK(obj.factories[3].packets.size() ==  0);
 }
 
 TEST_CASE("Insert 9 reserved in source 0 and 5 reserved in source 1 (AUX indicates that insertion must be done to previous stream(i.e., 0)).") {
@@ -114,11 +114,11 @@ TEST_CASE("Insert 9 reserved in source 0 and 5 reserved in source 1 (AUX indicat
   // Last byte triggers the defomatting
   CHECK(obj.insert(aux));
 
-  // Check length of streams
-  CHECK(obj.streams[0]->size() ==  9);
-  CHECK(obj.streams[1]->size() ==  5);
-  CHECK(obj.streams[2]->size() ==  0);
-  CHECK(obj.streams[3]->size() ==  0);
+  // Check length of factories
+  CHECK(obj.factories[0].packets.size() ==  9);
+  CHECK(obj.factories[1].packets.size() ==  5);
+  CHECK(obj.factories[2].packets.size() ==  0);
+  CHECK(obj.factories[3].packets.size() ==  0);
 }
 
 TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in source 2, 1 reserved in source 3 (v1).") {
@@ -138,11 +138,11 @@ TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in 
   // Last byte triggers the defomatting
   CHECK(obj.insert(aux));
 
-  // Check length of streams
-  CHECK(obj.streams[0]->size() ==  2);
-  CHECK(obj.streams[1]->size() ==  2);
-  CHECK(obj.streams[2]->size() ==  3);
-  CHECK(obj.streams[3]->size() ==  1);
+  // Check length of factories
+  CHECK(obj.factories[0].packets.size() ==  2);
+  CHECK(obj.factories[1].packets.size() ==  2);
+  CHECK(obj.factories[2].packets.size() ==  3);
+  CHECK(obj.factories[3].packets.size() ==  1);
 }
 
 TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in source 2, 1 reserved in source 3 (v2).") {
@@ -162,9 +162,9 @@ TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in 
   // Last byte triggers the defomatting
   CHECK(obj.insert(aux));
 
-  // Check length of streams
-  CHECK(obj.streams[0]->size() ==  3);
-  CHECK(obj.streams[1]->size() ==  2);
-  CHECK(obj.streams[2]->size() ==  2);
-  CHECK(obj.streams[3]->size() ==  1);
+  // Check length of factories
+  CHECK(obj.factories[0].packets.size() ==  3);
+  CHECK(obj.factories[1].packets.size() ==  2);
+  CHECK(obj.factories[2].packets.size() ==  2);
+  CHECK(obj.factories[3].packets.size() ==  1);
 }
