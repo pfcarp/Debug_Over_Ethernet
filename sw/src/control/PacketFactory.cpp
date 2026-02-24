@@ -24,9 +24,7 @@ bool PacketFactory::insert(const uint8_t& byte) {
     Packet::setTimestamp(packets[current], timestamp);
   }
   else {
-    MEASURE_TIME({
     Packet::insert(packets[current], byte);
-    })
   }
   // Separate if for cases where no payload is present
   if (Packet::isDone(packets[current])) {
