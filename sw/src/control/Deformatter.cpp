@@ -46,7 +46,6 @@ void Deformatter::format() {
       frame[15] >>= 1;
     }
     else { // (i%2 == 1) {
-      /*
       if (insertInPrevious) {
         factories[previous].insert(frame[i]);
         insertInPrevious = false;
@@ -54,8 +53,6 @@ void Deformatter::format() {
       else {
         factories[current].insert(frame[i]);
       }
-      */
-      factories[(insertInPrevious)? previous : current].insert(frame[i]);
     }
   }
 }
