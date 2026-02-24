@@ -5,13 +5,36 @@
 #include <iostream>
 
 
+bool Packet::isDone(const Packet::Variant& packet) {
+  return std::visit([](const auto & p) {
+    return p.isDone();
+  }, packet);
+}
+
+void Packet::insert(Packet::Variant& packet, const uint8_t& byte) {
+  std::visit([&](auto& p) {
+    p.insert(byte);
+  }, packet);
+}
+
+std::string Packet::asString(const Packet::Variant& packet) {
+  return std::visit([](const auto& p) {
+    return p.asString();
+  }, packet);
+}
+
+void Packet::setTimestamp(Packet::Variant& packet, const uint64_t& timestamp) {
+  std::visit([&](auto& p) {
+    p.setTimestamp(timestamp);
+  }, packet);
+}
+
 void Packet::Base::insert(const uint8_t& byte) {
   if (iterator < Packet::bytesize) {
     raw[iterator] = byte;
     iterator++;
   }
 }
-
 std::string Packet::Base::asString() const {
   return std::format("[@{}] ", timestamp);
 }
@@ -28,7 +51,7 @@ uint8_t Packet::Base::getIterator() const {
   return iterator;
 }
 
-void Packet::Base::setTimestamp(uint64_t t) {
+void Packet::Base::setTimestamp(const uint64_t& t) {
   timestamp = t;
 }
 
@@ -54,7 +77,9 @@ bool Packet::Extension::isBranchFutureFlush() const {
 }
 
 void Packet::Extension::insert(const uint8_t& byte) {
-  Packet::Base::insert(byte);
+  //Packet::Base::insert(byte);
+  raw[iterator] = byte;
+  iterator++;
   // 63 as iterator will be incremented in the Base::insert()
   if (iterator == 2)
     iterator = (byte > 0)? Packet::bytesize : Packet::bytesize-10;

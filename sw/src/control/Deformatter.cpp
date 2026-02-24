@@ -5,6 +5,9 @@
 #include <iostream>
 
 
+#include "Tools.hpp"
+
+
 bool Deformatter::toInsertInPrevious(const uint8_t& aux, const uint8_t& offset) const {
   return (aux >> offset) & 0x01;
 }
@@ -28,24 +31,31 @@ bool Deformatter::insert(const uint8_t& byte) {
 void Deformatter::format() {
   for (uint8_t i = 0; i < 15; i++) { // 15 becasue last byte contains carried over bits
     // Inspect if odd indexed byte and check if it is an ID
-    if (i%2 == 0) {
+    if (!(i & 0x01)) {
       // Check AUX to detect whether the next (data) byte belong to the current or previous stream source
-      if (frame[i]%2) {
+      if (frame[i] & 0x01) { // (frame[i]%2) {
         previous = current;
         current = frame[i] >> 1;
-        insertInPrevious = toInsertInPrevious(frame[15], i/2);
+        insertInPrevious = frame[15] & 0x01;
+        //insertInPrevious = toInsertInPrevious(frame[15], i>>1);
       }
       else {
-        factories[current].insert((frame[i] & 0xfe) | ((frame[15] >> (i/2)) & 0x01));
+        factories[current].insert((frame[i] & 0xfe) | (frame[15] & 0x01));
       }
+      // Update AUX
+      frame[15] >>= 1;
     }
-    else {
+    else { // (i%2 == 1) {
+      /*
       if (insertInPrevious) {
         factories[previous].insert(frame[i]);
         insertInPrevious = false;
       }
-      else
+      else {
         factories[current].insert(frame[i]);
+      }
+      */
+      factories[(insertInPrevious)? previous : current].insert(frame[i]);
     }
   }
 }

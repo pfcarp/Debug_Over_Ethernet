@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <variant>
 #include <vector>
 
 
@@ -17,7 +18,7 @@ namespace Packet {
       uint64_t timestamp = 0;
       uint8_t counter = 0;
       uint8_t iterator = 0;
-  uint8_t  raw[Packet::bytesize];
+      uint8_t  raw[Packet::bytesize];
 
     public:
       // Methods
@@ -26,7 +27,7 @@ namespace Packet {
       virtual bool isDone() const;
       virtual void markDone();
       virtual uint8_t getIterator() const;
-      virtual void setTimestamp(uint64_t t);
+      virtual void setTimestamp(const uint64_t& t);
       virtual ~Base() = default;
 
   };
@@ -571,5 +572,12 @@ namespace Packet {
       std::string asString() const override;
 
   };
+
+  using Variant = std::variant<Reserved, Extension, TraceInfo, Timestamp, TraceOn, FunctionReturn, ExceptionReturn, Resynchronization, CycleCountFormat1, CycleCountFormat2, CycleCountFormat3, NumberedDataSyncMark, UnnumberedDataSyncMark, Commit, CancelFormat1, Mispredict, CancelFormat2, CancelFormat3, ConditionalInstructionFormat1, ConditionalInstructionFormat2, ConditionalFlush, ConditionalResultFormat4, ConditionalResultFormat2, ConditionalResultFormat3, ConditionalResultFormat1, ConditionalInstructionFormat3, Ignore, Event, Context, AddressWithContext, TimestampMarker, ExactMatchAddress, ShortAddress, LongAddress, Q, AtomFormat1, AtomFormat2, AtomFormat3, AtomFormat4, AtomFormat5, AtomFormat6, Exception>;
+
+  bool isDone(const Variant& packet);
+  void insert(Variant&, const uint8_t& byte);
+  std::string asString(const Variant& packet);
+  void setTimestamp(Variant& packet, const uint64_t& timestamp);
 
 }

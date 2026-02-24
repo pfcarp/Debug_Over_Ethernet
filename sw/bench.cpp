@@ -41,13 +41,13 @@ int main(int argc, char* argv[]) {
   double elapsed = elapsed_seconds.count();
 
   // Compute metrics
-  double bytePerPacket = buffer.size()/static_cast<double>(deformatter.streams[0]->size());
+  double bytePerPacket = buffer.size()/static_cast<double>(deformatter.factories[0].packets.size());
   double bytePerNSec   = buffer.size()/elapsed;
-  double packetPerNSec = deformatter.streams[0]->size()/elapsed;
+  double packetPerNSec = deformatter.factories[0].packets.size()/elapsed;
 
   // Print as CSV
   std::cout << "bytes,seconds,packets,bytePerPacket,bytePerSec,packetPerSec" << std::endl;
-  std::cout << buffer.size() << "," << elapsed << "," << deformatter.streams[0]->size() << "," << bytePerPacket << "," << bytePerNSec << "," << packetPerNSec << std::endl;
+  std::cout << buffer.size() << "," << elapsed << "," << deformatter.factories[0].packets.size() << "," << bytePerPacket << "," << bytePerNSec << "," << packetPerNSec << std::endl;
 
   return 0;
 }

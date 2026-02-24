@@ -2,7 +2,7 @@ CXXFLAGS=-lm -std=c++20 -Wall -Wextra
 GTK4FLAGS=`pkg-config --cflags --libs gtk4`
 PCAPFLAGS=`pkg-config --cflags --libs libpcap`
 GRAPHVIZFLAGS=-lgvc -lcgraph
-OPT=-O0 -march=native
+OPT=-O2 -march=native
 DEBUG=-g
 
 MODEL=src/model
@@ -11,7 +11,7 @@ CTRL=src/control
 
 TEST=test/
 
-INCLUDE=-Iinclude/view -Iinclude/model -Iinclude/control
+INCLUDE=-Iinclude/view -Iinclude/model -Iinclude/control -Iinclude/common
 OBJ=object
 
 
