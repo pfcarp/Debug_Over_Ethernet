@@ -19,7 +19,6 @@ int main(int argc, char* argv[]) {
     auto start = std::chrono::steady_clock::now();
     for (uint64_t iteration = 0; iteration < iterations; iteration++) {
       factory.insert(id);
-      factory.consume();
     }
     auto end = std::chrono::steady_clock::now();
 

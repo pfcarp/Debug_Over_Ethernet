@@ -12,7 +12,7 @@ make clean
 # Compile unit tests
 make tests
 # Run tests
-./tests.out
+./bin/tests.out
 ```
 
 The expected output should end with:
@@ -32,7 +32,7 @@ cd sw/
 # Ensure to start from clean state
 make clean
 # Compile benchmarking program
-make bench
+make benchmark/packet
 ```
 
 ### Benchmark

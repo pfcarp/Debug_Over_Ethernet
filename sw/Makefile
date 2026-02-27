@@ -5,14 +5,15 @@ GRAPHVIZFLAGS=-lgvc -lcgraph
 OPT=-O2 -march=native
 DEBUG=-g
 
+
 MODEL=src/model
 VIEW=src/view
 CTRL=src/control
 
-TEST=test/
 
 INCLUDE=-Iinclude/view -Iinclude/model -Iinclude/control -Iinclude/common
 OBJ=object
+BIN=bin
 
 
 all: gui parser tests bench
@@ -91,26 +92,26 @@ Dispatcher.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/Dispatcher.cpp -o $(OBJ)/Dispatcher.o $(CXXFLAGS)
 
 
-parser: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
-	g++ $(DEBUG) $(OPT) $(INCLUDE) parser.cpp $(OBJ)/*.o -o parser.out $(CXXFLAGS)
+parser/offline: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) parser/offline.cpp $(OBJ)/*.o -o $(BIN)/offline-parser.out $(CXXFLAGS)
 
-online: PacketFactory.o Packet.o Stream.o Deformatter.o Sniffer.o Dispatcher.o
-	g++ $(DEBUG) $(OPT) $(INCLUDE) online.cpp $(OBJ)/*.o -o online.out $(CXXFLAGS) $(PCAPFLAGS)
+parser/online: PacketFactory.o Packet.o Stream.o Deformatter.o Sniffer.o Dispatcher.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) parser/online.cpp $(OBJ)/*.o -o $(BIN)/online-parser.out $(CXXFLAGS) $(PCAPFLAGS)
 
 tests: Dispatcher.o Packet.o Deformatter.o Stream.o PacketFactory.o
-	g++ $(OPT) $(INCLUDE) tests.cpp $(wildcard test/packet/*.cpp) $(wildcard test/deformatter/*.cpp) $(OBJ)/*.o -o tests.out $(CXXFLAGS)
+	g++ $(OPT) $(INCLUDE) test/tests.cpp $(wildcard test/packet/*.cpp) $(wildcard test/deformatter/*.cpp) $(OBJ)/*.o -o $(BIN)/tests.out $(CXXFLAGS)
 
-gui: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
-	g++ $(DEBUG) $(OPT) $(INCLUDE) gui.c $(wildcard object/*.o) -o doeth.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
+gui/online: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/online.cpp $(wildcard object/*.o) -o $(BIN)/online-gui.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
 
-bench: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
-	g++ $(DEBUG) $(OPT) $(INCLUDE) bench.cpp $(OBJ)/*.o -o bench.out $(CXXFLAGS)
+benchmark/packet: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) benchmark/packet.cpp $(OBJ)/*.o -o $(BIN)/packet-benchmark.out $(CXXFLAGS)
 
-factory: PacketFactory.o Packet.o
-	g++ $(DEBUG) $(OPT) $(INCLUDE) factory.cpp $(OBJ)/*.o -o factory.out $(CXXFLAGS)
+benchmark/factory: PacketFactory.o Packet.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) benchmark/factory.cpp $(OBJ)/*.o -o $(BIN)/factory-benchmark.out $(CXXFLAGS)
 
 
 clean:
-	rm -f doeth.out parser.out tests.out online.out
+	rm -f $(BIN)/*.out
 	rm -f $(OBJ)/*.o
 
