@@ -28,10 +28,10 @@ int main() {
   }
 
   // Print trace
-  for (const auto& stream : deformatter.streams) {
+  for (int i = 0; i < 4; i++) {
     std::cout << "STREAM -----------------------" << std::endl;
-    for (const auto& packet : stream->packets)
-      std::cout << packet->asString() << std::endl;
+    for (const auto& packet : deformatter.factories[i].packets)
+      std::cout << Packet::asString(packet) << std::endl;
   }
 
   return 0;

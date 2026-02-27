@@ -15,12 +15,13 @@ namespace Packet {
     
     protected:
       // Attributes
-      uint64_t timestamp = 0;
       uint8_t counter = 0;
       uint8_t iterator = 0;
       uint8_t  raw[Packet::bytesize];
 
     public:
+      // Attributes
+      uint64_t timestamp = 0;
       // Methods
       virtual void insert(const uint8_t& byte);
       virtual std::string asString() const;
