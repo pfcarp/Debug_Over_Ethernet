@@ -310,108 +310,119 @@ void ParseTracePage::onActivate(GtkWidget* button) {
   }).detach();
 }
 
-struct Wizard {
+class Wizard {
   
-  GtkWidget* dialog;
-  GtkWidget* stack;
-  GtkWidget* step_list;
-  GtkWidget* header;
-  GtkWidget* next_button;
+  private:
+    // Attributes
+    GtkWidget* parent;
+    GtkWidget* dialog;
+    GtkWidget* content;
+    GtkWidget* paned; 
+    GtkWidget* stack;
+    GtkWidget* step_list;
+    GtkWidget* header;
+    GtkWidget* next_button;
+    std::vector<Page*>::iterator current;
+    std::vector<Page*> steps;
+    // Methods
+    static void cOnNext(GtkWidget* _, gpointer data);
 
-  std::vector<Page*>::iterator current;
-  std::vector<Page*> steps;
+  public:
+    Wizard(GtkApplication* app, GtkWidget* parent);
+    void onNext();
+
 };
 
-
-static void on_next(GtkWidget* _, gpointer data) {
-  Wizard* wiz = static_cast<Wizard*>(data);
-
-  wiz->current++;
-  if (wiz->current != wiz->steps.end()) {
-    (*wiz->current)->step.markAsVisited();
-    gtk_stack_set_visible_child_name(GTK_STACK(wiz->stack), (*wiz->current)->step.getName().c_str());
+Wizard::Wizard(GtkApplication* app, GtkWidget* parent): parent(parent) {
+  // create DialogBox
+  dialog = gtk_dialog_new();
+  gtk_window_set_application(GTK_WINDOW(dialog), app);
+  gtk_window_set_title(GTK_WINDOW(dialog), "Trace Setup Wizard");
+  gtk_window_set_default_size(GTK_WINDOW(dialog), 700, 400);
+  gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(parent));
+  gtk_window_set_modal(GTK_WINDOW(dialog), TRUE);
+  // Create header for dialog box
+  header = gtk_header_bar_new();
+  gtk_header_bar_set_show_title_buttons(GTK_HEADER_BAR(header), FALSE);
+  // Create button
+  next_button = gtk_button_new_with_label("Next");
+  g_signal_connect(next_button, "clicked", G_CALLBACK(Wizard::cOnNext), this);
+  gtk_header_bar_pack_end(GTK_HEADER_BAR(header), next_button);
+  gtk_window_set_titlebar(GTK_WINDOW(dialog), header);
+  // Construct pane/tab system
+  content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+  paned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
+  gtk_box_append(GTK_BOX(content), paned);
+  // Left pane
+  step_list = gtk_list_box_new();
+  gtk_paned_set_position(GTK_PANED(paned), 150);
+  gtk_paned_set_start_child(GTK_PANED(paned), step_list);
+  gtk_paned_set_resize_start_child(GTK_PANED(paned), FALSE);
+  gtk_paned_set_shrink_start_child(GTK_PANED(paned), FALSE);
+  // Right pane
+  stack = gtk_stack_new();
+  gtk_widget_set_hexpand(stack, TRUE);
+  gtk_widget_set_vexpand(stack, TRUE);
+  gtk_paned_set_end_child(GTK_PANED(paned), stack);
+  // Setup steps
+  steps.push_back(new StartPage());
+  steps.push_back(new AcquireTracePage());
+  steps.push_back(new ParseTracePage());
+  //// Connect step-page
+  for (const auto& page : steps) {
+    gtk_list_box_append(GTK_LIST_BOX(step_list), page->step.row);
+    gtk_stack_add_named(GTK_STACK(stack), page->page, page->getName().c_str());
   }
+  //// Setup first step-page
+  current = steps.begin();
+  (*current)->step.markAsVisited();
+  gtk_stack_set_visible_child_name(GTK_STACK(stack), (*current)->step.getName().c_str());
+  // Show dialog box
+  gtk_window_present(GTK_WINDOW(dialog));
+}
 
+void Wizard::onNext() {
+  // Go to next step-page
+  current++;
+  if (current != steps.end()) {
+    (*current)->step.markAsVisited();
+    gtk_stack_set_visible_child_name(GTK_STACK(stack), (*current)->step.getName().c_str());
+  }
   // Simple linear example
-  if (!wiz->steps.empty() && (wiz->current == std::prev(wiz->steps.end()))) {
+  if (!steps.empty() && (current == std::prev(steps.end()))) {
     // Update button style
-    gtk_button_set_label(GTK_BUTTON(wiz->next_button), "Plot");
-    GtkStyleContext* ctx = gtk_widget_get_style_context(GTK_WIDGET(wiz->next_button));
+    gtk_button_set_label(GTK_BUTTON(next_button), "Plot");
+    GtkStyleContext* ctx = gtk_widget_get_style_context(GTK_WIDGET(next_button));
     gtk_style_context_add_class(ctx, "suggested-action");
     // Start thread
-    (*wiz->current)->onActivate(GTK_WIDGET(wiz->next_button));
+    (*current)->onActivate(GTK_WIDGET(next_button));
   }
-  else if (wiz->current == wiz->steps.end()) {
-    gtk_window_destroy(GTK_WINDOW(wiz->dialog));
+  else if (current == steps.end()) {
+    gtk_window_destroy(GTK_WINDOW(dialog));
   }
 }
 
+void Wizard::cOnNext(GtkWidget* _, gpointer data) {
+  Wizard* self = static_cast<Wizard*>(data);
+  self->onNext();
+}
 
-static void on_activate(GtkApplication* app, gpointer) {
-  Wizard* wiz = new Wizard();
+
+static void onActivate(GtkApplication* app, gpointer _) {
 
   GtkWidget* window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(window), "DoEth Live Tracer");
   gtk_window_set_default_size(GTK_WINDOW(window), 1000, 700);
-
-  wiz->dialog = gtk_dialog_new();
-  gtk_window_set_application(GTK_WINDOW(wiz->dialog), app);
-  gtk_window_set_title(GTK_WINDOW(wiz->dialog), "Trace Setup Wizard");
-  gtk_window_set_default_size(GTK_WINDOW(wiz->dialog), 700, 400);
-  gtk_window_set_transient_for(GTK_WINDOW(wiz->dialog), GTK_WINDOW(window));
-  gtk_window_set_modal(GTK_WINDOW(wiz->dialog), TRUE);
-
-
-  wiz->header = gtk_header_bar_new();
-  gtk_header_bar_set_show_title_buttons(GTK_HEADER_BAR(wiz->header), FALSE);
-
-  wiz->next_button = gtk_button_new_with_label("Next");
-  g_signal_connect(wiz->next_button, "clicked", G_CALLBACK(on_next), wiz);
-  gtk_header_bar_pack_end(GTK_HEADER_BAR(wiz->header), wiz->next_button);
-  gtk_window_set_titlebar(GTK_WINDOW(wiz->dialog), wiz->header);
-
-
-  GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(wiz->dialog));
-
-  GtkWidget* paned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
-  gtk_box_append(GTK_BOX(content), paned);
-
-  // LEFT SIDE: Step list
-  wiz->step_list = gtk_list_box_new();
-  gtk_paned_set_position(GTK_PANED(paned), 150);
-  gtk_paned_set_start_child(GTK_PANED(paned), wiz->step_list);
-  gtk_paned_set_resize_start_child(GTK_PANED(paned), FALSE);
-  gtk_paned_set_shrink_start_child(GTK_PANED(paned), FALSE);
-
-  // RIGHT SIDE: Pages
-  wiz->stack = gtk_stack_new();
-  gtk_widget_set_hexpand(wiz->stack, TRUE);
-  gtk_widget_set_vexpand(wiz->stack, TRUE);
-  gtk_paned_set_end_child(GTK_PANED(paned), wiz->stack);
-
-  // Create steps
-  wiz->steps.push_back(new StartPage());
-  wiz->steps.push_back(new AcquireTracePage());
-  wiz->steps.push_back(new ParseTracePage());
-  
-  for (const auto& page : wiz->steps) {
-    gtk_list_box_append(GTK_LIST_BOX(wiz->step_list), page->step.row);
-    gtk_stack_add_named(GTK_STACK(wiz->stack), page->page, page->getName().c_str());
-  }
-
-  wiz->current = wiz->steps.begin();
-  (*wiz->current)->step.markAsVisited();
-  gtk_stack_set_visible_child_name(GTK_STACK(wiz->stack), (*wiz->current)->step.getName().c_str());
-
   gtk_window_present(GTK_WINDOW(window));
-  gtk_window_present(GTK_WINDOW(wiz->dialog));
+
+  Wizard* wiz = new Wizard(app, window);
 }
 
 
 int main(int argc, char** argv) {
   GtkApplication* app = gtk_application_new("com.example.wizard", G_APPLICATION_FLAGS_NONE);
 
-  g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
+  g_signal_connect(app, "activate", G_CALLBACK(onActivate), NULL);
 
   int status = g_application_run(G_APPLICATION(app), argc, argv);
   g_object_unref(app);
