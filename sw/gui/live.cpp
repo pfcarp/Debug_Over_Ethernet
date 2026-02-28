@@ -1,9 +1,17 @@
+#include <cstdint>
 #include <gtk/gtk.h>
 #include <vector>
 #include <string>
 #include <map>
 #include <iostream>
+#include <fstream>
 #include <thread>
+#include <algorithm>
+
+
+#include "Deformatter.hpp"
+#include "PlotArea.hpp"
+#include "Events.hpp"
 
 
 class Step {
@@ -107,11 +115,37 @@ StartPage::StartPage(): Page("Start guide") {
 class AcquireTracePage: public Page {
 
   private:
+    // Attributes
+    GtkWidget* stack;
+    GtkWidget* switcher;
+    struct {
+      GtkWidget* page;
+      GtkWidget* row;
+      GtkWidget* entry;
+      GtkWidget* title;
+      GtkWidget* desc;
+      GtkWidget* browse;
+    } file;
+    struct {
+      GtkWidget* page;
+      GtkWidget* title[2];
+      GtkWidget* desc[2];
+      GtkWidget* row[2];
+      GtkWidget* combo;
+      GtkWidget* play;
+      GtkWidget* stop;
+      GtkWidget* entry;
+      GtkWidget* browse;
+      GtkWidget* check;
+    } ethernet;
+    std::vector<uint8_t>* buffer;
+    // Methods
     static void on_browse_clicked(GtkButton *btn, gpointer user_data);
     static void on_file_selected(GObject *source, GAsyncResult *res, gpointer data);
 
   public:
-    AcquireTracePage();
+    AcquireTracePage(std::vector<uint8_t>* buffer);
+    void onActivate(GtkWidget* _);
 
 };
 
@@ -133,105 +167,117 @@ void AcquireTracePage::on_file_selected(GObject *source, GAsyncResult *res, gpoi
   g_object_unref(source);
 }
 
-AcquireTracePage::AcquireTracePage(): Page("Acquire Trace") {
+AcquireTracePage::AcquireTracePage(std::vector<uint8_t>* buffer): Page("Acquire Trace"), buffer(buffer) {
   page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
 
   // Stack container
-  GtkWidget* stack = gtk_stack_new();
+  stack = gtk_stack_new();
   gtk_widget_set_vexpand(stack, TRUE);
   gtk_widget_set_hexpand(stack, TRUE);
 
   // Switcher (tabs header)
-  GtkWidget* switcher = gtk_stack_switcher_new();
+  switcher = gtk_stack_switcher_new();
   gtk_stack_switcher_set_stack(GTK_STACK_SWITCHER(switcher), GTK_STACK(stack));
 
   //// File Page
-  GtkWidget* file_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+  file.page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
   /* Horizontal row for entry + button */
-  GtkWidget* file_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-  GtkWidget* file_entry = gtk_entry_new();
-  gtk_widget_set_hexpand(file_entry, TRUE);
+  file.row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  file.entry = gtk_entry_new();
+  gtk_widget_set_hexpand(file.entry, TRUE);
   //// Interface label
-  GtkWidget* file_title = gtk_label_new("File selection.");
-  gtk_widget_add_css_class(file_title, "heading");
+  file.title = gtk_label_new("File selection.");
+  gtk_widget_add_css_class(file.title, "heading");
   // Description
-  GtkWidget* file_desc = gtk_label_new("Select the source trace file of interrest by clicking the 'Browse' button. Make sure it is correct.");
-  gtk_label_set_wrap(GTK_LABEL(file_desc), TRUE);
-  gtk_label_set_justify(GTK_LABEL(file_desc), GTK_JUSTIFY_CENTER);
-  gtk_widget_set_halign(file_desc, GTK_ALIGN_CENTER);
+  file.desc = gtk_label_new("Select the source trace file of interrest by clicking the 'Browse' button. Make sure it is correct.");
+  gtk_label_set_wrap(GTK_LABEL(file.desc), TRUE);
+  gtk_label_set_justify(GTK_LABEL(file.desc), GTK_JUSTIFY_CENTER);
+  gtk_widget_set_halign(file.desc, GTK_ALIGN_CENTER);
   ////// Create browse button
-  GtkWidget* browse_btn = gtk_button_new_with_label("Browse");
+  file.browse = gtk_button_new_with_label("Browse");
   ////// Store entry pointer inside button for callback access
-  g_object_set_data(G_OBJECT(browse_btn), "entry", file_entry);
+  g_object_set_data(G_OBJECT(file.browse), "entry", file.entry);
   ////// Browse callback
-  g_signal_connect(browse_btn, "clicked", G_CALLBACK(on_browse_clicked), file_entry);
+  g_signal_connect(file.browse, "clicked", G_CALLBACK(on_browse_clicked), file.entry);
   //// Assemble row
-  gtk_box_append(GTK_BOX(file_row), file_entry);
-  gtk_box_append(GTK_BOX(file_row), browse_btn);
+  gtk_box_append(GTK_BOX(file.row), file.entry);
+  gtk_box_append(GTK_BOX(file.row), file.browse);
   //// Add to page
-  gtk_box_append(GTK_BOX(file_page), file_title);
-  gtk_box_append(GTK_BOX(file_page), file_desc);
-  gtk_box_append(GTK_BOX(file_page), file_row);
+  gtk_box_append(GTK_BOX(file.page), file.title);
+  gtk_box_append(GTK_BOX(file.page), file.desc);
+  gtk_box_append(GTK_BOX(file.page), file.row);
   // Add to stack
-  gtk_stack_add_titled(GTK_STACK(stack), file_page, "file", "Load from file");
+  gtk_stack_add_titled(GTK_STACK(stack), file.page, "file", "Load from file");
 
   // Ethernet Page
-  GtkWidget* eth_page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
-  gtk_stack_add_titled(GTK_STACK(stack), eth_page, "ethernet", "Load over Ethernet");
+  ethernet.page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+  gtk_stack_add_titled(GTK_STACK(stack), ethernet.page, "ethernet", "Load over Ethernet");
   //// Interface label
-  GtkWidget* iface_title = gtk_label_new("Ethernet interface selection.");
-  gtk_widget_add_css_class(iface_title, "heading");
-  gtk_box_append(GTK_BOX(eth_page), iface_title);
+  ethernet.title[0] = gtk_label_new("Ethernet interface selection.");
+  gtk_widget_add_css_class(ethernet.title[0], "heading");
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.title[0]);
   // Description
-  GtkWidget* iface_desc1 = gtk_label_new("Select the interface to listen to to get the trace.");
-  gtk_label_set_wrap(GTK_LABEL(iface_desc1), TRUE);
-  gtk_label_set_justify(GTK_LABEL(iface_desc1), GTK_JUSTIFY_CENTER);
-  gtk_widget_set_halign(iface_desc1, GTK_ALIGN_CENTER);
-  gtk_box_append(GTK_BOX(eth_page), iface_desc1);
+  ethernet.desc[0] = gtk_label_new("Select the interface to listen to to get the trace.");
+  gtk_label_set_wrap(GTK_LABEL(ethernet.desc[0]), TRUE);
+  gtk_label_set_justify(GTK_LABEL(ethernet.desc[0]), GTK_JUSTIFY_CENTER);
+  gtk_widget_set_halign(ethernet.desc[0], GTK_ALIGN_CENTER);
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.desc[0]);
   //// TOP ROW : Interface + Controls
-  GtkWidget* top_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+  ethernet.row[0] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   ////// Combo box text
-  GtkWidget* combo = gtk_combo_box_text_new();
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), NULL, "eth0");
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), NULL, "eth1");
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo), NULL, "lo");
-  gtk_widget_set_hexpand(combo, TRUE);
-  gtk_box_append(GTK_BOX(top_row), combo);
+  ethernet.combo = gtk_combo_box_text_new();
+  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(ethernet.combo), NULL, "eth0");
+  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(ethernet.combo), NULL, "eth1");
+  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(ethernet.combo), NULL, "lo");
+  gtk_widget_set_hexpand(ethernet.combo, TRUE);
+  gtk_box_append(GTK_BOX(ethernet.row[0]), ethernet.combo);
   ////// Play button
-  GtkWidget* play_btn = gtk_button_new_from_icon_name("media-playback-start");
-  gtk_box_append(GTK_BOX(top_row), play_btn);
+  ethernet.play = gtk_button_new_from_icon_name("media-playback-start");
+  gtk_box_append(GTK_BOX(ethernet.row[0]), ethernet.play);
   ////// Stop button
-  GtkWidget* stop_btn = gtk_button_new_from_icon_name("media-playback-stop");
-  gtk_box_append(GTK_BOX(top_row), stop_btn);
+  ethernet.stop = gtk_button_new_from_icon_name("media-playback-stop");
+  gtk_box_append(GTK_BOX(ethernet.row[0]), ethernet.stop);
   ////// Push top row into main box
-  gtk_box_append(GTK_BOX(eth_page), top_row);
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.row[0]);
   //// TRACE SAVING SECTION
   ////// Title label
-  GtkWidget* save_title = gtk_label_new("Save trace?");
-  gtk_widget_add_css_class(save_title, "heading");
-  gtk_box_append(GTK_BOX(eth_page), save_title);
+  ethernet.title[1] = gtk_label_new("Save trace?");
+  gtk_widget_add_css_class(ethernet.title[1], "heading");
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.title[1]);
   ////// Description
-  GtkWidget* iface_desc2 = gtk_label_new("Select a destination to store the recoding of the trace by clicking the 'Browse' button. Confirm the action by checking the box below.");
-  gtk_label_set_wrap(GTK_LABEL(iface_desc2), TRUE);
-  gtk_label_set_justify(GTK_LABEL(iface_desc2), GTK_JUSTIFY_CENTER);
-  gtk_widget_set_halign(iface_desc2, GTK_ALIGN_CENTER);
-  gtk_box_append(GTK_BOX(eth_page), iface_desc2);
+  ethernet.desc[1] = gtk_label_new("Select a destination to store the recoding of the trace by clicking the 'Browse' button. Confirm the action by checking the box below.");
+  gtk_label_set_wrap(GTK_LABEL(ethernet.desc[1]), TRUE);
+  gtk_label_set_justify(GTK_LABEL(ethernet.desc[1]), GTK_JUSTIFY_CENTER);
+  gtk_widget_set_halign(ethernet.desc[1], GTK_ALIGN_CENTER);
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.desc[1]);
   ////// File picker row
-  GtkWidget* file_row2 = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-  GtkWidget* file_entry2 = gtk_entry_new();
-  gtk_widget_set_hexpand(file_entry2, TRUE);
-  GtkWidget* browse_btn2 = gtk_button_new_with_label("Browse");
+  ethernet.row[1] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  ethernet.entry = gtk_entry_new();
+  gtk_widget_set_hexpand(ethernet.entry, TRUE);
+  ethernet.browse = gtk_button_new_with_label("Browse");
   ////// Connect browse button (reuse your previous pattern) */
-  g_signal_connect(browse_btn2, "clicked", G_CALLBACK(on_browse_clicked), file_entry2);
-  gtk_box_append(GTK_BOX(file_row2), file_entry2);
-  gtk_box_append(GTK_BOX(file_row2), browse_btn2);
-  gtk_box_append(GTK_BOX(eth_page), file_row2);
+  g_signal_connect(ethernet.browse, "clicked", G_CALLBACK(on_browse_clicked), ethernet.entry);
+  gtk_box_append(GTK_BOX(ethernet.row[1]), ethernet.entry);
+  gtk_box_append(GTK_BOX(ethernet.row[1]), ethernet.browse);
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.row[1]);
   ////// Checkbox
-  GtkWidget* save_check = gtk_check_button_new_with_label("Enable saving");
-  gtk_box_append(GTK_BOX(eth_page), save_check);
+  ethernet.check = gtk_check_button_new_with_label("Enable saving");
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.check);
   // Add switcher + stack to page
   gtk_box_append(GTK_BOX(page), switcher);
   gtk_box_append(GTK_BOX(page), stack);
+}
+
+void AcquireTracePage::onActivate(GtkWidget* _) {
+  GtkWidget* visible = gtk_stack_get_visible_child(GTK_STACK(stack));
+  if (visible == file.page) {
+    std::ifstream binary(std::string(gtk_editable_get_text(GTK_EDITABLE(file.entry))), std::ios::binary);
+    if (!binary) throw std::runtime_error("Failed to open file");
+    (*buffer) = std::vector<uint8_t>(std::istreambuf_iterator<char>(binary), std::istreambuf_iterator<char>());
+  }
+  else if (visible == ethernet.page) {
+    std::cout << "Ethernet selected" << std::endl;
+  }
 }
 
 
@@ -244,14 +290,16 @@ class ParseTracePage: public Page {
     GtkWidget* progress;
     GtkWidget* percent_label;
     GtkWidget* spinner;
+    std::vector<uint8_t>* buffer;
+    DeformatterVector* deformatter;
 
   public:
-    ParseTracePage();
+    ParseTracePage(std::vector<uint8_t>* buffer, DeformatterVector* deformatter);
     void onActivate(GtkWidget* button);
 
 };
 
-ParseTracePage::ParseTracePage(): Page("Parse Trace") {
+ParseTracePage::ParseTracePage(std::vector<uint8_t>* buffer, DeformatterVector* deformatter): Page("Parse Trace"), buffer(buffer), deformatter(deformatter) {
   page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 15);
   gtk_widget_set_valign(page, GTK_ALIGN_CENTER);
   gtk_widget_set_halign(page, GTK_ALIGN_CENTER);
@@ -285,15 +333,19 @@ void ParseTracePage::onActivate(GtkWidget* button) {
   gtk_widget_set_sensitive(button, FALSE);
   gtk_spinner_start(GTK_SPINNER(spinner));
   std::thread([this, button]() {
-    for (int i = 0; i <= 100; ++i) {
-      progress_value = i / 100.0;
+    int step = buffer->size()/100;
+    for (long unsigned int i = 0; i < buffer->size(); i += step) {
+      long unsigned int nextStep = std::min(i+step, buffer->size());
+      for (long unsigned int j = i; j < nextStep; j++) {
+        deformatter->insert(buffer->at(j));
+      }
+      progress_value = nextStep/((double)buffer->size());
       g_idle_add([](gpointer data) -> gboolean {
-        auto* tuple = static_cast<std::pair<ParseTracePage*, GtkWidget*>*>(data);
-        auto* self = tuple->first;
-        GtkWidget* button = tuple->second;
-        double f = self->progress_value.load();
-        gtk_progress_bar_set_fraction(
-          GTK_PROGRESS_BAR(self->progress), f);
+          auto* tuple = static_cast<std::pair<ParseTracePage*, GtkWidget*>*>(data);
+          auto* self = tuple->first;
+          GtkWidget* button = tuple->second;
+          double f = self->progress_value.load();
+          gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(self->progress), f);
           char buffer[16];
           snprintf(buffer, sizeof(buffer), "%.0f %%", f * 100);
           gtk_label_set_text(GTK_LABEL(self->percent_label), buffer);
@@ -304,8 +356,8 @@ void ParseTracePage::onActivate(GtkWidget* button) {
           delete tuple;
           return G_SOURCE_REMOVE;
         },
-      new std::pair<ParseTracePage*, GtkWidget*>{this, button});
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        new std::pair<ParseTracePage*, GtkWidget*>{this, button}
+      );
     }
   }).detach();
 }
@@ -328,12 +380,12 @@ class Wizard {
     static void cOnNext(GtkWidget* _, gpointer data);
 
   public:
-    Wizard(GtkApplication* app, GtkWidget* parent);
+    Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, DeformatterVector* deformatter);
     void onNext();
 
 };
 
-Wizard::Wizard(GtkApplication* app, GtkWidget* parent): parent(parent) {
+Wizard::Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, DeformatterVector* deformatter): parent(parent) {
   // create DialogBox
   dialog = gtk_dialog_new();
   gtk_window_set_application(GTK_WINDOW(dialog), app);
@@ -366,8 +418,8 @@ Wizard::Wizard(GtkApplication* app, GtkWidget* parent): parent(parent) {
   gtk_paned_set_end_child(GTK_PANED(paned), stack);
   // Setup steps
   steps.push_back(new StartPage());
-  steps.push_back(new AcquireTracePage());
-  steps.push_back(new ParseTracePage());
+  steps.push_back(new AcquireTracePage(buffer));
+  steps.push_back(new ParseTracePage(buffer, deformatter));
   //// Connect step-page
   for (const auto& page : steps) {
     gtk_list_box_append(GTK_LIST_BOX(step_list), page->step.row);
@@ -382,6 +434,9 @@ Wizard::Wizard(GtkApplication* app, GtkWidget* parent): parent(parent) {
 }
 
 void Wizard::onNext() {
+  if (!steps.empty() && (current == std::prev(std::prev(steps.end())))) {
+    (*current)->onActivate(GTK_WIDGET(next_button));
+  }
   // Go to next step-page
   current++;
   if (current != steps.end()) {
@@ -409,13 +464,21 @@ void Wizard::cOnNext(GtkWidget* _, gpointer data) {
 
 
 static void onActivate(GtkApplication* app, gpointer _) {
+  std::vector<uint8_t>* buffer = new std::vector<uint8_t>();
+  DeformatterVector* deformatter = new DeformatterVector();
+  std::vector<Event*> eventsPerf = {new Event("Inst. retired"), new Event("L2 refills")};
+  Events* traces = new Events(eventsPerf);
 
   GtkWidget* window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(window), "DoEth Live Tracer");
   gtk_window_set_default_size(GTK_WINDOW(window), 1000, 700);
   gtk_window_present(GTK_WINDOW(window));
 
-  Wizard* wiz = new Wizard(app, window);
+  Wizard* wiz = new Wizard(app, window, buffer, deformatter);
+
+  PlotArea* plot = new PlotArea(800, 200);
+  plot->collection = traces;
+  gtk_window_set_child(GTK_WINDOW(window), plot->parent);
 }
 
 
