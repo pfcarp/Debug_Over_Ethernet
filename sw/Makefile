@@ -104,6 +104,9 @@ tests: Dispatcher.o Packet.o Deformatter.o Stream.o PacketFactory.o
 gui/online: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/online.cpp $(wildcard object/*.o) -o $(BIN)/online-gui.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
 
+gui/live:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/live.cpp $(wildcard object/*.o) -o $(BIN)/live-gui.out $(GTK4FLAGS) $(CXXFLAGS)
+
 benchmark/packet: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) benchmark/packet.cpp $(OBJ)/*.o -o $(BIN)/packet-benchmark.out $(CXXFLAGS)
 
