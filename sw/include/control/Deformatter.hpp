@@ -26,6 +26,7 @@ class Deformatter {
     PacketFactory factories[4]; // Needed for tests...
     // Methods
     bool insert(const uint8_t& byte);
+    bool insert_bytes(const uint8_t * chunk, size_t chunk_len);
     bool toInsertInPrevious(const uint8_t& aux, const uint8_t& offset) const;
     void setTimestamp(uint64_t t);
     virtual ~Deformatter();

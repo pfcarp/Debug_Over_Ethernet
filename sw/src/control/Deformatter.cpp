@@ -2,6 +2,7 @@
 
 
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 
 
@@ -25,9 +26,45 @@ bool Deformatter::insert(const uint8_t& byte) {
   return (counter == 0);
 }
 
+bool Deformatter::insert_bytes(const uint8_t * chunk, size_t chunk_len) {
+    // Insert new byte
+    memcpy(frame, chunk, chunk_len);
+    format();
+    return 0;
+}
+
 /**
  * Followed format presented in DDI0314H page 220 (Sec. 8.12.1)
  */
+void Deformatter::format() {
+    register uint8_t disc = frame[15];
+
+#define PROCESS_16BITS(index)						\
+    do {								\
+	if (frame[index] & 0x01) {					\
+	    previous = current;						\
+	    current = frame[index] >> 1;				\
+	    factories[(disc & (1 << index)?previous:current)].insert(frame[index+1]); \
+	} else {							\
+	    factories[current].insert((frame[index] & 0xfe) |		\
+				      ((disc & (1<<index))>>index));	\
+	    factories[current].insert(frame[index+1]);			\
+	}								\
+    } while(0)
+
+    PROCESS_16BITS(0);
+    PROCESS_16BITS(2);
+    PROCESS_16BITS(4);
+    PROCESS_16BITS(6);
+    PROCESS_16BITS(8);
+    PROCESS_16BITS(10);
+    PROCESS_16BITS(12);
+    PROCESS_16BITS(14);
+    
+}	
+
+
+#if 0
 void Deformatter::format() {
   for (uint8_t i = 0; i < 15; i++) { // 15 becasue last byte contains carried over bits
     // Inspect if odd indexed byte and check if it is an ID
@@ -56,6 +93,7 @@ void Deformatter::format() {
     }
   }
 }
+#endif
 
 void Deformatter::setTimestamp(uint64_t t) {
   for (size_t i = 0; i < 4; i++) {

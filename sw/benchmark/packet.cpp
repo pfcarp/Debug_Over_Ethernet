@@ -3,6 +3,7 @@
 #include <vector>
 #include <cstdint>
 #include <chrono>
+#include <sys/mman.h>
 
 
 #include "Deformatter.hpp"
@@ -30,10 +31,20 @@ int main(int argc, char* argv[]) {
   // Create deformatter
   DeformatterVector deformatter;
 
+  // pre-allocate all pages.
+  mlockall(MCL_CURRENT | MCL_FUTURE);
+  
   auto start = std::chrono::steady_clock::now();
+#if 0
   for (uint8_t byte : buffer) {
     deformatter.insert(byte);
   }
+#else
+  uint8_t * chunk;
+  for (chunk = buffer.data(); chunk < buffer.data() + buffer.size(); chunk += 16) {
+      deformatter.insert_bytes(chunk, 16);
+  }
+#endif
   auto end = std::chrono::steady_clock::now();
 
   // Determine time delta
