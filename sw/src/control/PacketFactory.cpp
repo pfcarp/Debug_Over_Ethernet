@@ -8,9 +8,7 @@
 #include "Tools.hpp"
 
 
-PacketFactory::PacketFactory() {
-  packets.reserve(32*1024*1024);
-}
+PacketFactory::PacketFactory() {}
 
 std::ostream& operator<<(std::ostream& os, const Packet::Base& e) {
   os << e.asString();
@@ -19,16 +17,16 @@ std::ostream& operator<<(std::ostream& os, const Packet::Base& e) {
 
 bool PacketFactory::insert(const uint8_t& byte) {
   // Reserved packet means that it is not set
-  if (std::holds_alternative<Packet::Reserved>(packets[current])) {
-    factory[byte](*this, byte);
-    Packet::setTimestamp(packets[current], timestamp);
+  if (!current) {
+    current = factory[byte](*this, byte);
+    Packet::setTimestamp(*current, timestamp);
   }
   else {
-    Packet::insert(packets[current], byte);
+    Packet::insert(*current, byte);
   }
   // Separate if for cases where no payload is present
-  if (Packet::isDone(packets[current])) {
-    current++;
+  if (Packet::isDone(*current)) {
+    current = nullptr;
     return true;
   }
   return false;

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <map>
 
 
 #include "Packet.hpp"
@@ -11,15 +12,17 @@
 
 class PacketFactory {
   
-  using FactoryFunction = void(*)(PacketFactory&, const uint8_t&);
+  using FactoryFunction = Packet::Variant*(*)(PacketFactory&, const uint8_t&);
   
   public:
     // Attributes
-    std::vector<Packet::Variant> packets; // Needed for tests...
+  std::map<std::string, std::vector<Packet::Variant>> packets;
 
   private:
+    // Attibutes
+    Packet::Variant* current = nullptr;
     // Methods
-    #define MAKE_FACTORY(T) static void make##T(PacketFactory& self, const uint8_t& id) { self.packets.emplace_back(std::in_place_type<Packet::T>, id); }
+    #define MAKE_FACTORY(T) static Packet::Variant* make##T(PacketFactory& self, const uint8_t& id) { self.packets[#T].emplace_back(Packet::T(id)); return &self.packets[#T].back(); }
     MAKE_FACTORY(Extension)
     MAKE_FACTORY(TraceInfo)
     MAKE_FACTORY(Timestamp)
@@ -64,7 +67,6 @@ class PacketFactory {
     MAKE_FACTORY(AtomFormat6)
     #undef MAKE_FACTORY
     // Attributes
-    uint32_t current = 0;
     uint64_t timestamp = 0;
     static constexpr std::array<FactoryFunction, 256> factory = [] {
       std::array<FactoryFunction, 256> t{};

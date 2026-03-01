@@ -70,11 +70,14 @@ TEST_CASE("Insert 15 reserved in source 0.") {
   CHECK(obj.insert(aux));
 
   // Check length of stream 0: must be 15, others must be 0
-  CHECK(obj.factories[0].packets.size() == 15);
+  CHECK(obj.factories[0].packets.size() ==  1);
   CHECK(obj.factories[1].packets.size() ==  0);
   CHECK(obj.factories[2].packets.size() ==  0);
   CHECK(obj.factories[3].packets.size() ==  0);
 
+  // Check that stream 0 as 15 reserved packets
+  CHECK(obj.factories[0].packets["Reserved"].size() == 15);
+  
   // Check timestamp
   CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
 }
@@ -97,11 +100,15 @@ TEST_CASE("Insert 8 reserved in source 0 and 6 reserved in source 1.") {
   CHECK(obj.insert(aux));
 
   // Check length of factories
-  CHECK(obj.factories[0].packets.size() ==  8);
-  CHECK(obj.factories[1].packets.size() ==  6);
+  CHECK(obj.factories[0].packets.size() ==  1);
+  CHECK(obj.factories[1].packets.size() ==  1);
   CHECK(obj.factories[2].packets.size() ==  0);
   CHECK(obj.factories[3].packets.size() ==  0);
 
+  // Check in streams for reserved packets
+  CHECK(obj.factories[0].packets["Reserved"].size() ==  8);
+  CHECK(obj.factories[1].packets["Reserved"].size() ==  6);
+  
   // Check timestamp
   CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
 }
@@ -124,10 +131,14 @@ TEST_CASE("Insert 9 reserved in source 0 and 5 reserved in source 1 (AUX indicat
   CHECK(obj.insert(aux));
 
   // Check length of factories
-  CHECK(obj.factories[0].packets.size() ==  9);
-  CHECK(obj.factories[1].packets.size() ==  5);
+  CHECK(obj.factories[0].packets.size() ==  1);
+  CHECK(obj.factories[1].packets.size() ==  1);
   CHECK(obj.factories[2].packets.size() ==  0);
   CHECK(obj.factories[3].packets.size() ==  0);
+
+  // Check in streams for reserved packets
+  CHECK(obj.factories[0].packets["Reserved"].size() ==  9);
+  CHECK(obj.factories[1].packets["Reserved"].size() ==  5);
 
   // Check timestamp
   CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
@@ -151,10 +162,16 @@ TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in 
   CHECK(obj.insert(aux));
 
   // Check length of factories
-  CHECK(obj.factories[0].packets.size() ==  2);
-  CHECK(obj.factories[1].packets.size() ==  2);
-  CHECK(obj.factories[2].packets.size() ==  3);
+  CHECK(obj.factories[0].packets.size() ==  1);
+  CHECK(obj.factories[1].packets.size() ==  1);
+  CHECK(obj.factories[2].packets.size() ==  1);
   CHECK(obj.factories[3].packets.size() ==  1);
+
+  // Check in streams for reserved packets
+  CHECK(obj.factories[0].packets["Reserved"].size() ==  2);
+  CHECK(obj.factories[1].packets["Reserved"].size() ==  2);
+  CHECK(obj.factories[2].packets["Reserved"].size() ==  3);
+  CHECK(obj.factories[3].packets["Reserved"].size() ==  1);
 
   // Check timestamp
   CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
@@ -178,10 +195,16 @@ TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in 
   CHECK(obj.insert(aux));
 
   // Check length of factories
-  CHECK(obj.factories[0].packets.size() ==  3);
-  CHECK(obj.factories[1].packets.size() ==  2);
-  CHECK(obj.factories[2].packets.size() ==  2);
+  CHECK(obj.factories[0].packets.size() ==  1);
+  CHECK(obj.factories[1].packets.size() ==  1);
+  CHECK(obj.factories[2].packets.size() ==  1);
   CHECK(obj.factories[3].packets.size() ==  1);
+
+  // Check in streams for reserved packets
+  CHECK(obj.factories[0].packets["Reserved"].size() ==  3);
+  CHECK(obj.factories[1].packets["Reserved"].size() ==  2);
+  CHECK(obj.factories[2].packets["Reserved"].size() ==  2);
+  CHECK(obj.factories[3].packets["Reserved"].size() ==  1);
 
   // Check timestamp
   CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
