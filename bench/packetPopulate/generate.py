@@ -417,7 +417,7 @@ class AtomFormatX():
 class TPIU():
 
     @staticmethod
-    def format(buffer):
+    def addAux(buffer):
         data = bytearray(0)
         for packet in range(0, len(buffer), 15):
             auxiliary = 0x00
@@ -429,6 +429,23 @@ class TPIU():
                     data.extend(bytes([buffer[packet+frame]]))
             data.extend(bytes([auxiliary]))
         return data
+
+    @staticmethod
+    def addTimestamp(buffer):
+        timestamp = b'\x01\x00\x00\x00' # reversed for endianess
+        frameWidth = 16
+        data = bytearray(0)
+        for i in range(0, len(buffer), frameWidth):
+            #print(len(data))
+            frame = buffer[i : i+frameWidth]
+            data.extend(frame)
+            if (len(frame) == frameWidth):
+                data.extend(timestamp)
+        return data
+
+    @staticmethod
+    def format(buffer):
+        return TPIU.addTimestamp(TPIU.addAux(buffer))
 
 
 class ETM():
