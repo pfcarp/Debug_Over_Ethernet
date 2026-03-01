@@ -21,7 +21,6 @@ class Sniffer {
     char errbuf[PCAP_ERRBUF_SIZE];
     Deformatter& deformatter;
     std::vector<uint8_t> recording;
-    uint32_t goodput = 0;
     uint64_t timestamp = 0;
     std::thread captureThread;
     // Methods

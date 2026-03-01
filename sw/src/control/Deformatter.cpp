@@ -18,25 +18,27 @@ bool Deformatter::insert(const uint8_t& byte) {
   frame[counter] = byte;
   counter++;
   // If frame size reached: Format frame
-  if (counter == 16) [[unlikely]] {
-    format();
+  if (counter == workFrameWidth) [[unlikely]] {
+    setTimestamp();
+    deformat();
     counter = 0;
   }
-  // Counter is 0 iff it was 15 when entering the function
+  // Counter is 0 iff it was `frameWidth` when entering the function
   return (counter == 0);
 }
 
 bool Deformatter::insert_bytes(const uint8_t * chunk, size_t chunk_len) {
     // Insert new byte
     memcpy(frame, chunk, chunk_len);
-    format();
+    deformat();
     return 0;
 }
 
 /**
  * Followed format presented in DDI0314H page 220 (Sec. 8.12.1)
  */
-void Deformatter::format() {
+#if 0
+void Deformatter::deformat() {
     register uint8_t disc = frame[15];
 
 #define PROCESS_16BITS(index)						\
@@ -62,25 +64,25 @@ void Deformatter::format() {
     PROCESS_16BITS(14);
     
 }	
+#endif
 
 
-#if 0
-void Deformatter::format() {
-  for (uint8_t i = 0; i < 15; i++) { // 15 becasue last byte contains carried over bits
+void Deformatter::deformat() {
+  for (uint32_t i = timestampWidth; i < workFrameWidth-1; i++) { // `frameWidth-1` becasue last byte contains carried over bits
     // Inspect if odd indexed byte and check if it is an ID
     if (!(i & 0x01)) {
       // Check AUX to detect whether the next (data) byte belong to the current or previous stream source
       if (frame[i] & 0x01) { // (frame[i]%2) {
         previous = current;
         current = frame[i] >> 1;
-        insertInPrevious = frame[15] & 0x01;
+        insertInPrevious = frame[workFrameWidth-1] & 0x01;
         //insertInPrevious = toInsertInPrevious(frame[15], i>>1);
       }
       else {
-        factories[current].insert((frame[i] & 0xfe) | (frame[15] & 0x01));
+        factories[current].insert((frame[i] & 0xfe) | (frame[workFrameWidth-1] & 0x01));
       }
       // Update AUX
-      frame[15] >>= 1;
+      frame[workFrameWidth-1] >>= 1;
     }
     else { // (i%2 == 1) {
       if (insertInPrevious) {
@@ -93,12 +95,18 @@ void Deformatter::format() {
     }
   }
 }
-#endif
 
-void Deformatter::setTimestamp(uint64_t t) {
-  for (size_t i = 0; i < 4; i++) {
-    factories[i].setTimestamp(t);
+void Deformatter::setTimestamp() {
+  uint32_t relative; // relative timestamp
+  std::memcpy(&relative, frame, timestampWidth);
+  timestamp += relative;
+  for (size_t i = 0; i < factoriesNumber; i++) {
+    factories[i].setTimestamp(timestamp);
   }
+}
+
+uint64_t Deformatter::getTimestamp() {
+  return timestamp;
 }
 
 

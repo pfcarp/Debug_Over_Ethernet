@@ -6,11 +6,11 @@
 #include "Deformatter.hpp"
 
 
-TEST_CASE("Formatting is triggered at the 16th insertion") {
+TEST_CASE("Formatting is triggered at the 20th insertion (timestamp+frame = 4+16)") {
   // Create object under test
   DeformatterVector obj;
   // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
-  std::vector<uint8_t> encoding = {0xB2, 0xB1, 0xB4, 0xB3, 0xB6, 0xB5, 0xB8, 0xB7, 0xBA, 0xB9, 0xBC, 0xBB, 0xBE, 0xBD, 0xBE};
+  std::vector<uint8_t> encoding = {0xEF, 0xBE, 0xAD, 0xDE, 0xB2, 0xB1, 0xB4, 0xB3, 0xB6, 0xB5, 0xB8, 0xB7, 0xBA, 0xB9, 0xBC, 0xBB, 0xBE, 0xBD, 0xBE};
   uint8_t aux = 0x00;
 
   // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
@@ -19,6 +19,9 @@ TEST_CASE("Formatting is triggered at the 16th insertion") {
   }
   // Last byte triggers the defomatting
   CHECK(obj.insert(aux));
+
+  // Check timestamp
+  CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
 }
 
 TEST_CASE("Check ID byte detection (v1)") {
@@ -56,7 +59,7 @@ TEST_CASE("Insert 15 reserved in source 0.") {
   DeformatterVector obj;
 
   // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
-  std::vector<uint8_t> encoding = {0xB2, 0xB1, 0xB4, 0xB3, 0xB6, 0xB5, 0xB8, 0xB7, 0xBA, 0xB9, 0xBC, 0xBB, 0xBE, 0xBD, 0xBE};
+  std::vector<uint8_t> encoding = {0xEF, 0xBE, 0xAD, 0xDE, 0xB2, 0xB1, 0xB4, 0xB3, 0xB6, 0xB5, 0xB8, 0xB7, 0xBA, 0xB9, 0xBC, 0xBB, 0xBE, 0xBD, 0xBE};
   uint8_t aux = 0x00;
 
   // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
@@ -71,6 +74,9 @@ TEST_CASE("Insert 15 reserved in source 0.") {
   CHECK(obj.factories[1].packets.size() ==  0);
   CHECK(obj.factories[2].packets.size() ==  0);
   CHECK(obj.factories[3].packets.size() ==  0);
+
+  // Check timestamp
+  CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
 }
 
 TEST_CASE("Insert 8 reserved in source 0 and 6 reserved in source 1.") {
@@ -80,7 +86,7 @@ TEST_CASE("Insert 8 reserved in source 0 and 6 reserved in source 1.") {
   // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
   //                               0   , 1   , 2   , 3   , 4   , 5   , 6   , 7   , 8   , 9   , 10  , 11  , 12  , 13  , 14
   //                               Data, Data, Data, Data, Data, Data, Data, Data, ID 1, Data, Data, Data, Data, Data, Data
-  std::vector<uint8_t> encoding = {0xB2, 0xB1, 0xB4, 0xB3, 0xB6, 0xB5, 0xB8, 0xB7, 0x03, 0xB9, 0xBC, 0xBB, 0xBE, 0xBD, 0xBE};
+  std::vector<uint8_t> encoding = {0xEF, 0xBE, 0xAD, 0xDE, 0xB2, 0xB1, 0xB4, 0xB3, 0xB6, 0xB5, 0xB8, 0xB7, 0x03, 0xB9, 0xBC, 0xBB, 0xBE, 0xBD, 0xBE};
   uint8_t aux = 0x00;
 
   // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
@@ -95,6 +101,9 @@ TEST_CASE("Insert 8 reserved in source 0 and 6 reserved in source 1.") {
   CHECK(obj.factories[1].packets.size() ==  6);
   CHECK(obj.factories[2].packets.size() ==  0);
   CHECK(obj.factories[3].packets.size() ==  0);
+
+  // Check timestamp
+  CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
 }
 
 TEST_CASE("Insert 9 reserved in source 0 and 5 reserved in source 1 (AUX indicates that insertion must be done to previous stream(i.e., 0)).") {
@@ -104,7 +113,7 @@ TEST_CASE("Insert 9 reserved in source 0 and 5 reserved in source 1 (AUX indicat
   // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
   //                               0   , 1   , 2   , 3   , 4   , 5   , 6   , 7   , 8   , 9   , 10  , 11  , 12  , 13  , 14
   //                               Data, Data, Data, Data, Data, Data, Data, Data, ID 1, Data, Data, Data, Data, Data, Data
-  std::vector<uint8_t> encoding = {0xB2, 0xB1, 0xB4, 0xB3, 0xB6, 0xB5, 0xB8, 0xB7, 0x03, 0xB9, 0xBC, 0xBB, 0xBE, 0xBD, 0xBE};
+  std::vector<uint8_t> encoding = {0xEF, 0xBE, 0xAD, 0xDE, 0xB2, 0xB1, 0xB4, 0xB3, 0xB6, 0xB5, 0xB8, 0xB7, 0x03, 0xB9, 0xBC, 0xBB, 0xBE, 0xBD, 0xBE};
   uint8_t aux = 0x10;
 
   // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
@@ -119,6 +128,9 @@ TEST_CASE("Insert 9 reserved in source 0 and 5 reserved in source 1 (AUX indicat
   CHECK(obj.factories[1].packets.size() ==  5);
   CHECK(obj.factories[2].packets.size() ==  0);
   CHECK(obj.factories[3].packets.size() ==  0);
+
+  // Check timestamp
+  CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
 }
 
 TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in source 2, 1 reserved in source 3 (v1).") {
@@ -128,7 +140,7 @@ TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in 
   // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
   //                               0   , 1   , 2   , 3   , 4   , 5   , 6   , 7   , 8   , 9   , 10  , 11  , 12  , 13  , 14
   //                               ID 0, Data, ID 1, Data, ID 2, Data, ID 3, Data, ID 0, Data, ID 1, Data, ID 2, Data, Data
-  std::vector<uint8_t> encoding = {0x01, 0xB1, 0x03, 0xB3, 0x05, 0xB5, 0x07, 0xB7, 0x01, 0xB9, 0x03, 0xBB, 0x05, 0xBD, 0xBE};
+  std::vector<uint8_t> encoding = {0xEF, 0xBE, 0xAD, 0xDE, 0x01, 0xB1, 0x03, 0xB3, 0x05, 0xB5, 0x07, 0xB7, 0x01, 0xB9, 0x03, 0xBB, 0x05, 0xBD, 0xBE};
   uint8_t aux = 0x00;
 
   // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
@@ -143,6 +155,9 @@ TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in 
   CHECK(obj.factories[1].packets.size() ==  2);
   CHECK(obj.factories[2].packets.size() ==  3);
   CHECK(obj.factories[3].packets.size() ==  1);
+
+  // Check timestamp
+  CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
 }
 
 TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in source 2, 1 reserved in source 3 (v2).") {
@@ -152,7 +167,7 @@ TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in 
   // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
   //                               0   , 1   , 2   , 3   , 4   , 5   , 6   , 7   , 8   , 9   , 10  , 11  , 12  , 13  , 14
   //                               ID 0, Data, ID 1, Data, ID 2, Data, ID 3, Data, ID 0, Data, ID 1, Data, ID 2, Data, Data
-  std::vector<uint8_t> encoding = {0x01, 0xB1, 0x03, 0xB3, 0x05, 0xB5, 0x07, 0xB7, 0x01, 0xB9, 0x03, 0xBB, 0x05, 0xBD, 0xBE};
+  std::vector<uint8_t> encoding = {0xEF, 0xBE, 0xAD, 0xDE, 0x01, 0xB1, 0x03, 0xB3, 0x05, 0xB5, 0x07, 0xB7, 0x01, 0xB9, 0x03, 0xBB, 0x05, 0xBD, 0xBE};
   uint8_t aux = 0xFE;
 
   // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
@@ -167,4 +182,99 @@ TEST_CASE("Insert 2 reserved in source 0, 2 reserved in source 1, 3 reserved in 
   CHECK(obj.factories[1].packets.size() ==  2);
   CHECK(obj.factories[2].packets.size() ==  2);
   CHECK(obj.factories[3].packets.size() ==  1);
+
+  // Check timestamp
+  CHECK(obj.getTimestamp() == 0x00000000DEADBEEF);
+}
+
+TEST_CASE("Check that relative timestamps are accumulated (base 1).") {
+  // Create object under test
+  DeformatterVector obj;
+
+  for (int i = 0; i < 64; i++) {
+    // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
+    //                               0   , 1   , 2   , 3   , 4   , 5   , 6   , 7   , 8   , 9   , 10  , 11  , 12  , 13  , 14
+    //                               ID 0, Data, ID 1, Data, ID 2, Data, ID 3, Data, ID 0, Data, ID 1, Data, ID 2, Data, Data
+    std::vector<uint8_t> encoding = {0x01, 0x00, 0x00, 0x00, 0x01, 0xB1, 0x03, 0xB3, 0x05, 0xB5, 0x07, 0xB7, 0x01, 0xB9, 0x03, 0xBB, 0x05, 0xBD, 0xBE};
+    uint8_t aux = 0xFE;
+
+    // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
+    for (uint8_t byte : encoding) {
+      CHECK(!obj.insert(byte));
+    }
+    // Last byte triggers the defomatting
+    CHECK(obj.insert(aux));
+
+    // Check timestamp
+    CHECK(obj.getTimestamp() == 0x0000000000000001*(i+1));
+  }
+}
+
+TEST_CASE("Check that relative timestamps are accumulated (base 255).") {
+  // Create object under test
+  DeformatterVector obj;
+
+  for (int i = 0; i < 64; i++) {
+    // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
+    //                               0   , 1   , 2   , 3   , 4   , 5   , 6   , 7   , 8   , 9   , 10  , 11  , 12  , 13  , 14
+    //                               ID 0, Data, ID 1, Data, ID 2, Data, ID 3, Data, ID 0, Data, ID 1, Data, ID 2, Data, Data
+    std::vector<uint8_t> encoding = {0xFF, 0x00, 0x00, 0x00, 0x01, 0xB1, 0x03, 0xB3, 0x05, 0xB5, 0x07, 0xB7, 0x01, 0xB9, 0x03, 0xBB, 0x05, 0xBD, 0xBE};
+    uint8_t aux = 0xFE;
+
+    // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
+    for (uint8_t byte : encoding) {
+      CHECK(!obj.insert(byte));
+    }
+    // Last byte triggers the defomatting
+    CHECK(obj.insert(aux));
+
+    // Check timestamp
+    CHECK(obj.getTimestamp() == 0x00000000000000FF*(i+1));
+  }
+}
+
+TEST_CASE("Check that relative timestamps are accumulated (base 0xFFFF).") {
+  // Create object under test
+  DeformatterVector obj;
+
+  for (int i = 0; i < 64; i++) {
+    // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
+    //                               0   , 1   , 2   , 3   , 4   , 5   , 6   , 7   , 8   , 9   , 10  , 11  , 12  , 13  , 14
+    //                               ID 0, Data, ID 1, Data, ID 2, Data, ID 3, Data, ID 0, Data, ID 1, Data, ID 2, Data, Data
+    std::vector<uint8_t> encoding = {0xFF, 0xFF, 0x00, 0x00, 0x01, 0xB1, 0x03, 0xB3, 0x05, 0xB5, 0x07, 0xB7, 0x01, 0xB9, 0x03, 0xBB, 0x05, 0xBD, 0xBE};
+    uint8_t aux = 0xFE;
+
+    // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
+    for (uint8_t byte : encoding) {
+      CHECK(!obj.insert(byte));
+    }
+    // Last byte triggers the defomatting
+    CHECK(obj.insert(aux));
+
+    // Check timestamp
+    CHECK(obj.getTimestamp() == 0x000000000000FFFF*(i+1));
+  }
+}
+
+TEST_CASE("Check that relative timestamps are accumulated (base 0xFFFFFF).") {
+  // Create object under test
+  DeformatterVector obj;
+
+  for (int i = 0; i < 64; i++) {
+    // Byte sequence (inserts 15x Reserved packets to not induce a segfault on the factory side; i.e., 0xB?).
+    //                               0   , 1   , 2   , 3   , 4   , 5   , 6   , 7   , 8   , 9   , 10  , 11  , 12  , 13  , 14
+    //                               ID 0, Data, ID 1, Data, ID 2, Data, ID 3, Data, ID 0, Data, ID 1, Data, ID 2, Data, Data
+    std::vector<uint8_t> encoding = {0xFF, 0xFF, 0xFF, 0x00, 0x01, 0xB1, 0x03, 0xB3, 0x05, 0xB5, 0x07, 0xB7, 0x01, 0xB9, 0x03, 0xBB, 0x05, 0xBD, 0xBE};
+    uint8_t aux = 0xFE;
+
+    // The first 15 byte are payload and do not trigger a deformatting (i.e., are just buffered)
+    for (uint8_t byte : encoding) {
+      CHECK(!obj.insert(byte));
+    }
+    // Last byte triggers the defomatting
+    CHECK(obj.insert(aux));
+
+    // Check timestamp
+    CHECK(obj.getTimestamp() == 0x0000000000FFFFFF*(i+1));
+  }
 }

@@ -40,35 +40,14 @@ void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
         // printf("index: %d  packet_size is %d\n",i,header->len);
         // printf("0x%x\n",packet[i]);
         if (!(areNext4BytesAllSet(&packet[i]) && areNext4BytesAllSet(&packet[i+4]))) {
-        
           // printf("1\n");
           // Check if timestamp packet index
-
-          if (goodput%5 == 0) {
-          // printf("Timestamp packet found at index %d\n", (goodput));
-          // if (false) {
-            // printf("2\n");
-            // printf("0x%x\n",packet[i]);
-            uint64_t relative = static_cast<uint64_t>(packet[i]);
-            for (int j = 1; j < 4; j++){
-              relative |= static_cast<uint64_t>(packet[i+j]) << 8*j;
-              // printf("0x%x\n",packet[i+j]);
-            }
-            timestamp += relative;
-            // printf("Setting timestamp to %llu\n", timestamp);
-            deformatter.setTimestamp(timestamp);
+          for (int j = 0; j < 4; j++) {
+            deformatter.insert(packet[i+j]);
+            // printf("0x%x\n",packet[i+j]);
+            // recording.push_back(packet[i+j]);
           }
-          else {
-            // printf("3\n");
-            for (int j = 0; j < 4; j++) {
-              deformatter.insert(packet[i+j]);
-              // printf("0x%x\n",packet[i+j]);
-              // recording.push_back(packet[i+j]);
-            }
-          }
-          // Increment goodput counter
           // recording.push_back(packet[i]);
-          goodput++;
         }
         else {
           // printf("Skipping 4 bytes at index %d\n", i);
