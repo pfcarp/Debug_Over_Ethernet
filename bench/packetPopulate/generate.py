@@ -438,9 +438,9 @@ class TPIU():
         for i in range(0, len(buffer), frameWidth):
             #print(len(data))
             frame = buffer[i : i+frameWidth]
-            data.extend(frame)
             if (len(frame) == frameWidth):
                 data.extend(timestamp)
+            data.extend(frame)
         return data
 
     @staticmethod
