@@ -181,8 +181,8 @@ class PacketFactory {
     	t[0x6C] = &PacketFactory::makeConditionalInstructionFormat1;
     	t[0x6D] = &PacketFactory::makeConditionalInstructionFormat3;
     	t[0x6E] = &PacketFactory::makeConditionalResultFormat1;
-    	t[0x6F] = &PacketFactory::makeIgnore;
-    	t[0x70] = &PacketFactory::makeEvent;
+    	t[0x6F] = &PacketFactory::makeConditionalResultFormat1;
+    	t[0x70] = &PacketFactory::makeIgnore;
     	t[0x71] = &PacketFactory::makeEvent;
     	t[0x72] = &PacketFactory::makeEvent;
     	t[0x73] = &PacketFactory::makeEvent;
