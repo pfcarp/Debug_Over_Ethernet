@@ -5,12 +5,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <vector>
 
 
 const char* xlabel = "Time (CC)";
 
 
-PlotArea::PlotArea(unsigned width, unsigned height): dimensions({width, height}) {
+PlotArea::PlotArea(unsigned width, unsigned height, PacketFactory* factory): dimensions({width, height}), factory(factory) {
   parent = gtk_drawing_area_new();
   gtk_widget_set_hexpand(parent, TRUE);
   gtk_widget_set_vexpand(parent, TRUE);
@@ -29,13 +30,8 @@ void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) 
   dimensions.height = height;
   cairo = cr;
   setBackground();
-  for (int i = 0; i < collection->amount(); i++) {
-    if ((*collection)[i]->show) {
-      if ((*collection)[i]->style == "-")
-        plotCurve((*collection)[i]);
-      else if ((*collection)[i]->style == ".")
-        plotScatter((*collection)[i]);
-    }
+  for (const auto& packets : factory->packets) {
+    plotCurve(&(packets.second));
   }
   drawAxes();
 }
@@ -47,30 +43,30 @@ void PlotArea::setBackground() {
 }
 
 
-void PlotArea::plotCurve(Buffer* buffer) {
+void PlotArea::plotCurve(const std::vector<Packet::Variant>* buffer) {
   // Define line setup
-  cairo_set_source_rgba(cairo, buffer->event->color.red, buffer->event->color.green, buffer->event->color.blue, buffer->event->color.alpha);
+  cairo_set_source_rgba(cairo, 0.0, 0.0, 0.0, 1.0);
   cairo_set_line_width(cairo, 2.0);
   // Draw each curve
   if (buffer->size()) {
-    const TimedData& coord = buffer->at(0);
-    cairo_move_to(cairo, adaptX(coord.time), adaptY(coord.value));
+    const Packet::Variant& packet = buffer->at(0);
+    cairo_move_to(cairo, adaptX(Packet::getTimestamp(packet)), adaptY(1));
     for (int i = 1; i < buffer->size(); i++) {
-      const TimedData& coord = buffer->at(i);
-      cairo_line_to(cairo, adaptX(coord.time), adaptY(coord.value));
+      const Packet::Variant& packet = buffer->at(i);
+      cairo_line_to(cairo, adaptX(Packet::getTimestamp(packet)), adaptY(1));
     }
   }
   // Actually draw
   cairo_stroke(cairo);
 }
 
-void PlotArea::plotScatter(Buffer* buffer) {
+void PlotArea::plotScatter(const std::vector<Packet::Variant>* buffer) {
   // Define line setup
-  cairo_set_source_rgba(cairo, buffer->event->color.red, buffer->event->color.green, buffer->event->color.blue, buffer->event->color.alpha);
+  cairo_set_source_rgba(cairo, 0.0, 0.0, 0.0, 1.0);
   // Draw each curve
   for (int i = 0; i < buffer->size(); i++) {
-    const TimedData& coord = buffer->at(i);
-    cairo_arc(cairo, adaptX(coord.time), adaptY(coord.value), 2.0, 0, 2*M_PI);
+    const Packet::Variant& packet = buffer->at(i);
+    cairo_arc(cairo, adaptX(Packet::getTimestamp(packet)), adaptY(1), 2.0, 0, 2*M_PI);
     cairo_fill(cairo);
   }
   // Actually draw
@@ -107,7 +103,7 @@ void PlotArea::drawAxes() {
     cairo_stroke(cairo);
     // Label slightly below tick
     char label[32];
-    snprintf(label, sizeof(label), "%.1f", collection->xmin()+t*(collection->xmax()-collection->xmin()));
+    snprintf(label, sizeof(label), "%.1f", 0+t*(1.1-0));
     cairo_move_to(cairo, tx-10, dimensions.height-margin.bottom+15);
     cairo_show_text(cairo, label);
   }
@@ -126,7 +122,7 @@ void PlotArea::drawAxes() {
     cairo_stroke(cairo);
     // Label slightly below tick
     char label[32];
-    snprintf(label, sizeof(label), "%.1f", collection->ymin()+t*(collection->ymax()-collection->ymin()));
+    snprintf(label, sizeof(label), "%.1f", 0+t*(1.1-0));
     cairo_move_to(cairo, margin.left-35, ty+3);
     cairo_show_text(cairo, label);
   }
@@ -145,13 +141,13 @@ double PlotArea::plotHeight() {
 
 
 double PlotArea::adaptX(double value) {
-  double min = collection->xmin();
-  double max = collection->xmax();
+  double min = 0;
+  double max = factory->packets["Extension"].size();
   return margin.left+(value-min)/(max-min)*plotWidth();
 }
 
 double PlotArea::adaptY(double value) {
-  double min = collection->ymin()*1.1;
-  double max = collection->ymax()*1.1;
+  double min = 0*1.1;
+  double max = 1*1.1;
   return dimensions.height-margin.bottom-((value-min)/(max-min)*plotHeight());
 }

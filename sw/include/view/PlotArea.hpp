@@ -4,13 +4,13 @@
 #include <gtk/gtk.h>
 
 
-#include "Collection.hpp"
-#include "Buffer.hpp"
+#include "PacketFactory.hpp"
 
 
 class PlotArea {
 
   private:
+    // Attributes
     const struct {
       double top    = 20;
       double bottom = 40;
@@ -22,7 +22,8 @@ class PlotArea {
       double height;
     } dimensions;
     cairo_t* cairo;
-
+    PacketFactory* factory;
+    // Methods
     inline double plotWidth();
     inline double plotHeight();
     inline double adaptX(double value);
@@ -31,13 +32,12 @@ class PlotArea {
     static void cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data);
     void setBackground();
     void drawAxes();
-    void plotCurve(Buffer* buffer);
-    void plotScatter(Buffer* buffer);
+    void plotCurve(const std::vector<Packet::Variant>* buffer);
+    void plotScatter(const std::vector<Packet::Variant>* buffer);
 
   public:
     GtkWidget* parent;
-    Collection* collection;
     
-    PlotArea(unsigned width, unsigned height);
+    PlotArea(unsigned width, unsigned height, PacketFactory* factory);
 
 };
