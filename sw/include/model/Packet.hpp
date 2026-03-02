@@ -29,6 +29,7 @@ namespace Packet {
       virtual void markDone();
       virtual uint8_t getIterator() const;
       virtual void setTimestamp(const uint64_t& t);
+      virtual uint64_t getTimestamp() const;
       virtual ~Base() = default;
 
   };
@@ -580,5 +581,6 @@ namespace Packet {
   void insert(Variant& packet, const uint8_t& byte);
   std::string asString(const Variant& packet);
   void setTimestamp(Variant& packet, const uint64_t& timestamp);
+  uint64_t getTimestamp(const Variant& packet);
 
 }

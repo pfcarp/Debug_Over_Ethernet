@@ -29,6 +29,12 @@ void Packet::setTimestamp(Packet::Variant& packet, const uint64_t& timestamp) {
   }, packet);
 }
 
+uint64_t Packet::getTimestamp(const Packet::Variant& packet) {
+  return std::visit([](const auto & p) {
+    return p.getTimestamp();
+  }, packet);
+}
+
 void Packet::Base::insert(const uint8_t& byte) {
   if (iterator < Packet::bytesize) {
     raw[iterator] = byte;
@@ -53,6 +59,10 @@ uint8_t Packet::Base::getIterator() const {
 
 void Packet::Base::setTimestamp(const uint64_t& t) {
   timestamp = t;
+}
+
+uint64_t Packet::Base::getTimestamp() const {
+  return timestamp;
 }
 
 
