@@ -1,6 +1,7 @@
 #include "PacketFactory.hpp"
 
 
+#include <cstdint>
 #include <iostream>
 #include <memory>
 
@@ -18,8 +19,7 @@ std::ostream& operator<<(std::ostream& os, const Packet::Base& e) {
 bool PacketFactory::insert(const uint8_t& byte) {
   // Reserved packet means that it is not set
   if (!current) {
-    current = factory[byte](*this, byte);
-    Packet::setTimestamp(*current, timestamp);
+    current = factory[byte](*this, byte, timestamp);
   }
   else {
     Packet::insert(*current, byte);

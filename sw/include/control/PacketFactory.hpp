@@ -3,26 +3,26 @@
 #include <array>
 #include <cstdint>
 #include <memory>
-#include <vector>
-#include <map>
 
 
+#include "TraceCollection.hpp"
 #include "Packet.hpp"
+#include "Trace.hpp"
 
 
 class PacketFactory {
   
-  using FactoryFunction = Packet::Variant*(*)(PacketFactory&, const uint8_t&);
+  using FactoryFunction = Packet::Variant*(*)(PacketFactory&, const uint8_t&, const uint64_t&);
   
   public:
     // Attributes
-  std::map<std::string, std::vector<Packet::Variant>> packets;
+    TraceCollection map;
 
   private:
     // Attibutes
     Packet::Variant* current = nullptr;
     // Methods
-    #define MAKE_FACTORY(T) static Packet::Variant* make##T(PacketFactory& self, const uint8_t& id) { self.packets[#T].emplace_back(Packet::T(id)); return &self.packets[#T].back(); }
+    #define MAKE_FACTORY(T) static Packet::Variant* make##T(PacketFactory& self, const uint8_t& id, const uint64_t& timestamp) { return self.map.add(#T, timestamp, Packet::T(id)); }
     MAKE_FACTORY(Extension)
     MAKE_FACTORY(TraceInfo)
     MAKE_FACTORY(Timestamp)

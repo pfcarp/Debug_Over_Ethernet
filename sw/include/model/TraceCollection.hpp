@@ -1,0 +1,32 @@
+#pragma once
+
+
+#include <string>
+#include <cstdint>
+#include <vector>
+
+
+#include "Packet.hpp"
+#include "Trace.hpp"
+
+
+class TraceCollection {
+
+  private:
+    bool cumulative = true;
+
+  public:
+    // Attributes
+    std::map<std::string, Trace> map;
+    // Methods
+    Packet::Variant* add(std::string name, uint64_t ts, Packet::Variant pkt);
+    uint64_t minTimestamp() const;
+    uint64_t maxTimestamp() const;
+    uint64_t maxCount() const;
+    uint64_t minCount() const;
+    const Trace& entries(std::string name) const;
+    const std::vector<std::string> getVariants() const;
+    void setCumulative(const bool bit);
+    const bool isCumulative() const;
+
+};

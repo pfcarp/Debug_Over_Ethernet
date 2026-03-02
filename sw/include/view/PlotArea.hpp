@@ -5,6 +5,9 @@
 
 
 #include "PacketFactory.hpp"
+#include "Trace.hpp"
+#include "Packet.hpp"
+#include "Color.hpp"
 
 
 class PlotArea {
@@ -32,8 +35,8 @@ class PlotArea {
     static void cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data);
     void setBackground();
     void drawAxes();
-    void plotCurve(const std::vector<Packet::Variant>* buffer);
-    void plotScatter(const std::vector<Packet::Variant>* buffer);
+    void plotCurve(const Color* color, const Trace* buffer);
+    void plotScatter(const Color* color, const Trace* buffer);
 
   public:
     GtkWidget* parent;
