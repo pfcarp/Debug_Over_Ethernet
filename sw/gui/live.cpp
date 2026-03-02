@@ -14,6 +14,9 @@
 #include "Events.hpp"
 
 
+PlotArea* plot;
+
+
 class Step {
   
   private:
@@ -454,6 +457,7 @@ void Wizard::onNext() {
   }
   else if (current == steps.end()) {
     gtk_window_destroy(GTK_WINDOW(dialog));
+    gtk_widget_queue_draw(plot->parent);
   }
 }
 
@@ -466,8 +470,6 @@ void Wizard::cOnNext(GtkWidget* _, gpointer data) {
 static void onActivate(GtkApplication* app, gpointer _) {
   std::vector<uint8_t>* buffer = new std::vector<uint8_t>();
   DeformatterVector* deformatter = new DeformatterVector();
-  std::vector<Event*> eventsPerf = {new Event("Inst. retired"), new Event("L2 refills")};
-  Events* traces = new Events(eventsPerf);
 
   GtkWidget* window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(window), "DoEth Live Tracer");
@@ -476,8 +478,7 @@ static void onActivate(GtkApplication* app, gpointer _) {
 
   Wizard* wiz = new Wizard(app, window, buffer, deformatter);
 
-  PlotArea* plot = new PlotArea(800, 200);
-  plot->collection = traces;
+  plot = new PlotArea(800, 200, &deformatter->factories[0]);
   gtk_window_set_child(GTK_WINDOW(window), plot->parent);
 }
 
