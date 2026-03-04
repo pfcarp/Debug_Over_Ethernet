@@ -1,4 +1,5 @@
 #include "Trace.hpp"
+#include <iostream>
 
 
 Packet::Variant* Trace::add(uint64_t ts, Packet::Variant pkt) {
@@ -17,26 +18,42 @@ Packet::Variant* Trace::add(uint64_t ts, Packet::Variant pkt) {
   return &seq.back();
 }
 
-uint64_t Trace::minTimestamp() const {
-  if (data.empty()) {
-    return 0;
+uint64_t Trace::minTimestamp(bool cumulative) const {
+  if (cumulative) {
+    if (accumulated.empty()) {
+      return 0;
+    }
+    return accumulated.front().first;
   }
-  return data.front().first;
+  else {
+    if (data.empty()) {
+      return 0;
+    }
+    return data.front().first;
+  }
 }
 
-uint64_t Trace::maxTimestamp() const {
-  if (data.empty()) {
-    return 1;
+uint64_t Trace::maxTimestamp(bool cumulative) const {
+  if (cumulative) {
+    if (accumulated.empty()) {
+      return 1;
+    }
+    return accumulated.back().first;
   }
-  return data.back().first;
-}
-
-uint64_t Trace::maxCount(bool cumulative) const {
-  return (cumulative)? accumulated.back().second : max;
+  else {
+    if (data.empty()) {
+      return 1;
+    }
+    return data.back().first;
+  }
 }
 
 uint64_t Trace::minCount() const {
   return 0;
+}
+
+uint64_t Trace::maxCount(bool cumulative) const {
+  return (cumulative)? accumulated.back().second : max;
 }
 
 const std::vector<std::pair<uint64_t, uint32_t>>& Trace::entries(bool cumulative) const {

@@ -24,7 +24,7 @@ class TraceCollection {
     uint64_t maxTimestamp() const;
     uint64_t maxCount() const;
     uint64_t minCount() const;
-    const Trace& entries(std::string name) const;
+    const std::vector<std::pair<uint64_t, uint32_t>>& entries(std::string name) const;
     const std::vector<std::string> getVariants() const;
     void setCumulative(const bool bit);
     const bool isCumulative() const;

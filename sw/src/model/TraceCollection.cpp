@@ -11,7 +11,7 @@ Packet::Variant* TraceCollection::add(std::string name, uint64_t ts, Packet::Var
 uint64_t TraceCollection::minTimestamp() const {
   uint64_t res = UINT64_MAX;
   for (const auto& pair : map) {
-    res = std::min(res, pair.second.minTimestamp());
+    res = std::min(res, pair.second.minTimestamp(cumulative));
   }
   return res;
 }
@@ -19,7 +19,7 @@ uint64_t TraceCollection::minTimestamp() const {
 uint64_t TraceCollection::maxTimestamp() const {
   uint64_t res = 0;
   for (const auto& pair : map) {
-    res = std::max(res, pair.second.maxTimestamp());
+    res = std::max(res, pair.second.maxTimestamp(cumulative));
   }
   return res;
 }
@@ -40,8 +40,8 @@ uint64_t TraceCollection::maxCount() const {
   return res;
 }
 
-const Trace& TraceCollection::entries(std::string name) const {
-  return map.at(name);
+const std::vector<std::pair<uint64_t, uint32_t>>& TraceCollection::entries(std::string name) const {
+  return map.at(name).entries(cumulative);
 }
 
 const std::vector<std::string> TraceCollection::getVariants() const {

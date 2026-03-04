@@ -31,9 +31,7 @@ void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) 
   cairo = cr;
   setBackground();
   for (const std::string& variant : factory->map.getVariants()) {
-    Color color = Packet::ColorMap[variant];
-    Trace trace = factory->map.entries(variant);
-    plotCurve(&color, &trace);
+    plotCurve(variant);
   }
   drawAxes();
 }
@@ -45,12 +43,13 @@ void PlotArea::setBackground() {
 }
 
 
-void PlotArea::plotCurve(const Color* color, const Trace* trace) {
+void PlotArea::plotCurve(const std::string& variant) {
+  Color color = Packet::ColorMap[variant];
   // Define line setup
-  cairo_set_source_rgba(cairo, color->red, color->green, color->blue, color->alpha);
+  cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
   cairo_set_line_width(cairo, 2.0);
   // Draw each curve
-  const auto& buffer = trace->entries(true);
+  const auto& buffer = factory->map.entries(variant);
   if (buffer.size()) {
     const auto& entry = buffer.at(0);
     cairo_move_to(cairo, adaptX(entry.first), adaptY(entry.second));
@@ -63,11 +62,12 @@ void PlotArea::plotCurve(const Color* color, const Trace* trace) {
   cairo_stroke(cairo);
 }
 
-void PlotArea::plotScatter(const Color* color, const Trace* trace) {
+void PlotArea::plotScatter(const std::string& variant) {
+  Color color = Packet::ColorMap[variant];
   // Define line setup
-  cairo_set_source_rgba(cairo, color->red, color->green, color->blue, color->alpha);
+  cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
   // Draw each curve
-  const auto& buffer = trace->entries(false);
+  const auto& buffer = factory->map.entries(variant);
   for (int i = 0; i < buffer.size(); i++) {
     const auto& entry = buffer.at(i);
     cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0, 0, 2*M_PI);

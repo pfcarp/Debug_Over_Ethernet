@@ -2,6 +2,7 @@
 
 
 #include <gtk/gtk.h>
+#include <string>
 
 
 #include "PacketFactory.hpp"
@@ -35,8 +36,8 @@ class PlotArea {
     static void cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data);
     void setBackground();
     void drawAxes();
-    void plotCurve(const Color* color, const Trace* buffer);
-    void plotScatter(const Color* color, const Trace* buffer);
+    void plotCurve(const std::string& variant);
+    void plotScatter(const std::string& variant);
 
   public:
     GtkWidget* parent;

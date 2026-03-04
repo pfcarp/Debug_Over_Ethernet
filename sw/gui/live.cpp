@@ -9,12 +9,13 @@
 #include <algorithm>
 
 
+#include "SourcePanel.hpp"
 #include "Deformatter.hpp"
 #include "PlotArea.hpp"
 #include "Events.hpp"
 
 
-PlotArea* plot;
+SourcePanel* panel;
 
 
 class Step {
@@ -457,7 +458,7 @@ void Wizard::onNext() {
   }
   else if (current == steps.end()) {
     gtk_window_destroy(GTK_WINDOW(dialog));
-    gtk_widget_queue_draw(plot->parent);
+    panel->update();
   }
 }
 
@@ -477,9 +478,9 @@ static void onActivate(GtkApplication* app, gpointer _) {
   gtk_window_present(GTK_WINDOW(window));
 
   Wizard* wiz = new Wizard(app, window, buffer, deformatter);
+  panel = new SourcePanel(0, &deformatter->factories[0]);
 
-  plot = new PlotArea(800, 200, &deformatter->factories[0]);
-  gtk_window_set_child(GTK_WINDOW(window), plot->parent);
+  gtk_window_set_child(GTK_WINDOW(window), panel->parent);
 }
 
 
