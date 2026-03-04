@@ -13,7 +13,7 @@ class SourcePanel {
 
   private:
     // Attributes
-    PacketFactory* factory;
+    PacketFactory& factory;
     struct {
       GtkWidget* box;
       GtkWidget* title;
@@ -29,7 +29,7 @@ class SourcePanel {
     // Attributes
     GtkWidget* parent;
     // Methods
-    SourcePanel(uint32_t sourceID, PacketFactory* factory);
+    SourcePanel(uint32_t sourceID, PacketFactory& factory);
     void update();
 
 };

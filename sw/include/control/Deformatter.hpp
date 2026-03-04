@@ -2,6 +2,7 @@
 
 
 #include <cstdint>
+#include <vector>
 
 
 #include "Dispatcher.hpp"
@@ -27,13 +28,14 @@ class Deformatter {
     constexpr static const uint32_t factoriesNumber = 4;
     // Attributes
     uint8_t frame[workFrameWidth]; // Needed for tests...
-    PacketFactory factories[factoriesNumber]; // Needed for tests...
+    std::vector<PacketFactory> factories; // Needed for tests...
     // Methods
     bool insert(const uint8_t& byte);
     bool insert_bytes(const uint8_t * chunk, size_t chunk_len);
     bool toInsertInPrevious(const uint8_t& aux, const uint8_t& offset) const;
     void setTimestamp();
     uint64_t getTimestamp();
+    Deformatter();
     virtual ~Deformatter();
 
 };

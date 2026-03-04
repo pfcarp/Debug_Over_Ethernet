@@ -11,7 +11,7 @@
 const char* xlabel = "Time (CC)";
 
 
-PlotArea::PlotArea(unsigned width, unsigned height, PacketFactory* factory): dimensions({width, height}), factory(factory) {
+PlotArea::PlotArea(unsigned width, unsigned height, PacketFactory& factory): dimensions({width, height}), factory(factory) {
   parent = gtk_drawing_area_new();
   gtk_widget_set_hexpand(parent, TRUE);
   gtk_widget_set_vexpand(parent, TRUE);
@@ -30,7 +30,7 @@ void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) 
   dimensions.height = height;
   cairo = cr;
   setBackground();
-  for (const std::string& variant : factory->map.getVariants()) {
+  for (const std::string& variant : factory.map.getVariants()) {
     plotCurve(variant);
   }
   drawAxes();
@@ -49,7 +49,7 @@ void PlotArea::plotCurve(const std::string& variant) {
   cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
   cairo_set_line_width(cairo, 2.0);
   // Draw each curve
-  const auto& buffer = factory->map.entries(variant);
+  const auto& buffer = factory.map.entries(variant);
   if (buffer.size()) {
     const auto& entry = buffer.at(0);
     cairo_move_to(cairo, adaptX(entry.first), adaptY(entry.second));
@@ -67,7 +67,7 @@ void PlotArea::plotScatter(const std::string& variant) {
   // Define line setup
   cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
   // Draw each curve
-  const auto& buffer = factory->map.entries(variant);
+  const auto& buffer = factory.map.entries(variant);
   for (int i = 0; i < buffer.size(); i++) {
     const auto& entry = buffer.at(i);
     cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0, 0, 2*M_PI);
@@ -107,8 +107,8 @@ void PlotArea::drawAxes() {
     cairo_stroke(cairo);
     // Label slightly below tick
     char label[32];
-    auto xmin = factory->map.minTimestamp();
-    auto xmax = factory->map.maxTimestamp();
+    auto xmin = factory.map.minTimestamp();
+    auto xmax = factory.map.maxTimestamp();
     snprintf(label, sizeof(label), "%.1f", xmin+t*(xmax-xmin));
     cairo_move_to(cairo, tx-10, dimensions.height-margin.bottom+15);
     cairo_show_text(cairo, label);
@@ -128,8 +128,8 @@ void PlotArea::drawAxes() {
     cairo_stroke(cairo);
     // Label slightly below tick
     char label[32];
-    auto ymin = factory->map.minCount();
-    auto ymax = factory->map.maxCount();
+    auto ymin = factory.map.minCount();
+    auto ymax = factory.map.maxCount();
     snprintf(label, sizeof(label), "%.1f", ymin+t*(ymax-ymin));
     cairo_move_to(cairo, margin.left-35, ty+3);
     cairo_show_text(cairo, label);
@@ -149,13 +149,13 @@ double PlotArea::plotHeight() {
 
 
 double PlotArea::adaptX(double value) {
-  double min = factory->map.minTimestamp();
-  double max = factory->map.maxTimestamp();
+  double min = factory.map.minTimestamp();
+  double max = factory.map.maxTimestamp();
   return margin.left+((value-min)/(max-min)*plotWidth());
 }
 
 double PlotArea::adaptY(double value) {
-  double min = factory->map.minCount();
-  double max = factory->map.maxCount();
+  double min = factory.map.minCount();
+  double max = factory.map.maxCount();
   return dimensions.height-margin.bottom-((value-min)/(max-min)*plotHeight());
 }

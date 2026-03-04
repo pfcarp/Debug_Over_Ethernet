@@ -9,6 +9,11 @@
 #include "Tools.hpp"
 
 
+Deformatter::Deformatter() {
+  factories.resize(factoriesNumber);
+}
+
+
 bool Deformatter::toInsertInPrevious(const uint8_t& aux, const uint8_t& offset) const {
   return (aux >> offset) & 0x01;
 }

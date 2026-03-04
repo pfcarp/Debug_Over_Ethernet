@@ -1,7 +1,7 @@
 #include "SourcePanel.hpp"
 
 
-SourcePanel::SourcePanel(uint32_t sourceID, PacketFactory* factory): factory(factory) {
+SourcePanel::SourcePanel(uint32_t sourceID, PacketFactory& factory): factory(factory) {
   parent = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
   // header
   header.box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
@@ -12,7 +12,7 @@ SourcePanel::SourcePanel(uint32_t sourceID, PacketFactory* factory): factory(fac
   header.label = gtk_label_new("Cumulative?");
   gtk_widget_set_halign(header.label, GTK_ALIGN_END);
   header.switcher = gtk_switch_new();
-  gtk_switch_set_active(GTK_SWITCH(header.switcher), factory->map.isCumulative());
+  gtk_switch_set_active(GTK_SWITCH(header.switcher), factory.map.isCumulative());
   g_signal_connect(header.switcher, "notify::active", G_CALLBACK(SourcePanel::cOnCheckToggle), this);
   gtk_widget_set_halign(header.switcher, GTK_ALIGN_END);
   //// pack
@@ -28,7 +28,7 @@ SourcePanel::SourcePanel(uint32_t sourceID, PacketFactory* factory): factory(fac
 }
 
 void SourcePanel::onCheckToggle(GtkSwitch* check) {
-  factory->map.setCumulative(gtk_switch_get_active(check));
+  factory.map.setCumulative(gtk_switch_get_active(check));
   update();
 }
 

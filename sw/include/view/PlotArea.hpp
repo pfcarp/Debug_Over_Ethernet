@@ -26,7 +26,7 @@ class PlotArea {
       double height;
     } dimensions;
     cairo_t* cairo;
-    PacketFactory* factory;
+    PacketFactory& factory;
     // Methods
     inline double plotWidth();
     inline double plotHeight();
@@ -42,6 +42,6 @@ class PlotArea {
   public:
     GtkWidget* parent;
     
-    PlotArea(unsigned width, unsigned height, PacketFactory* factory);
+    PlotArea(unsigned width, unsigned height, PacketFactory& factory);
 
 };
