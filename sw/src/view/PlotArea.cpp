@@ -45,36 +45,42 @@ void PlotArea::setBackground() {
 
 void PlotArea::plotCurve(const std::string& variant) {
   Color color = Packet::ColorMap[variant];
-  // Define line setup
-  cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
-  cairo_set_line_width(cairo, 2.0);
-  // Draw each curve
-  const auto& buffer = factory.map.entries(variant);
-  if (buffer.size()) {
-    const auto& entry = buffer.at(0);
-    cairo_move_to(cairo, adaptX(entry.first), adaptY(entry.second));
-    for (int i = 1; i < buffer.size(); i++) {
-      const auto& entry = buffer.at(i);
-      cairo_line_to(cairo, adaptX(entry.first), adaptY(entry.second));
+  // Bother drawing iff the color is not completely transparent
+  if (color.alpha > 0.0) {
+    // Define line setup
+    cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
+    cairo_set_line_width(cairo, 2.0);
+    // Draw each curve
+    const auto& buffer = factory.map.entries(variant);
+    if (buffer.size()) {
+      const auto& entry = buffer.at(0);
+      cairo_move_to(cairo, adaptX(entry.first), adaptY(entry.second));
+      for (int i = 1; i < buffer.size(); i++) {
+        const auto& entry = buffer.at(i);
+        cairo_line_to(cairo, adaptX(entry.first), adaptY(entry.second));
+      }
     }
+    // Actually draw
+    cairo_stroke(cairo);
   }
-  // Actually draw
-  cairo_stroke(cairo);
 }
 
 void PlotArea::plotScatter(const std::string& variant) {
   Color color = Packet::ColorMap[variant];
-  // Define line setup
-  cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
-  // Draw each curve
-  const auto& buffer = factory.map.entries(variant);
-  for (int i = 0; i < buffer.size(); i++) {
-    const auto& entry = buffer.at(i);
-    cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0, 0, 2*M_PI);
-    cairo_fill(cairo);
+  // Bother drawing iff the color is not completely transparent
+  if (color.alpha > 0.0) {
+    // Define line setup
+    cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
+    // Draw each curve
+    const auto& buffer = factory.map.entries(variant);
+    for (int i = 0; i < buffer.size(); i++) {
+      const auto& entry = buffer.at(i);
+      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0, 0, 2*M_PI);
+      cairo_fill(cairo);
+    }
+    // Actually draw
+    cairo_stroke(cairo);
   }
-  // Actually draw
-  cairo_stroke(cairo);
 }
 
 void PlotArea::drawAxes() {
