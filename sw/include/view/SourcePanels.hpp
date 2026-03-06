@@ -51,6 +51,7 @@ class SourcePanels {
         GtkWidget* packet;
       } title;
       GtkWidget* box;
+      GtkWidget* grid;
       std::vector<PanelEntry> entries;
     } control;
     // Methods

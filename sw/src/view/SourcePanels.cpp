@@ -7,36 +7,42 @@
 SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
   parent = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   // Controls
+  //// Setup scroll
+  control.box = gtk_scrolled_window_new();
   //// Setup grid
-  control.box = gtk_grid_new();
-  gtk_grid_set_row_spacing(GTK_GRID(control.box), 6);
-  gtk_grid_set_column_spacing(GTK_GRID(control.box), 12);
+  control.grid = gtk_grid_new();
+  gtk_grid_set_row_spacing(GTK_GRID(control.grid), 6);
+  gtk_grid_set_column_spacing(GTK_GRID(control.grid), 12);
   //// Set up header
   control.title.show = gtk_label_new("Show");
   gtk_widget_add_css_class(control.title.show, "heading");
   gtk_widget_set_hexpand(control.title.show, TRUE);
-  gtk_grid_attach(GTK_GRID(control.box), control.title.show, 0, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(control.grid), control.title.show, 0, 0, 1, 1);
   gtk_widget_set_halign(control.title.show, GTK_ALIGN_CENTER);
   control.title.color = gtk_label_new("Color");
   gtk_widget_add_css_class(control.title.color, "heading");
   gtk_widget_set_hexpand(control.title.color, TRUE);
-  gtk_grid_attach(GTK_GRID(control.box), control.title.color, 1, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(control.grid), control.title.color, 1, 0, 1, 1);
   gtk_widget_set_halign(control.title.color, GTK_ALIGN_CENTER);
   control.title.packet = gtk_label_new("Packet");
   gtk_widget_add_css_class(control.title.packet, "heading");
   gtk_widget_set_hexpand(control.title.packet, TRUE);
-  gtk_grid_attach(GTK_GRID(control.box), control.title.packet, 2, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(control.grid), control.title.packet, 2, 0, 1, 1);
   gtk_widget_set_halign(control.title.packet, GTK_ALIGN_START);
   //// Create entry for each packet
   control.entries.reserve(Packet::ColorMap.size());
   int row = 1;
   for (const auto& [name, color] : Packet::ColorMap) {
     control.entries.emplace_back(name, color, this);
-    gtk_grid_attach(GTK_GRID(control.box), control.entries.back().checkbox   , 0, row, 1, 1);
-    gtk_grid_attach(GTK_GRID(control.box), control.entries.back().colorpicker, 1, row, 1, 1);
-    gtk_grid_attach(GTK_GRID(control.box), control.entries.back().label      , 2, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().checkbox   , 0, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().colorpicker, 1, row, 1, 1);
+    gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().label      , 2, row, 1, 1);
     row++;
   }
+  gtk_widget_set_hexpand(control.grid, TRUE);
+  gtk_widget_set_vexpand(control.grid, TRUE);
+  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(control.box), control.grid);
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(control.box), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
   gtk_box_append(GTK_BOX(parent), control.box);
   // Seperator
   GtkWidget* seperator = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
