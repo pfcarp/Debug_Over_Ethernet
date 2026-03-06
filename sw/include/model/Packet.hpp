@@ -580,7 +580,7 @@ namespace Packet {
 
   using Variant = std::variant<Reserved, Extension, TraceInfo, Timestamp, TraceOn, FunctionReturn, ExceptionReturn, Resynchronization, CycleCountFormat1, CycleCountFormat2, CycleCountFormat3, NumberedDataSyncMark, UnnumberedDataSyncMark, Commit, CancelFormat1, Mispredict, CancelFormat2, CancelFormat3, ConditionalInstructionFormat1, ConditionalInstructionFormat2, ConditionalFlush, ConditionalResultFormat4, ConditionalResultFormat2, ConditionalResultFormat3, ConditionalResultFormat1, ConditionalInstructionFormat3, Ignore, Event, Context, AddressWithContext, TimestampMarker, ExactMatchAddress, ShortAddress, LongAddress, Q, AtomFormat1, AtomFormat2, AtomFormat3, AtomFormat4, AtomFormat5, AtomFormat6, Exception>;
   
-  static std::unordered_map<std::string, Color> ColorMap = {
+  inline std::unordered_map<std::string, Color> ColorMap = {
     {"Extension"   , Color(0.15, 0.64, 0.41, 1.00)},
     {"Ignore"      , Color(0.10, 0.37, 0.71, 1.00)},
     {"Event"       , Color(0.90, 0.65, 0.04, 1.00)},
