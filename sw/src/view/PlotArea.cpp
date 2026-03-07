@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -17,6 +18,20 @@ PlotArea::PlotArea(unsigned width, unsigned height, PacketFactory& factory): dim
   gtk_widget_set_vexpand(parent, TRUE);
   gtk_widget_set_size_request(parent, width, height);
   gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(parent), cOnDraw, this, NULL);
+  // Scroll
+  GtkEventController* scroll = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_VERTICAL);
+  g_signal_connect(scroll, "scroll", G_CALLBACK(PlotArea::cOnScroll), this);
+  gtk_widget_add_controller(parent, scroll);
+  // Mouse
+  GtkEventController* motion = gtk_event_controller_motion_new();
+  g_signal_connect(motion, "motion", G_CALLBACK(cOnMotion), this);
+  gtk_widget_add_controller(parent, motion);
+  // Click
+  GtkGestureClick* click = GTK_GESTURE_CLICK(gtk_gesture_click_new());
+  gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 1);
+  gtk_widget_add_controller(parent, GTK_EVENT_CONTROLLER(click));
+  g_signal_connect(click, "pressed", G_CALLBACK(cOnButtonPress), this);
+  g_signal_connect(click, "released", G_CALLBACK(cOnButtonRelease), this);
 }
 
 
@@ -29,11 +44,83 @@ void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) 
   dimensions.width = width;
   dimensions.height = height;
   cairo = cr;
+  handleZoom();
   setBackground();
   for (const std::string& variant : factory.map.getVariants()) {
     plotCurve(variant);
   }
   drawAxes();
+}
+
+
+gboolean PlotArea::cOnScroll(GtkEventControllerScroll* controller, double dx, double dy, gpointer user_data) {
+  PlotArea* self = static_cast<PlotArea*>(user_data);
+  return self->onScroll(dy);
+}
+
+gboolean PlotArea::onScroll(double dy) {
+  const double zoom_factor = 1.1;
+  world.width  = dimensions.width;
+  world.height = dimensions.height;
+  double old_scale = zoom.scale;
+  // Convert cursor to world coordinates BEFORE zoom
+  double world_x = (mouse.current.x - zoom.offset.x) / zoom.scale;
+  double world_y = (mouse.current.y - zoom.offset.y) / zoom.scale;
+  // Update zoom
+  if (dy < 0)      zoom.scale = std::clamp(zoom.scale * zoom_factor, 1.0, 50.0);
+  else if (dy > 0) zoom.scale = std::clamp(zoom.scale / zoom_factor, 1.0, 50.0);
+  // Recompute offset so the world point stays under the cursor
+  zoom.offset.x = mouse.current.x - world_x * zoom.scale;
+  zoom.offset.y = mouse.current.y - world_y * zoom.scale;
+  // Clamp offset to prevent empty areas
+  clampOffset();
+  // Trigger redraw
+  gtk_widget_queue_draw(parent);
+
+  return TRUE;
+}
+
+
+void PlotArea::cOnMotion(GtkEventControllerMotion* controller, double x, double y, gpointer user_data) {
+  PlotArea* self = static_cast<PlotArea*>(user_data);
+  self->onMotion(x, y);
+}
+
+void PlotArea::onMotion(double x, double y) {
+  // Keep track of current position (for scroll)
+  mouse.current.x = x;
+  mouse.current.y = y;
+  // Handling drag
+  if (mouse.dragging) [[unlikely]] {
+    zoom.offset.x += x-mouse.last.x;
+    zoom.offset.y += y-mouse.last.y;
+    mouse.last.x = x;
+    mouse.last.y = y;
+    clampOffset();   // same clamping logic used in zoom
+    gtk_widget_queue_draw(parent);
+  }
+}
+
+
+void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data) {
+  PlotArea* self = static_cast<PlotArea*>(user_data);
+  self->onButtonPress(x, y);
+}
+
+void PlotArea::onButtonPress(double x, double y) {
+  mouse.dragging = true;
+  mouse.last.x = x;
+  mouse.last.y = y;
+}
+
+
+void PlotArea::cOnButtonRelease(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data) {
+  PlotArea* self = static_cast<PlotArea*>(user_data);
+  self->onButtonRelease();
+}
+
+void PlotArea::onButtonRelease() {
+  mouse.dragging = false;
 }
 
 
@@ -43,18 +130,42 @@ void PlotArea::setBackground() {
 }
 
 
+void PlotArea::handleZoom() {
+  cairo_translate(cairo, zoom.offset.x, zoom.offset.y);
+  cairo_scale(cairo, zoom.scale, zoom.scale);
+}
+
+
+void PlotArea::clampOffset() {
+/*
+  double min_offset_x = dimensions.width-(world.width*zoom.scale);
+  double min_offset_y = dimensions.height-(world.height*zoom.scale);
+  zoom.offset.x = std::clamp(zoom.offset.x, min_offset_x, 0.0);
+  zoom.offset.y = std::clamp(zoom.offset.y, min_offset_y, 0.0);
+*/
+  double min_x = dimensions.width - world.width * zoom.scale;
+  double max_x = 0;
+
+  double min_y = dimensions.height - world.height * zoom.scale;
+  double max_y = 0;
+
+  zoom.offset.x = std::clamp(zoom.offset.x, min_x, max_x);
+  zoom.offset.y = std::clamp(zoom.offset.y, min_y, max_y);
+}
+
+
 void PlotArea::plotCurve(const std::string& variant) {
   Color color = Packet::ColorMap[variant];
   // Bother drawing iff the color is not completely transparent
   if (color.alpha > 0.0) {
     // Define line setup
     cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
-    cairo_set_line_width(cairo, 2.0);
+    cairo_set_line_width(cairo, 2.0/zoom.scale);
     // Draw each curve
     const auto& buffer = factory.map.entries(variant);
     if (buffer.size() == 1) {
       const auto& entry = buffer.at(0);
-      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0, 0, 2*M_PI);
+      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/zoom.scale, 0, 2*M_PI);
       cairo_fill(cairo);
     }
     else if (buffer.size() > 1) {
@@ -80,7 +191,7 @@ void PlotArea::plotScatter(const std::string& variant) {
     const auto& buffer = factory.map.entries(variant);
     for (int i = 0; i < buffer.size(); i++) {
       const auto& entry = buffer.at(i);
-      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0, 0, 2*M_PI);
+      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/zoom.scale, 0, 2*M_PI);
       cairo_fill(cairo);
     }
     // Actually draw
@@ -94,7 +205,7 @@ void PlotArea::drawAxes() {
 
   cairo_save(cairo);
   cairo_set_source_rgb(cairo, 0.2, 0.2, 0.2);
-  cairo_set_line_width(cairo, 1.0);
+  cairo_set_line_width(cairo, 1.0/zoom.scale);
   cairo_select_font_face(cairo, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
   cairo_set_font_size(cairo, 10.0);
 

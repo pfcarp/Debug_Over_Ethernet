@@ -25,6 +25,28 @@ class PlotArea {
       double width;
       double height;
     } dimensions;
+    struct {
+      double scale = 1.0;
+      struct {
+        double x = 0.0;
+        double y = 0.0;
+      } offset;
+    } zoom;
+    struct {
+      double width;
+      double height;
+    } world;
+    struct {
+      struct {
+        double x = 0.0;
+        double y = 0.0;
+      } current;
+      struct {
+        double x = 0.0;
+        double y = 0.0;
+      } last;
+      bool dragging = false;
+    } mouse;
     cairo_t* cairo;
     PacketFactory& factory;
     // Methods
@@ -34,7 +56,17 @@ class PlotArea {
     inline double adaptY(double value);
     void onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height);
     static void cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data);
+    gboolean onScroll(double dy);
+    static gboolean cOnScroll(GtkEventControllerScroll* controller, double dx, double dy, gpointer user_data);
+    void onMotion(double x, double y);
+    static void cOnMotion(GtkEventControllerMotion* controller, double x, double y, gpointer user_data);
+    void onButtonPress(double x, double y);
+    static void cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
+    void onButtonRelease();
+    static void cOnButtonRelease(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
     void setBackground();
+    void handleZoom();
+    void clampOffset();
     void drawAxes();
     void plotCurve(const std::string& variant);
     void plotScatter(const std::string& variant);
