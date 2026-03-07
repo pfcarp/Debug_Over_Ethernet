@@ -41,8 +41,12 @@ void PlotArea::cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height,
 }
 
 void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) {
+  // update geometries
   dimensions.width = width;
   dimensions.height = height;
+  plot.width = dimensions.width-(1.5*plot.x);
+  plot.height = dimensions.height-(1.5*plot.y);
+  //
   cairo = cr;
   handleZoom();
   setBackground();
@@ -62,16 +66,16 @@ gboolean PlotArea::onScroll(double dy) {
   const double zoom_factor = 1.1;
   world.width  = dimensions.width;
   world.height = dimensions.height;
-  double old_scale = zoom.scale;
+  double old_scale = viewport.scale;
   // Convert cursor to world coordinates BEFORE zoom
-  double world_x = (mouse.current.x - zoom.offset.x) / zoom.scale;
-  double world_y = (mouse.current.y - zoom.offset.y) / zoom.scale;
+  double world_x = (mouse.current.x - viewport.offset.x) / viewport.scale;
+  double world_y = (mouse.current.y - viewport.offset.y) / viewport.scale;
   // Update zoom
-  if (dy < 0)      zoom.scale = std::clamp(zoom.scale * zoom_factor, 1.0, 50.0);
-  else if (dy > 0) zoom.scale = std::clamp(zoom.scale / zoom_factor, 1.0, 50.0);
+  if (dy < 0)      viewport.scale = std::clamp(viewport.scale * zoom_factor, 1.0, 50.0);
+  else if (dy > 0) viewport.scale = std::clamp(viewport.scale / zoom_factor, 1.0, 50.0);
   // Recompute offset so the world point stays under the cursor
-  zoom.offset.x = mouse.current.x - world_x * zoom.scale;
-  zoom.offset.y = mouse.current.y - world_y * zoom.scale;
+  viewport.offset.x = mouse.current.x - world_x * viewport.scale;
+  viewport.offset.y = mouse.current.y - world_y * viewport.scale;
   // Clamp offset to prevent empty areas
   clampOffset();
   // Trigger redraw
@@ -92,8 +96,8 @@ void PlotArea::onMotion(double x, double y) {
   mouse.current.y = y;
   // Handling drag
   if (mouse.dragging) [[unlikely]] {
-    zoom.offset.x += x-mouse.last.x;
-    zoom.offset.y += y-mouse.last.y;
+    viewport.offset.x += x-mouse.last.x;
+    viewport.offset.y += y-mouse.last.y;
     mouse.last.x = x;
     mouse.last.y = y;
     clampOffset();   // same clamping logic used in zoom
@@ -131,26 +135,18 @@ void PlotArea::setBackground() {
 
 
 void PlotArea::handleZoom() {
-  cairo_translate(cairo, zoom.offset.x, zoom.offset.y);
-  cairo_scale(cairo, zoom.scale, zoom.scale);
+  cairo_translate(cairo, viewport.offset.x, viewport.offset.y);
+  cairo_scale(cairo, viewport.scale, viewport.scale);
 }
 
 
 void PlotArea::clampOffset() {
-/*
-  double min_offset_x = dimensions.width-(world.width*zoom.scale);
-  double min_offset_y = dimensions.height-(world.height*zoom.scale);
-  zoom.offset.x = std::clamp(zoom.offset.x, min_offset_x, 0.0);
-  zoom.offset.y = std::clamp(zoom.offset.y, min_offset_y, 0.0);
-*/
-  double min_x = dimensions.width - world.width * zoom.scale;
+  double min_x = dimensions.width - world.width * viewport.scale;
   double max_x = 0;
-
-  double min_y = dimensions.height - world.height * zoom.scale;
+  viewport.offset.x = std::clamp(viewport.offset.x, min_x, max_x);
+  double min_y = dimensions.height - world.height * viewport.scale;
   double max_y = 0;
-
-  zoom.offset.x = std::clamp(zoom.offset.x, min_x, max_x);
-  zoom.offset.y = std::clamp(zoom.offset.y, min_y, max_y);
+  viewport.offset.y = std::clamp(viewport.offset.y, min_y, max_y);
 }
 
 
@@ -160,12 +156,12 @@ void PlotArea::plotCurve(const std::string& variant) {
   if (color.alpha > 0.0) {
     // Define line setup
     cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
-    cairo_set_line_width(cairo, 2.0/zoom.scale);
+    cairo_set_line_width(cairo, 2.0/viewport.scale);
     // Draw each curve
     const auto& buffer = factory.map.entries(variant);
     if (buffer.size() == 1) {
       const auto& entry = buffer.at(0);
-      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/zoom.scale, 0, 2*M_PI);
+      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/viewport.scale, 0, 2*M_PI);
       cairo_fill(cairo);
     }
     else if (buffer.size() > 1) {
@@ -191,7 +187,7 @@ void PlotArea::plotScatter(const std::string& variant) {
     const auto& buffer = factory.map.entries(variant);
     for (int i = 0; i < buffer.size(); i++) {
       const auto& entry = buffer.at(i);
-      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/zoom.scale, 0, 2*M_PI);
+      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/viewport.scale, 0, 2*M_PI);
       cairo_fill(cairo);
     }
     // Actually draw
@@ -205,55 +201,55 @@ void PlotArea::drawAxes() {
 
   cairo_save(cairo);
   cairo_set_source_rgb(cairo, 0.2, 0.2, 0.2);
-  cairo_set_line_width(cairo, 1.0/zoom.scale);
+  cairo_set_line_width(cairo, 1.0/viewport.scale);
   cairo_select_font_face(cairo, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
   cairo_set_font_size(cairo, 10.0);
 
   // --- X axis ---
-  cairo_move_to(cairo, margin.left, dimensions.height-margin.bottom);
-  cairo_line_to(cairo, dimensions.width-margin.right, dimensions.height-margin.bottom);
+  cairo_move_to(cairo, plot.x, dimensions.height-plot.y);
+  cairo_line_to(cairo, plot.x+plot.width, dimensions.height-plot.y);
   cairo_stroke(cairo);
   // X-axis label (centered below)
   cairo_set_font_size(cairo, 12.0);
   cairo_text_extents_t extents;
   cairo_text_extents(cairo, xlabel, &extents);
-  cairo_move_to(cairo, margin.left+(plotWidth()-extents.width)/2, dimensions.height-10);
+  cairo_move_to(cairo, plot.x+(plot.width-extents.width)/2, dimensions.height-10);
   cairo_show_text(cairo, xlabel);
   // X ticks & labels (between edges)
   for (int i = 0; i <= nticks; i++) {
     double t = (double)i/nticks;
-    double tx = margin.left+t*plotWidth();
+    double tx = plot.x+t*plot.width;
     // Tick mark
-    cairo_move_to(cairo, tx, dimensions.height-margin.bottom);
-    cairo_line_to(cairo, tx, dimensions.height-margin.bottom+tick_len);
+    cairo_move_to(cairo, tx, dimensions.height-plot.y);
+    cairo_line_to(cairo, tx, dimensions.height-plot.y+tick_len);
     cairo_stroke(cairo);
     // Label slightly below tick
     char label[32];
     auto xmin = factory.map.minTimestamp();
     auto xmax = factory.map.maxTimestamp();
     snprintf(label, sizeof(label), "%.1f", xmin+t*(xmax-xmin));
-    cairo_move_to(cairo, tx-10, dimensions.height-margin.bottom+15);
+    cairo_move_to(cairo, tx-10, dimensions.height-plot.y+15);
     cairo_show_text(cairo, label);
   }
 
   // --- Y axis ---
-  cairo_move_to(cairo, margin.left, dimensions.height-margin.bottom);
-  cairo_line_to(cairo, margin.left, margin.top);
+  cairo_move_to(cairo, plot.x, dimensions.height-plot.y);
+  cairo_line_to(cairo, plot.x, dimensions.height-plot.y-plot.height);
   cairo_stroke(cairo);
   // Y ticks & labels
   for (int i = 0; i <= nticks; i++) {
     double t = (double)i/nticks;
-    double ty = dimensions.height-margin.bottom-t*plotHeight();
+    double ty = dimensions.height-plot.y-t*plot.height;
     // Tick mark
-    cairo_move_to(cairo, margin.left, ty);
-    cairo_line_to(cairo, margin.left-tick_len, ty);
+    cairo_move_to(cairo, plot.x, ty);
+    cairo_line_to(cairo, plot.x-tick_len, ty);
     cairo_stroke(cairo);
     // Label slightly below tick
     char label[32];
     auto ymin = factory.map.minCount();
     auto ymax = factory.map.maxCount();
     snprintf(label, sizeof(label), "%.1f", ymin+t*(ymax-ymin));
-    cairo_move_to(cairo, margin.left-35, ty+3);
+    cairo_move_to(cairo, plot.x-35, ty+3);
     cairo_show_text(cairo, label);
   }
 
@@ -261,23 +257,14 @@ void PlotArea::drawAxes() {
 }
 
 
-double PlotArea::plotWidth() {
-  return dimensions.width-margin.left-margin.right;
-}
-
-double PlotArea::plotHeight() {
-  return dimensions.height-margin.top-margin.bottom;
-}
-
-
 double PlotArea::adaptX(double value) {
   double min = factory.map.minTimestamp();
   double max = factory.map.maxTimestamp();
-  return margin.left+((value-min)/(max-min)*plotWidth());
+  return plot.x+((value-min)/(max-min)*plot.width);
 }
 
 double PlotArea::adaptY(double value) {
   double min = factory.map.minCount();
   double max = factory.map.maxCount();
-  return dimensions.height-margin.bottom-((value-min)/(max-min)*plotHeight());
+  return dimensions.height-plot.y-((value-min)/(max-min)*plot.height);
 }

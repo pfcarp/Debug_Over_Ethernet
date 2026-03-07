@@ -15,12 +15,12 @@ class PlotArea {
 
   private:
     // Attributes
-    const struct {
-      double top    = 20;
-      double bottom = 40;
-      double left   = 50;
-      double right  = 20;
-    } margin;
+    struct {
+      double x      = 50.0;
+      double y      = 50.0;
+      double width  =  0.0;
+      double height =  0.0;
+    } plot;
     struct {
       double width;
       double height;
@@ -31,7 +31,7 @@ class PlotArea {
         double x = 0.0;
         double y = 0.0;
       } offset;
-    } zoom;
+    } viewport;
     struct {
       double width;
       double height;
@@ -50,10 +50,8 @@ class PlotArea {
     cairo_t* cairo;
     PacketFactory& factory;
     // Methods
-    inline double plotWidth();
-    inline double plotHeight();
-    inline double adaptX(double value);
-    inline double adaptY(double value);
+    double adaptX(double value);
+    double adaptY(double value);
     void onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height);
     static void cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data);
     gboolean onScroll(double dy);
