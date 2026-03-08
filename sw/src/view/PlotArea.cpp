@@ -156,12 +156,10 @@ void PlotArea::handleZoom() {
 
 
 void PlotArea::clampOffset() {
-  double min_x = dimensions.width - world.width * viewport.scale;
-  double max_x = 0;
-  viewport.offset.x = std::clamp(viewport.offset.x, min_x, max_x);
-  double min_y = dimensions.height - world.height * viewport.scale;
-  double max_y = 0;
-  viewport.offset.y = std::clamp(viewport.offset.y, min_y, max_y);
+  std::cout << "( " << -plot.width*viewport.scale << " < " << viewport.offset.x << " < 0.0 ) ( " << -plot.height*viewport.scale << " < " << viewport.offset.y << " < 0.0 )" << std::endl;
+
+  viewport.offset.x = std::clamp(viewport.offset.x, -(plot.width)*(viewport.scale-1), 0.0);
+  viewport.offset.y = std::clamp(viewport.offset.y, -(plot.height)*(viewport.scale-1), 0.0);
 }
 
 
@@ -256,7 +254,7 @@ void PlotArea::drawAxes() {
   auto ymin = factory.map.minCount();
   auto ymax = factory.map.maxCount();
   double visible_width_y = (ymax-ymin)/viewport.scale;
-  double world_y_min = ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
+  double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
   for (int i = 0; i <= nticks; i++) {
     double t = ((double)(nticks-i))/nticks;
     double ty = dimensions.height-plot.y-t*plot.height;
