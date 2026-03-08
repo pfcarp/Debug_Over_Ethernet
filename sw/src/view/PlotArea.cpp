@@ -42,18 +42,31 @@ void PlotArea::cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height,
 
 void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) {
   // update geometries
+  cairo = cr;
   dimensions.width = width;
   dimensions.height = height;
   plot.width = dimensions.width-(1.5*plot.x);
   plot.height = dimensions.height-(1.5*plot.y);
-  //
-  cairo = cr;
-  handleZoom();
+  // draw data
+  cairo_save(cairo);
   setBackground();
+  ////
+  cairo_rectangle(cairo, plot.x, plot.y*(1.5-1), plot.width, plot.height);
+  cairo_clip(cairo);
+  ////
+  cairo_translate(cairo, plot.x, plot.y*(1.5-1));
+  cairo_translate(cairo, viewport.offset.x, viewport.offset.y);
+  cairo_scale(cairo, viewport.scale, viewport.scale);
+  ////
   for (const std::string& variant : factory.map.getVariants()) {
-    plotCurve(variant);
+    plotScatter(variant);
   }
+  ////
+  cairo_restore(cr);
+  // axes
+  cairo_save(cairo);
   drawAxes();
+  cairo_restore(cairo);
 }
 
 
@@ -63,24 +76,26 @@ gboolean PlotArea::cOnScroll(GtkEventControllerScroll* controller, double dx, do
 }
 
 gboolean PlotArea::onScroll(double dy) {
-  const double zoom_factor = 1.1;
   world.width  = dimensions.width;
   world.height = dimensions.height;
-  double old_scale = viewport.scale;
+  // Convert mouse position to plot-local coordinates
+  double px = mouse.current.x-(plot.x);
+  double py = mouse.current.y-(plot.y*0.5);
+  // Ignore scroll outside plot area
+  if (px < 0 || px > plot.width || py < 0 || py > plot.height)
+      return FALSE;
   // Convert cursor to world coordinates BEFORE zoom
-  double world_x = (mouse.current.x - viewport.offset.x) / viewport.scale;
-  double world_y = (mouse.current.y - viewport.offset.y) / viewport.scale;
+  double world_x = (px-viewport.offset.x)/viewport.scale;
+  double world_y = (py-viewport.offset.y)/viewport.scale;
   // Update zoom
-  if (dy < 0)      viewport.scale = std::clamp(viewport.scale * zoom_factor, 1.0, 50.0);
-  else if (dy > 0) viewport.scale = std::clamp(viewport.scale / zoom_factor, 1.0, 50.0);
+  if      (dy < 0) viewport.scale = std::clamp(viewport.scale+0.25, 1.0, 50.0);
+  else if (dy > 0) viewport.scale = std::clamp(viewport.scale-0.25, 1.0, 50.0);
   // Recompute offset so the world point stays under the cursor
-  viewport.offset.x = mouse.current.x - world_x * viewport.scale;
-  viewport.offset.y = mouse.current.y - world_y * viewport.scale;
+  viewport.offset.x = px-(world_x*viewport.scale);
+  viewport.offset.y = py-(world_y*viewport.scale);
   // Clamp offset to prevent empty areas
   clampOffset();
-  // Trigger redraw
   gtk_widget_queue_draw(parent);
-
   return TRUE;
 }
 
@@ -199,7 +214,6 @@ void PlotArea::drawAxes() {
   const int nticks = 10;
   const double tick_len = 5.0;
 
-  cairo_save(cairo);
   cairo_set_source_rgb(cairo, 0.2, 0.2, 0.2);
   cairo_set_line_width(cairo, 1.0/viewport.scale);
   cairo_select_font_face(cairo, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
@@ -252,19 +266,17 @@ void PlotArea::drawAxes() {
     cairo_move_to(cairo, plot.x-35, ty+3);
     cairo_show_text(cairo, label);
   }
-
-  cairo_restore(cairo);
 }
 
 
 double PlotArea::adaptX(double value) {
   double min = factory.map.minTimestamp();
   double max = factory.map.maxTimestamp();
-  return plot.x+((value-min)/(max-min)*plot.width);
+  return (value-min)/(max-min)*plot.width;
 }
 
 double PlotArea::adaptY(double value) {
   double min = factory.map.minCount();
   double max = factory.map.maxCount();
-  return dimensions.height-plot.y-((value-min)/(max-min)*plot.height);
+  return plot.height-((value-min)/(max-min)*plot.height);
 }
