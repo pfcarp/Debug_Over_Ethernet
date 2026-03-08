@@ -215,7 +215,7 @@ void PlotArea::drawAxes() {
   const double tick_len = 5.0;
 
   cairo_set_source_rgb(cairo, 0.2, 0.2, 0.2);
-  cairo_set_line_width(cairo, 1.0/viewport.scale);
+  cairo_set_line_width(cairo, 1.0);
   cairo_select_font_face(cairo, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
   cairo_set_font_size(cairo, 10.0);
 
@@ -230,6 +230,10 @@ void PlotArea::drawAxes() {
   cairo_move_to(cairo, plot.x+(plot.width-extents.width)/2, dimensions.height-10);
   cairo_show_text(cairo, xlabel);
   // X ticks & labels (between edges)
+  auto xmin = factory.map.minTimestamp();
+  auto xmax = factory.map.maxTimestamp();
+  double visible_width_x = (xmax-xmin)/viewport.scale;
+  double world_x_min = xmin+(((-viewport.offset.x/plot.width)/viewport.scale)*xmax);
   for (int i = 0; i <= nticks; i++) {
     double t = (double)i/nticks;
     double tx = plot.x+t*plot.width;
@@ -239,9 +243,7 @@ void PlotArea::drawAxes() {
     cairo_stroke(cairo);
     // Label slightly below tick
     char label[32];
-    auto xmin = factory.map.minTimestamp();
-    auto xmax = factory.map.maxTimestamp();
-    snprintf(label, sizeof(label), "%.1f", xmin+t*(xmax-xmin));
+    snprintf(label, sizeof(label), "%.1f", world_x_min+t*visible_width_x);
     cairo_move_to(cairo, tx-10, dimensions.height-plot.y+15);
     cairo_show_text(cairo, label);
   }
@@ -251,8 +253,12 @@ void PlotArea::drawAxes() {
   cairo_line_to(cairo, plot.x, dimensions.height-plot.y-plot.height);
   cairo_stroke(cairo);
   // Y ticks & labels
+  auto ymin = factory.map.minCount();
+  auto ymax = factory.map.maxCount();
+  double visible_width_y = (ymax-ymin)/viewport.scale;
+  double world_y_min = ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
   for (int i = 0; i <= nticks; i++) {
-    double t = (double)i/nticks;
+    double t = ((double)(nticks-i))/nticks;
     double ty = dimensions.height-plot.y-t*plot.height;
     // Tick mark
     cairo_move_to(cairo, plot.x, ty);
@@ -260,9 +266,7 @@ void PlotArea::drawAxes() {
     cairo_stroke(cairo);
     // Label slightly below tick
     char label[32];
-    auto ymin = factory.map.minCount();
-    auto ymax = factory.map.maxCount();
-    snprintf(label, sizeof(label), "%.1f", ymin+t*(ymax-ymin));
+    snprintf(label, sizeof(label), "%.1f", world_y_min+t*visible_width_y);
     cairo_move_to(cairo, plot.x-35, ty+3);
     cairo_show_text(cairo, label);
   }
