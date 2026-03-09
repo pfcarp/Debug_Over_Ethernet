@@ -156,8 +156,6 @@ void PlotArea::handleZoom() {
 
 
 void PlotArea::clampOffset() {
-  std::cout << "( " << -plot.width*viewport.scale << " < " << viewport.offset.x << " < 0.0 ) ( " << -plot.height*viewport.scale << " < " << viewport.offset.y << " < 0.0 )" << std::endl;
-
   viewport.offset.x = std::clamp(viewport.offset.x, -(plot.width)*(viewport.scale-1), 0.0);
   viewport.offset.y = std::clamp(viewport.offset.y, -(plot.height)*(viewport.scale-1), 0.0);
 }
