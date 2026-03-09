@@ -7,8 +7,9 @@
 class Color {
 
   private:
-    static int iterator;
-    static std::vector<std::vector<double>> map;
+    double f(const double t) const;
+    double gamma(const double u) const;
+    void generate(const double h, const double c, const double l);
 
   public:
     double red;
