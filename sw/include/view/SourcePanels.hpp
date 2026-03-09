@@ -41,9 +41,10 @@ class SourcePanels {
 
   private:
     // Attributes
-    static const uint32_t panelNumber = 1;
-    SourcePanel* panel[panelNumber];
-    GtkWidget* panels;
+    struct {
+      std::vector<SourcePanel> widget;
+      GtkWidget* grid;
+    } panels;
     struct {
       struct {
         GtkWidget* show;

@@ -2,6 +2,7 @@
 
 
 #include <algorithm>
+#include <cstdint>
 
 
 Packet::Variant* TraceCollection::add(std::string name, uint64_t ts, Packet::Variant pkt) {
@@ -13,7 +14,7 @@ uint64_t TraceCollection::minTimestamp() const {
   for (const auto& pair : map) {
     res = std::min(res, pair.second.minTimestamp(cumulative));
   }
-  return res;
+  return (res == UINT64_MAX)? 0 : res;
 }
 
 uint64_t TraceCollection::maxTimestamp() const {
@@ -29,7 +30,7 @@ uint64_t TraceCollection::minCount() const {
   for (const auto& pair : map) {
     res = std::min(res, pair.second.minCount());
   }
-  return res;
+  return (res == UINT64_MAX)? 0 : res;
 }
 
 uint64_t TraceCollection::maxCount() const {

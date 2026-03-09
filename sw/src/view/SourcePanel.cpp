@@ -5,7 +5,7 @@ SourcePanel::SourcePanel(uint32_t sourceID, PacketFactory& factory): factory(fac
   parent = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
   // header
   header.box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-  header.title = gtk_label_new("Source 0");
+  header.title = gtk_label_new(("Source "+std::to_string(sourceID)).c_str());
   gtk_widget_add_css_class(header.title, "heading");
   gtk_widget_set_hexpand(header.title, TRUE);
   gtk_widget_set_halign(header.title, GTK_ALIGN_START);

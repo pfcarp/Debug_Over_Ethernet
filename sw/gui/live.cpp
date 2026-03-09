@@ -474,7 +474,7 @@ static void onActivate(GtkApplication* app, gpointer _) {
 
   GtkWidget* window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(window), "DoEth Live Tracer");
-  gtk_window_set_default_size(GTK_WINDOW(window), 1000, 700);
+  gtk_window_set_default_size(GTK_WINDOW(window), 1600, 900);
   gtk_window_present(GTK_WINDOW(window));
 
   Wizard* wiz = new Wizard(app, window, buffer, deformatter);

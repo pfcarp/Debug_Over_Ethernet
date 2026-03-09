@@ -16,7 +16,6 @@ PlotArea::PlotArea(unsigned width, unsigned height, PacketFactory& factory): dim
   parent = gtk_drawing_area_new();
   gtk_widget_set_hexpand(parent, TRUE);
   gtk_widget_set_vexpand(parent, TRUE);
-  gtk_widget_set_size_request(parent, width, height);
   gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(parent), cOnDraw, this, NULL);
   // Scroll
   GtkEventController* scroll = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_VERTICAL);

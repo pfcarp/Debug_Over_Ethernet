@@ -39,7 +39,7 @@ SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
     gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().label      , 2, row, 1, 1);
     row++;
   }
-  gtk_widget_set_hexpand(control.grid, TRUE);
+  gtk_widget_set_hexpand(control.grid, FALSE);
   gtk_widget_set_vexpand(control.grid, TRUE);
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(control.box), control.grid);
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(control.box), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
@@ -49,17 +49,24 @@ SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
   gtk_widget_set_vexpand(seperator, TRUE);
   gtk_box_append(GTK_BOX(parent), seperator);
   // Panels
-  panels = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
-  gtk_box_append(GTK_BOX(parent), panels);
-  for (uint32_t i = 0; i < panelNumber; i++) {
-    panel[i] = new SourcePanel(i, factories[i]);
-    gtk_box_append(GTK_BOX(panels), panel[i]->parent);
+  panels.grid = gtk_grid_new();
+  gtk_grid_set_row_spacing(GTK_GRID(panels.grid), 6);
+  gtk_grid_set_column_spacing(GTK_GRID(panels.grid), 6);
+  gtk_box_append(GTK_BOX(parent), panels.grid);
+  panels.widget.reserve(factories.size());
+  for (uint32_t i = 0; i < factories.size(); i++) {
+    panels.widget.emplace_back(i, factories[i]);
+    int rows = static_cast<int>(std::sqrt(factories.size()));
+    int cols = (factories.size()+rows-1)/rows;
+    int row = i/rows;
+    int col = i%cols;
+    gtk_grid_attach(GTK_GRID(panels.grid), panels.widget.back().parent, col, row, 1, 1);
   }
 }
 
 void SourcePanels::update() {
-  for (uint32_t i = 0; i < panelNumber; i++) {
-    panel[i]->update();
+  for (uint32_t i = 0; i < panels.widget.size(); i++) {
+    panels.widget[i].update();
   }
 }
 
