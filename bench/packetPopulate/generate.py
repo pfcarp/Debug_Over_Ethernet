@@ -1,9 +1,10 @@
 """
 Usage:
-    generate.py --packet <packet> --amount <amount>
+    generate.py --sources <sources> --packet <packet> --amount <amount>
     generate.py (-h | --help)
 
 Options:
+    --sources <sources> Amount of sources in the trace
     --packet <packet>   Packet type
     --amount <amount>   Amount of packets to be generated int he trace (padded with Ignore packets is needed)
 """
@@ -417,17 +418,36 @@ class AtomFormatX():
 class TPIU():
 
     @staticmethod
-    def addAux(buffer):
+    def makeFrame(source, buffer):
         data = bytearray(0)
-        for packet in range(0, len(buffer), 15):
-            auxiliary = 0x00
-            for frame in range(15):
-                if ((frame%2) == 0):
-                    data.extend(bytes([buffer[packet+frame] & 0xfe]))
-                    auxiliary |= (buffer[packet+frame] & 0x01) << (frame//2)
-                else:
-                    data.extend(bytes([buffer[packet+frame]]))
-            data.extend(bytes([auxiliary]))
+        auxiliary = 0x00
+        # id/source switch; aux not touched to indicate that next byte belongs to new source/id
+        data.extend(bytes([(source << 1) | 0x01]))
+        # payload
+        for frame in range(1, 15):
+            if ((frame%2) == 0):
+                data.extend(bytes([buffer[frame-1] & 0xfe]))
+                auxiliary |= (buffer[frame-1] & 0x01) << (frame//2)
+            else:
+                data.extend(bytes([buffer[frame-1]]))
+        # auxiliary
+        data.extend(bytes([auxiliary]))
+        return data
+
+    @staticmethod
+    def makeFrames(buffers):
+        data = bytearray(0)
+        # Build temporary representation
+        frames = [[TPIU.makeFrame(source, buffer[i:i+14]) for i in range(0, len(buffer), 14)] for source, buffer in enumerate(buffers)]
+        # Combine
+        positions = [0]*len(frames)
+        active = list(range(len(frames)))
+        while active:
+            i = random.choice(active)
+            data.extend(frames[i][positions[i]])
+            positions[i] += 1
+            if (positions[i] >= len(frames[i])):
+                active.remove(i)
         return data
 
     @staticmethod
@@ -444,8 +464,8 @@ class TPIU():
         return data
 
     @staticmethod
-    def format(buffer):
-        return TPIU.addTimestamp(TPIU.addAux(buffer))
+    def format(buffers):
+        return TPIU.addTimestamp(TPIU.makeFrames(buffers))
 
 
 class ETM():
@@ -495,34 +515,35 @@ class ETM():
 
 class Binary():
 
-    def __init__(self, filename):
+    def __init__(self, sources, filename):
         self.filename = filename
-        self.buffer = bytearray(0)
+        self.buffers = [bytearray(0) for _ in range(sources)]
 
-    def add(self, data):
-        self.buffer.extend(data)
+    def add(self, source, data):
+        self.buffers[source].extend(data)
 
     def write(self):
-        # pad with IGNORE packets such that it is a multiple of 15 (i.e., 16-1)
-        padding = 15-(len(self.buffer)%15)
-        print(f"[WARNING] Add {padding} `Ignore` packets.")
-        for _ in range(padding):
-            self.add(Ignore.generate())
-        # format
-        self.buffer = TPIU.format(self.buffer)
+        for source in range(len(self.buffers)):
+            # pad with IGNORE packets such that it is a multiple of 14 (i.e., 16-1-1 => 1 for aux and 1 for source switch)
+            padding = 14-(len(self.buffers[source])%14) if (len(self.buffers[source])%14) else 0
+            print(f"[WARNING] Add {padding} `Ignore` packets to source #{source}.")
+            for _ in range(padding):
+                self.add(source, Ignore.generate())
         # dump binary
         with open(self.filename, "wb") as f:
-            f.write(self.buffer)
+            f.write(TPIU.format(self.buffers))
 
 
 if (__name__ == "__main__"):
     args = docopt(__doc__)
 
+    sources     = int(args["--sources"])
     repetitions = int(args["--amount"])
     packetType  = args["--packet"]
     filename    = f"{packetType}.bin"
 
-    binary = Binary(filename)
-    for _ in range(repetitions):
-        binary.add(ETM.get[packetType].generate())
+    binary = Binary(sources, filename)
+    for source in range(sources):
+        for _ in range(repetitions):
+            binary.add(source, ETM.get[packetType].generate())
     binary.write()
