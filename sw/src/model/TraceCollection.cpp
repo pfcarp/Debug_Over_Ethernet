@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <iostream>
 
 
 Packet::Variant* TraceCollection::add(std::string name, uint64_t ts, Packet::Variant pkt) {
@@ -59,4 +60,15 @@ void TraceCollection::setCumulative(const bool bit) {
 
 const bool TraceCollection::isCumulative() const {
   return cumulative;
+}
+
+void TraceCollection::find(uint64_t timestamp, uint32_t occurences) {
+  for (const auto& pair : map) {
+    auto match = pair.second.find(timestamp, occurences, cumulative);
+    if (match) {
+      for (const Packet::Variant& packet : *match) {
+        std::cout << Packet::asString(packet) << std::endl;
+      }
+    }
+  }
 }

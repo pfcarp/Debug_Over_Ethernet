@@ -28,5 +28,6 @@ class TraceCollection {
     const std::vector<std::string> getVariants() const;
     void setCumulative(const bool bit);
     const bool isCumulative() const;
+    void find(uint64_t timestamp, uint32_t occurences);
 
 };

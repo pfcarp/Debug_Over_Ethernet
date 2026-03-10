@@ -1,4 +1,7 @@
 #include "Trace.hpp"
+
+
+#include <algorithm>
 #include <iostream>
 
 
@@ -61,4 +64,28 @@ const std::vector<std::pair<uint64_t, uint32_t>>& Trace::entries(bool cumulative
     return accumulated;
   }
   return flattened;
+}
+
+std::optional<std::vector<Packet::Variant>> Trace::find(uint64_t timestamp, uint32_t occurences, bool cumulative) const {
+  if (cumulative) {
+    const auto it = std::lower_bound(
+      accumulated.begin(), accumulated.end(), timestamp,
+      [](const auto& p, uint64_t value){ return p.first < value; }
+    );
+    if ((it != accumulated.end()) && (it->first == timestamp) && (it->second == occurences)) {
+      size_t offset = std::distance(accumulated.begin(), it);
+      return data.at(offset).second;
+    }
+  }
+  else {
+    const auto it = std::lower_bound(
+      flattened.begin(), flattened.end(), timestamp,
+      [](const auto& p, uint64_t value){ return p.first < value; }
+    );
+    if ((it != flattened.end()) && (it->first == timestamp) && (it->second == occurences)) {
+      size_t offset = std::distance(flattened.begin(), it);
+      return data.at(offset).second;
+    }
+  }
+  return std::nullopt;
 }

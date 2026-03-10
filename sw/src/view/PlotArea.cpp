@@ -126,9 +126,30 @@ void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, d
 }
 
 void PlotArea::onButtonPress(double x, double y) {
+  // Dragging management
   mouse.dragging = true;
   mouse.last.x = x;
   mouse.last.y = y;
+  // Info lookup management
+  //// Convert mouse position to plot-local coordinates
+  double px = mouse.current.x-(plot.x);
+  double py = mouse.current.y-(plot.y*0.5);
+  //// Ignore scroll outside plot area
+  if ((px >= 0) && (px <= plot.width) && (py >= 0) && (py <= plot.height)) {
+    //// Convert cursor to world coordinates BEFORE zoom
+    ////// X axis
+    auto xmin = factory.map.minTimestamp();
+    auto xmax = factory.map.maxTimestamp();
+    auto interval_x = xmax-xmin;
+    double visible_width_x = interval_x/viewport.scale;
+    // (plot.width)*(viewport.scale-1)
+    double world_x = ((-viewport.offset.x/viewport.scale)*interval_x)+((px/plot.width)*visible_width_x);
+    ////// Y axis
+    double world_y = (py/plot.height)*factory.map.maxCount();
+    std::cout << "Click: (" << world_x << ", " << world_y << "); Offset: (" << viewport.offset.x << ", " << viewport.offset.y << ")" << std::endl;
+    std::cout << "Decomposition: " << (-viewport.offset.x/viewport.scale) << "+" << (px/plot.width)*visible_width_x << std::endl;
+    //factory.map.find(static_cast<uint64_t>(std::round(world_x)), static_cast<uint32_t>(std::round(world_y)));
+  }
 }
 
 
