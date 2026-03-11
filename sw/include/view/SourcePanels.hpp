@@ -55,6 +55,13 @@ class SourcePanels {
       GtkWidget* grid;
       std::vector<PanelEntry> entries;
     } control;
+    struct {
+      GtkWidget* box;
+      GtkWidget* title;
+      GtkWidget* separator;
+      GtkWidget* content;
+    } description;
+    GtkWidget* side;
     // Methods
 
   public:

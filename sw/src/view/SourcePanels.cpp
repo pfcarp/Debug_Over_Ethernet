@@ -6,14 +6,17 @@
 
 SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
   parent = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-  // Controls
-  //// Setup scroll
+  // Side panel
+  side = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+  gtk_box_append(GTK_BOX(parent), side);
+  //// Controls
+  ////// Setup scroll
   control.box = gtk_scrolled_window_new();
-  //// Setup grid
+  ////// Setup grid
   control.grid = gtk_grid_new();
   gtk_grid_set_row_spacing(GTK_GRID(control.grid), 6);
   gtk_grid_set_column_spacing(GTK_GRID(control.grid), 12);
-  //// Set up header
+  ////// Set up header
   control.title.show = gtk_label_new("Show");
   gtk_widget_add_css_class(control.title.show, "heading");
   gtk_widget_set_hexpand(control.title.show, TRUE);
@@ -29,7 +32,7 @@ SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
   gtk_widget_set_hexpand(control.title.packet, TRUE);
   gtk_grid_attach(GTK_GRID(control.grid), control.title.packet, 2, 0, 1, 1);
   gtk_widget_set_halign(control.title.packet, GTK_ALIGN_START);
-  //// Create entry for each packet
+  ////// Create entry for each packet
   control.entries.reserve(Packet::ColorMap.size());
   int row = 1;
   for (const auto& [name, color] : Packet::ColorMap) {
@@ -43,12 +46,33 @@ SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
   gtk_widget_set_vexpand(control.grid, TRUE);
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(control.box), control.grid);
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(control.box), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-  gtk_box_append(GTK_BOX(parent), control.box);
-  // Seperator
+  gtk_box_append(GTK_BOX(side), control.box);
+  //// Seperator 
+  GtkWidget* separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+  gtk_box_append(GTK_BOX(side), separator);
+  //// Description
+  description.box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+  gtk_box_append(GTK_BOX(side), description.box);
+  ////// Title
+  description.title = gtk_label_new("Description");
+  gtk_widget_add_css_class(description.title, "heading");
+  gtk_widget_set_halign(description.title, GTK_ALIGN_CENTER);
+  gtk_box_append(GTK_BOX(description.box), description.title);
+  ////// Seperator 2
+  description.separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+  gtk_box_append(GTK_BOX(description.box), description.separator);
+  ////// Text Box
+  description.content = gtk_label_new("");
+  gtk_widget_set_vexpand(description.content, TRUE);
+  gtk_widget_set_halign(description.content, GTK_ALIGN_START);
+  gtk_widget_set_valign(description.content, GTK_ALIGN_START);
+  gtk_label_set_wrap(GTK_LABEL(description.content), TRUE);
+  gtk_box_append(GTK_BOX(description.box), description.content);
+  //// Seperator
   GtkWidget* seperator = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
   gtk_widget_set_vexpand(seperator, TRUE);
   gtk_box_append(GTK_BOX(parent), seperator);
-  // Panels
+  //// Panels
   panels.grid = gtk_grid_new();
   gtk_grid_set_row_spacing(GTK_GRID(panels.grid), 6);
   gtk_grid_set_column_spacing(GTK_GRID(panels.grid), 6);
