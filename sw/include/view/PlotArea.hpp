@@ -52,6 +52,7 @@ class PlotArea {
     // Methods
     double adaptX(double value);
     double adaptY(double value);
+    std::vector<std::pair<uint64_t,uint32_t>> getPointsInRadius(uint64_t x, uint32_t y, double r);
     void onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height);
     static void cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data);
     gboolean onScroll(double dy);

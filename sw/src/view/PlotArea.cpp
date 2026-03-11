@@ -9,6 +9,9 @@
 #include <vector>
 
 
+#include "Description.hpp"
+
+
 const char* xlabel = "Time (CC)";
 
 
@@ -151,7 +154,17 @@ void PlotArea::onButtonPress(double x, double y) {
     double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
     double local_y = (1.0-(py/plot.height))*visible_width_y;
     double global_y = world_y_min+local_y;
-    factory.map.find(static_cast<uint64_t>(std::round(global_x)), static_cast<uint32_t>(std::round(global_y)));
+    ////// handle all matches
+    std::string description = "";
+    auto candidates = getPointsInRadius(global_x, global_y, 2.0/sqrt(viewport.scale));
+    for (const auto& candidate : candidates) {
+      description += factory.map.find(candidate.first, candidate.second)+"\n";
+    }
+    if (description != "") {
+      Description::instance().reset();
+      Description::instance().add(description);
+      Description::instance().update();
+    }
   }
 }
 
@@ -302,4 +315,26 @@ double PlotArea::adaptY(double value) {
   double min = factory.map.minCount();
   double max = factory.map.maxCount();
   return plot.height-((value-min)/(max-min)*plot.height);
+}
+
+
+std::vector<std::pair<uint64_t,uint32_t>> PlotArea::getPointsInRadius(uint64_t x, uint32_t y, double r) {
+  std::vector<std::pair<uint64_t, uint32_t>> result;
+  // Define region of interest
+  uint64_t xmin = std::ceil(x-r);
+  uint64_t xmax = std::floor(x+r);
+  uint32_t ymin = std::ceil(y-r);
+  uint32_t ymax = std::floor(y+r);
+  // Look-up all coordinate in grid
+  double r2 = r*r;
+  for (uint64_t i = xmin; i <= xmax; i++) {
+    for (uint32_t j = ymin; j <= ymax; j++) {
+      double dx = static_cast<double>(i-x);
+      double dy = static_cast<double>(j-y);
+      if (((dx*dx)+(dy*dy)) <= r2) {
+        result.emplace_back(i, j);
+      }
+    }
+  }
+  return result;
 }

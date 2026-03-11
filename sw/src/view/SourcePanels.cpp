@@ -2,6 +2,7 @@
 
 
 #include "Packet.hpp"
+#include "Description.hpp"
 
 
 SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
@@ -62,12 +63,21 @@ SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
   description.separator = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
   gtk_box_append(GTK_BOX(description.box), description.separator);
   ////// Text Box
-  description.content = gtk_label_new("");
-  gtk_widget_set_vexpand(description.content, TRUE);
-  gtk_widget_set_halign(description.content, GTK_ALIGN_START);
-  gtk_widget_set_valign(description.content, GTK_ALIGN_START);
-  gtk_label_set_wrap(GTK_LABEL(description.content), TRUE);
-  gtk_box_append(GTK_BOX(description.box), description.content);
+  //////// Scrollable
+  description.content.scrollable = gtk_scrolled_window_new();
+  gtk_widget_set_vexpand(description.content.scrollable, TRUE);
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(description.content.scrollable), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+  gtk_box_append(GTK_BOX(description.box), description.content.scrollable);
+  //////// Label
+  description.content.label = gtk_label_new("");
+  gtk_widget_set_vexpand(description.content.label, TRUE);
+  gtk_widget_set_halign(description.content.label, GTK_ALIGN_START);
+  gtk_widget_set_valign(description.content.label, GTK_ALIGN_START);
+  gtk_label_set_wrap(GTK_LABEL(description.content.label), TRUE);
+  gtk_label_set_wrap_mode(GTK_LABEL(description.content.label), PANGO_WRAP_WORD_CHAR);
+  gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(description.content.scrollable), description.content.label);
+  //////// Link
+  Description::instance().link(description.content.label);
   //// Seperator
   GtkWidget* seperator = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
   gtk_widget_set_vexpand(seperator, TRUE);

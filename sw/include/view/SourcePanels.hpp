@@ -59,7 +59,10 @@ class SourcePanels {
       GtkWidget* box;
       GtkWidget* title;
       GtkWidget* separator;
-      GtkWidget* content;
+      struct {
+        GtkWidget* scrollable;
+        GtkWidget* label;
+      } content;
     } description;
     GtkWidget* side;
     // Methods
