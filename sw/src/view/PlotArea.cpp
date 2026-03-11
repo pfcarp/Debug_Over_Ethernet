@@ -30,7 +30,7 @@ PlotArea::PlotArea(unsigned width, unsigned height, PacketFactory& factory): dim
   gtk_widget_add_controller(parent, motion);
   // Click
   GtkGestureClick* click = GTK_GESTURE_CLICK(gtk_gesture_click_new());
-  gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 1);
+  gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 0);
   gtk_widget_add_controller(parent, GTK_EVENT_CONTROLLER(click));
   g_signal_connect(click, "pressed", G_CALLBACK(cOnButtonPress), this);
   g_signal_connect(click, "released", G_CALLBACK(cOnButtonRelease), this);
@@ -125,45 +125,54 @@ void PlotArea::onMotion(double x, double y) {
 
 void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data) {
   PlotArea* self = static_cast<PlotArea*>(user_data);
-  self->onButtonPress(x, y);
+  bool right = GDK_BUTTON_SECONDARY == gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture));
+  self->onButtonPress(right, x, y);
 }
 
-void PlotArea::onButtonPress(double x, double y) {
-  // Dragging management
-  mouse.dragging = true;
-  mouse.last.x = x;
-  mouse.last.y = y;
-  // Info lookup management
-  //// Convert mouse position to plot-local coordinates
-  double px = mouse.current.x-(plot.x);
-  double py = mouse.current.y-(plot.y*0.5);
-  //// Ignore scroll outside plot area
-  if ((px >= 0) && (px <= plot.width) && (py >= 0) && (py <= plot.height)) {
-    //// Convert cursor to world coordinates BEFORE zoom
-    ////// X axis
-    auto xmin = factory.map.minTimestamp();
-    auto xmax = factory.map.maxTimestamp();
-    double visible_width_x = (xmax-xmin)/viewport.scale;
-    double world_x_min = xmin+(((-viewport.offset.x/plot.width)/viewport.scale)*xmax);
-    double local_x = (px/plot.width)*visible_width_x;
-    double global_x = world_x_min+local_x;
-    ////// Y axis
-    auto ymin = factory.map.minCount();
-    auto ymax = factory.map.maxCount();
-    double visible_width_y = (ymax-ymin)/viewport.scale;
-    double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
-    double local_y = (1.0-(py/plot.height))*visible_width_y;
-    double global_y = world_y_min+local_y;
-    ////// handle all matches
-    std::string description = "";
-    auto candidates = getPointsInRadius(global_x, global_y, 2.0/sqrt(viewport.scale));
-    for (const auto& candidate : candidates) {
-      description += factory.map.find(candidate.first, candidate.second)+"\n";
-    }
-    if (description != "") {
-      Description::instance().reset();
-      Description::instance().add(description);
-      Description::instance().update();
+void PlotArea::onButtonPress(bool right, double x, double y) {
+  if (right) {
+    std::cout << "Right click!" << std::endl;
+  }
+  else {
+    // Dragging management
+    mouse.dragging = true;
+    mouse.last.x = x;
+    mouse.last.y = y;
+    // Info lookup management
+    //// Convert mouse position to plot-local coordinates
+    double px = mouse.current.x-(plot.x);
+    double py = mouse.current.y-(plot.y*0.5);
+    //// Ignore scroll outside plot area
+    if ((px >= 0) && (px <= plot.width) && (py >= 0) && (py <= plot.height)) {
+      //// Convert cursor to world coordinates BEFORE zoom
+      ////// X axis
+      auto xmin = factory.map.minTimestamp();
+      auto xmax = factory.map.maxTimestamp();
+      double visible_width_x = (xmax-xmin)/viewport.scale;
+      double world_x_min = xmin+(((-viewport.offset.x/plot.width)/viewport.scale)*xmax);
+      double local_x = (px/plot.width)*visible_width_x;
+      double global_x = world_x_min+local_x;
+      ////// Y axis
+      auto ymin = factory.map.minCount();
+      auto ymax = factory.map.maxCount();
+      double visible_width_y = (ymax-ymin)/viewport.scale;
+      double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
+      double local_y = (1.0-(py/plot.height))*visible_width_y;
+      double global_y = world_y_min+local_y;
+      ////// handle all matches
+      std::string description = "";
+      auto candidates = getPointsInRadius(global_x, global_y, 2.0/sqrt(viewport.scale));
+      for (const auto& candidate : candidates) {
+        std::string msg = factory.map.find(candidate.first, candidate.second);
+        if (msg != "") {
+          description += msg+"\n";
+        }
+      }
+      if (description != "") {
+        Description::instance().reset();
+        Description::instance().add(description);
+        Description::instance().update();
+      }
     }
   }
 }

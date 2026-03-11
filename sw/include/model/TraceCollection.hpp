@@ -13,7 +13,7 @@
 class TraceCollection {
 
   private:
-    bool cumulative = true;
+    bool cumulative = false;
 
   public:
     // Attributes

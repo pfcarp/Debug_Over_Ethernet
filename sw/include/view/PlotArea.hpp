@@ -59,7 +59,7 @@ class PlotArea {
     static gboolean cOnScroll(GtkEventControllerScroll* controller, double dx, double dy, gpointer user_data);
     void onMotion(double x, double y);
     static void cOnMotion(GtkEventControllerMotion* controller, double x, double y, gpointer user_data);
-    void onButtonPress(double x, double y);
+    void onButtonPress(bool right, double x, double y);
     static void cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
     void onButtonRelease();
     static void cOnButtonRelease(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
