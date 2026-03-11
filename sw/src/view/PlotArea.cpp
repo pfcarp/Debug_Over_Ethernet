@@ -140,15 +140,18 @@ void PlotArea::onButtonPress(double x, double y) {
     ////// X axis
     auto xmin = factory.map.minTimestamp();
     auto xmax = factory.map.maxTimestamp();
-    auto interval_x = xmax-xmin;
-    double visible_width_x = interval_x/viewport.scale;
-    // (plot.width)*(viewport.scale-1)
-    double world_x = ((-viewport.offset.x/viewport.scale)*interval_x)+((px/plot.width)*visible_width_x);
+    double visible_width_x = (xmax-xmin)/viewport.scale;
+    double world_x_min = xmin+(((-viewport.offset.x/plot.width)/viewport.scale)*xmax);
+    double local_x = (px/plot.width)*visible_width_x;
+    double global_x = world_x_min+local_x;
     ////// Y axis
-    double world_y = (py/plot.height)*factory.map.maxCount();
-    std::cout << "Click: (" << world_x << ", " << world_y << "); Offset: (" << viewport.offset.x << ", " << viewport.offset.y << ")" << std::endl;
-    std::cout << "Decomposition: " << (-viewport.offset.x/viewport.scale) << "+" << (px/plot.width)*visible_width_x << std::endl;
-    //factory.map.find(static_cast<uint64_t>(std::round(world_x)), static_cast<uint32_t>(std::round(world_y)));
+    auto ymin = factory.map.minCount();
+    auto ymax = factory.map.maxCount();
+    double visible_width_y = (ymax-ymin)/viewport.scale;
+    double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
+    double local_y = (1.0-(py/plot.height))*visible_width_y;
+    double global_y = world_y_min+local_y;
+    factory.map.find(static_cast<uint64_t>(std::round(global_x)), static_cast<uint32_t>(std::round(global_y)));
   }
 }
 
@@ -192,7 +195,7 @@ void PlotArea::plotCurve(const std::string& variant) {
     const auto& buffer = factory.map.entries(variant);
     if (buffer.size() == 1) {
       const auto& entry = buffer.at(0);
-      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/viewport.scale, 0, 2*M_PI);
+      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/sqrt(viewport.scale), 0, 2*M_PI);
       cairo_fill(cairo);
     }
     else if (buffer.size() > 1) {
@@ -218,7 +221,7 @@ void PlotArea::plotScatter(const std::string& variant) {
     const auto& buffer = factory.map.entries(variant);
     for (int i = 0; i < buffer.size(); i++) {
       const auto& entry = buffer.at(i);
-      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/viewport.scale, 0, 2*M_PI);
+      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/sqrt(viewport.scale), 0, 2*M_PI);
       cairo_fill(cairo);
     }
     // Actually draw
