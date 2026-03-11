@@ -50,8 +50,8 @@ class PlotArea {
     cairo_t* cairo;
     PacketFactory& factory;
     // Methods
-    double adaptX(double value);
-    double adaptY(double value);
+    const double adaptX(const double& value, const double& min, const double& interval) const;
+    const double adaptY(const double& value, const double& min, const double& interval) const;
     std::vector<std::pair<uint64_t,uint32_t>> getPointsInRadius(uint64_t x, uint32_t y, double r);
     void onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height);
     static void cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data);

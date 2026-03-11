@@ -201,6 +201,13 @@ void PlotArea::plotCurve(const std::string& variant) {
   Color color = Packet::ColorMap[variant];
   // Bother drawing iff the color is not completely transparent
   if (color.alpha > 0.0) {
+    // parameter
+    double x_min = factory.map.minTimestamp();
+    double x_max = factory.map.maxTimestamp();
+    double x_interval = x_max-x_min;
+    double y_min = factory.map.minCount();
+    double y_max = factory.map.maxCount();
+    double y_interval = y_max-y_min;
     // Define line setup
     cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
     cairo_set_line_width(cairo, 2.0/viewport.scale);
@@ -208,15 +215,15 @@ void PlotArea::plotCurve(const std::string& variant) {
     const auto& buffer = factory.map.entries(variant);
     if (buffer.size() == 1) {
       const auto& entry = buffer.at(0);
-      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/sqrt(viewport.scale), 0, 2*M_PI);
+      cairo_arc(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval), 2.0/sqrt(viewport.scale), 0, 2*M_PI);
       cairo_fill(cairo);
     }
     else if (buffer.size() > 1) {
       const auto& entry = buffer.at(0);
-      cairo_move_to(cairo, adaptX(entry.first), adaptY(entry.second));
+      cairo_move_to(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval));
       for (int i = 1; i < buffer.size(); i++) {
         const auto& entry = buffer.at(i);
-        cairo_line_to(cairo, adaptX(entry.first), adaptY(entry.second));
+        cairo_line_to(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval));
       }
     }
     // Actually draw
@@ -228,13 +235,20 @@ void PlotArea::plotScatter(const std::string& variant) {
   Color color = Packet::ColorMap[variant];
   // Bother drawing iff the color is not completely transparent
   if (color.alpha > 0.0) {
+    // parameter
+    double x_min = factory.map.minTimestamp();
+    double x_max = factory.map.maxTimestamp();
+    double x_interval = x_max-x_min;
+    double y_min = factory.map.minCount();
+    double y_max = factory.map.maxCount();
+    double y_interval = y_max-y_min;
     // Define line setup
     cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
     // Draw each curve
     const auto& buffer = factory.map.entries(variant);
     for (int i = 0; i < buffer.size(); i++) {
       const auto& entry = buffer.at(i);
-      cairo_arc(cairo, adaptX(entry.first), adaptY(entry.second), 2.0/sqrt(viewport.scale), 0, 2*M_PI);
+      cairo_arc(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval), 2.0/sqrt(viewport.scale), 0, 2*M_PI);
       cairo_fill(cairo);
     }
     // Actually draw
@@ -305,16 +319,12 @@ void PlotArea::drawAxes() {
 }
 
 
-double PlotArea::adaptX(double value) {
-  double min = factory.map.minTimestamp();
-  double max = factory.map.maxTimestamp();
-  return (value-min)/(max-min)*plot.width;
+const double PlotArea::adaptX(const double& value, const double& min, const double& interval) const {
+  return (value-min)/interval*plot.width;
 }
 
-double PlotArea::adaptY(double value) {
-  double min = factory.map.minCount();
-  double max = factory.map.maxCount();
-  return plot.height-((value-min)/(max-min)*plot.height);
+const double PlotArea::adaptY(const double& value, const double& min, const double& interval) const {
+  return plot.height-((value-min)/interval*plot.height);
 }
 
 
