@@ -68,6 +68,7 @@ class PlotArea {
     void handleZoom();
     void clampOffset();
     void drawAxes();
+    void plotTimemarkers();
     void plotCurve(const std::string& variant);
     void plotScatter(const std::string& variant);
 

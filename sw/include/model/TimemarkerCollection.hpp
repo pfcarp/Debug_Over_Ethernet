@@ -22,13 +22,13 @@ class TimemarkerCollection {
     void add(Timemarker marker);
     size_t size() const;
     bool empty() const;
-    auto begin();
-    auto end();
-    auto begin() const;
-    auto end() const;
-    auto cbegin() const;
-    auto cend() const;
-    auto& operator[](size_t i);
-    const auto& operator[](size_t i) const;
+    std::vector<Timemarker>::iterator begin();
+    std::vector<Timemarker>::iterator end();
+    std::vector<Timemarker>::const_iterator begin() const;
+    std::vector<Timemarker>::const_iterator end() const;
+    std::vector<Timemarker>::const_iterator cbegin() const;
+    std::vector<Timemarker>::const_iterator cend() const;
+    Timemarker& operator[](size_t i);
+    const Timemarker& operator[](size_t i) const;
 
 };

@@ -11,6 +11,7 @@
 
 #include "Description.hpp"
 #include "TimemarkerDialog.hpp"
+#include "TimemarkerCollection.hpp"
 
 
 const char* xlabel = "Time (CC)";
@@ -61,6 +62,7 @@ void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) 
   cairo_translate(cairo, viewport.offset.x, viewport.offset.y);
   cairo_scale(cairo, viewport.scale, viewport.scale);
   ////
+  plotTimemarkers();
   for (const std::string& variant : factory.map.getVariants()) {
     plotScatter(variant);
   }
@@ -217,6 +219,28 @@ void PlotArea::handleZoom() {
 void PlotArea::clampOffset() {
   viewport.offset.x = std::clamp(viewport.offset.x, -(plot.width)*(viewport.scale-1), 0.0);
   viewport.offset.y = std::clamp(viewport.offset.y, -(plot.height)*(viewport.scale-1), 0.0);
+}
+
+
+void PlotArea::plotTimemarkers() {
+  TimemarkerCollection& collection = TimemarkerCollection::instance();
+  double x_min = factory.map.minTimestamp();
+  double x_max = factory.map.maxTimestamp();
+  double x_interval = x_max-x_min;
+  for (const auto& marker : collection) {
+    const Color& color = marker.getColor();
+    if (color.alpha > 0.0) {
+      // Define line setup
+      cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
+      cairo_set_line_width(cairo, 1.5/viewport.scale);
+      // Draw vertical line
+      double x = adaptX(static_cast<double>(marker.getTime()), x_min, x_interval);
+      cairo_move_to(cairo, x, 0.0);
+      cairo_line_to(cairo, x, plot.height);
+    }
+  }
+  // Actually draw
+  cairo_stroke(cairo);
 }
 
 

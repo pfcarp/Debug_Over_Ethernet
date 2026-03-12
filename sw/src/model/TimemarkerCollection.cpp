@@ -22,41 +22,41 @@ bool TimemarkerCollection::empty() const {
 }
 
 
-auto TimemarkerCollection::begin() {
+std::vector<Timemarker>::iterator TimemarkerCollection::begin() {
   return collection.begin();
 }
 
 
-auto TimemarkerCollection::end() {
+std::vector<Timemarker>::iterator TimemarkerCollection::end() {
   return collection.end();
 }
 
 
-auto TimemarkerCollection::begin() const {
+std::vector<Timemarker>::const_iterator TimemarkerCollection::begin() const {
   return collection.begin();
 }
 
 
-auto TimemarkerCollection::end() const {
+std::vector<Timemarker>::const_iterator TimemarkerCollection::end() const {
   return collection.end();
 }
 
 
-auto TimemarkerCollection::cbegin() const {
+std::vector<Timemarker>::const_iterator TimemarkerCollection::cbegin() const {
   return collection.cbegin();
 }
 
 
-auto TimemarkerCollection::cend() const {
+std::vector<Timemarker>::const_iterator TimemarkerCollection::cend() const {
   return collection.cend();
 }
 
 
-auto& TimemarkerCollection::operator[](size_t i) {
+Timemarker& TimemarkerCollection::operator[](size_t i) {
   return collection[i];
 }
 
 
-const auto& TimemarkerCollection::operator[](size_t i) const {
+const Timemarker& TimemarkerCollection::operator[](size_t i) const {
   return collection[i];
 }
