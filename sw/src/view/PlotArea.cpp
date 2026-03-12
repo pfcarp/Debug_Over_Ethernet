@@ -50,15 +50,15 @@ void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) 
   dimensions.width = width;
   dimensions.height = height;
   plot.width = dimensions.width-(1.5*plot.x);
-  plot.height = dimensions.height-(1.5*plot.y);
+  plot.height = dimensions.height-(2.0*plot.y);
   // draw data
   cairo_save(cairo);
   setBackground();
   ////
-  cairo_rectangle(cairo, plot.x, plot.y*(1.5-1), plot.width, plot.height);
+  cairo_rectangle(cairo, plot.x, plot.y, plot.width, plot.height);
   cairo_clip(cairo);
   ////
-  cairo_translate(cairo, plot.x, plot.y*(1.5-1));
+  cairo_translate(cairo, plot.x, plot.y);
   cairo_translate(cairo, viewport.offset.x, viewport.offset.y);
   cairo_scale(cairo, viewport.scale, viewport.scale);
   ////
@@ -85,7 +85,7 @@ gboolean PlotArea::onScroll(double dy) {
   world.height = dimensions.height;
   // Convert mouse position to plot-local coordinates
   double px = mouse.current.x-(plot.x);
-  double py = mouse.current.y-(plot.y*0.5);
+  double py = mouse.current.y-(plot.y);
   // Ignore scroll outside plot area
   if (px < 0 || px > plot.width || py < 0 || py > plot.height)
       return FALSE;
@@ -142,7 +142,7 @@ void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, d
 void PlotArea::onButtonPress(bool right, double x, double y) {
   // Convert mouse position to plot-local coordinates
   double px = mouse.current.x-(plot.x);
-  double py = mouse.current.y-(plot.y*0.5);
+  double py = mouse.current.y-(plot.y);
   bool isInframe = (px >= 0) && (px <= plot.width) && (py >= 0) && (py <= plot.height);
   // Convert cursor to world coordinates BEFORE zoom
   //// X axis
