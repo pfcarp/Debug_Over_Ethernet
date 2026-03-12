@@ -138,11 +138,32 @@ void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, d
 }
 
 void PlotArea::onButtonPress(bool right, double x, double y) {
+  // Convert mouse position to plot-local coordinates
+  double px = mouse.current.x-(plot.x);
+  double py = mouse.current.y-(plot.y*0.5);
+  bool isInframe = (px >= 0) && (px <= plot.width) && (py >= 0) && (py <= plot.height);
+  // Convert cursor to world coordinates BEFORE zoom
+  //// X axis
+  auto xmin = factory.map.minTimestamp();
+  auto xmax = factory.map.maxTimestamp();
+  double visible_width_x = (xmax-xmin)/viewport.scale;
+  double world_x_min = xmin+(((-viewport.offset.x/plot.width)/viewport.scale)*xmax);
+  double local_x = (px/plot.width)*visible_width_x;
+  double global_x = world_x_min+local_x;
+  //// Y axis
+  auto ymin = factory.map.minCount();
+  auto ymax = factory.map.maxCount();
+  double visible_width_y = (ymax-ymin)/viewport.scale;
+  double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
+  double local_y = (1.0-(py/plot.height))*visible_width_y;
+  double global_y = world_y_min+local_y;
   if (right) {
-    GtkWindow* window = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(parent)));
-    TimemarkerDialog* timemarker = new TimemarkerDialog(GTK_WINDOW(window));
-    g_signal_connect(timemarker->parent, "response", G_CALLBACK(PlotArea::cOnDialogResponse), timemarker);
-    gtk_window_present(GTK_WINDOW(timemarker->parent));
+    if (isInframe) {
+      GtkWindow* window = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(parent)));
+      TimemarkerDialog* timemarker = new TimemarkerDialog(GTK_WINDOW(window), global_x);
+      g_signal_connect(timemarker->parent, "response", G_CALLBACK(PlotArea::cOnDialogResponse), timemarker);
+      gtk_window_present(GTK_WINDOW(timemarker->parent));
+    }
   }
   else {
     // Dragging management
@@ -150,26 +171,8 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
     mouse.last.x = x;
     mouse.last.y = y;
     // Info lookup management
-    //// Convert mouse position to plot-local coordinates
-    double px = mouse.current.x-(plot.x);
-    double py = mouse.current.y-(plot.y*0.5);
     //// Ignore scroll outside plot area
-    if ((px >= 0) && (px <= plot.width) && (py >= 0) && (py <= plot.height)) {
-      //// Convert cursor to world coordinates BEFORE zoom
-      ////// X axis
-      auto xmin = factory.map.minTimestamp();
-      auto xmax = factory.map.maxTimestamp();
-      double visible_width_x = (xmax-xmin)/viewport.scale;
-      double world_x_min = xmin+(((-viewport.offset.x/plot.width)/viewport.scale)*xmax);
-      double local_x = (px/plot.width)*visible_width_x;
-      double global_x = world_x_min+local_x;
-      ////// Y axis
-      auto ymin = factory.map.minCount();
-      auto ymax = factory.map.maxCount();
-      double visible_width_y = (ymax-ymin)/viewport.scale;
-      double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
-      double local_y = (1.0-(py/plot.height))*visible_width_y;
-      double global_y = world_y_min+local_y;
+    if (isInframe) {
       ////// handle all matches
       std::string description = "";
       auto candidates = getPointsInRadius(global_x, global_y, 2.0/sqrt(viewport.scale));

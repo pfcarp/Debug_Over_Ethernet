@@ -37,19 +37,19 @@ Collection.o:
 Points.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Points.cpp -o $(OBJ)/Points.o $(CXXFLAGS)
 
-DataBuffer.o: Color.o
+DataBuffer.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/DataBuffer.cpp -o $(OBJ)/DataBuffer.o $(CXXFLAGS)
 
-HistogramBuffer.o: Color.o
+HistogramBuffer.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/HistogramBuffer.cpp -o $(OBJ)/HistogramBuffer.o $(CXXFLAGS)
 
 Controls.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/Controls.cpp -o $(OBJ)/Controls.o $(GTK4FLAGS) $(CXXFLAGS)
 
-InterfaceSelector.o: Sniffer.o
+InterfaceSelector.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/InterfaceSelector.cpp -o $(OBJ)/InterfaceSelector.o $(GTK4FLAGS) $(CXXFLAGS)
 
-PlotArea.o: Collection.o
+PlotArea.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/PlotArea.cpp -o $(OBJ)/PlotArea.o $(GTK4FLAGS) $(CXXFLAGS)
 
 GraphEdge.o:
@@ -100,7 +100,7 @@ Dispatcher.o:
 SourcePanel.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/SourcePanel.cpp -o $(OBJ)/SourcePanel.o $(GTK4FLAGS) $(CXXFLAGS)
 
-SourcePanels.o: SourcePanel.o
+SourcePanels.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/SourcePanels.cpp -o $(OBJ)/SourcePanels.o $(GTK4FLAGS) $(CXXFLAGS)
 
 Description.o:
@@ -108,6 +108,12 @@ Description.o:
 
 TimemarkerDialog.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/TimemarkerDialog.cpp -o $(OBJ)/TimemarkerDialog.o $(GTK4FLAGS) $(CXXFLAGS)
+
+Timemarker.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Timemarker.cpp -o $(OBJ)/Timemarker.o $(CXXFLAGS)
+
+TimemarkerCollection.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/TimemarkerCollection.cpp -o $(OBJ)/TimemarkerCollection.o $(CXXFLAGS)
 
 
 parser/offline: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
@@ -122,7 +128,7 @@ tests: Dispatcher.o Packet.o Deformatter.o Stream.o PacketFactory.o
 gui/online: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/online.cpp $(wildcard object/*.o) -o $(BIN)/online-gui.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
 
-gui/live: Deformatter.o PacketFactory.o Packet.o PlotArea.o Color.o Trace.o TraceCollection.o SourcePanel.o SourcePanels.o Description.o TimemarkerDialog.o
+gui/live: Deformatter.o PacketFactory.o Packet.o PlotArea.o Color.o Trace.o TraceCollection.o SourcePanel.o SourcePanels.o Description.o TimemarkerDialog.o TimemarkerCollection.o Timemarker.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/live.cpp $(wildcard object/*.o) -o $(BIN)/live-gui.out $(GTK4FLAGS) $(CXXFLAGS)
 
 benchmark/packet: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o

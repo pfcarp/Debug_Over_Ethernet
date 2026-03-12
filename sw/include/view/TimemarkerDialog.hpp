@@ -2,6 +2,7 @@
 
 
 #include <gtk/gtk.h>
+#include <cstdint>
 
 
 class TimemarkerDialog {
@@ -20,6 +21,7 @@ class TimemarkerDialog {
       GtkWidget* cancel;
       GtkWidget* confirm;
     } button;
+    uint64_t timestamp;
     // Methods
     static void cOnNameChanged(GtkEditable* editable, gpointer user_data);
     static void cOnConfirmClicked(GtkButton* button, gpointer user_data);
@@ -29,7 +31,7 @@ class TimemarkerDialog {
     // Atttributes
     GtkWidget* parent;
     // Methods
-    TimemarkerDialog(GtkWindow* window);
+    TimemarkerDialog(GtkWindow* window, uint64_t timestamp);
     void onDialogResponse(int response_id);
 
 };
