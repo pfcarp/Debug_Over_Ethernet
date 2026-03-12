@@ -28,8 +28,9 @@ TimemarkerDialog::TimemarkerDialog(GtkWindow* window) {
   entry = gtk_entry_new();
   gtk_grid_attach(GTK_GRID(grid), entry, 0, 0, 1, 1);
   gtk_entry_set_placeholder_text(GTK_ENTRY(entry), "Enter name");
-  color = gtk_color_dialog_button_new(NULL);
-  gtk_grid_attach(GTK_GRID(grid), color, 1, 0, 1, 1);
+  color.dialog = gtk_color_dialog_new();
+  color.picker = gtk_color_dialog_button_new(color.dialog);
+  gtk_grid_attach(GTK_GRID(grid), color.picker, 1, 0, 1, 1);
 
   // Buttons
   button.cancel = gtk_button_new_with_label("Cancel");
@@ -43,9 +44,6 @@ TimemarkerDialog::TimemarkerDialog(GtkWindow* window) {
   g_signal_connect(entry, "changed", G_CALLBACK(TimemarkerDialog::cOnNameChanged), button.confirm);
   g_signal_connect(button.cancel, "clicked", G_CALLBACK(TimemarkerDialog::cOnCancelClicked), this);
   g_signal_connect(button.confirm, "clicked", G_CALLBACK(TimemarkerDialog::cOnConfirmClicked), this);
-  // Bind enter key to confirm
-  gtk_widget_set_receives_default(button.confirm, TRUE);
-  gtk_window_set_default_widget(GTK_WINDOW(parent), button.confirm);
 }
 
 
@@ -70,7 +68,7 @@ void TimemarkerDialog::cOnCancelClicked(GtkButton* button, gpointer user_data) {
 void TimemarkerDialog::onDialogResponse(int response_id) {
   if (response_id == GTK_RESPONSE_ACCEPT) {
     const char* name = gtk_editable_get_text(GTK_EDITABLE(entry));
-    const GdkRGBA* colorSelection = gtk_color_dialog_button_get_rgba(GTK_COLOR_DIALOG_BUTTON(color));
+    const GdkRGBA* colorSelection = gtk_color_dialog_button_get_rgba(GTK_COLOR_DIALOG_BUTTON(color.picker));
     g_print("Create marker: %s\n", name);
     /* create_timemarker(name, &color); */
   }

@@ -12,7 +12,10 @@ class TimemarkerDialog {
     GtkWidget* header;
     GtkWidget* grid;
     GtkWidget* entry;
-    GtkWidget* color;
+    struct {
+      GtkColorDialog* dialog;
+      GtkWidget* picker;
+    } color;
     struct {
       GtkWidget* cancel;
       GtkWidget* confirm;

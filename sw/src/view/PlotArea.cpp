@@ -127,6 +127,7 @@ void PlotArea::onMotion(double x, double y) {
 void PlotArea::cOnDialogResponse(GtkDialog* dialog, int response_id, gpointer user_data) {
   TimemarkerDialog* self = static_cast<TimemarkerDialog*>(user_data);
   self->onDialogResponse(response_id);
+  delete self;
 }
 
 
