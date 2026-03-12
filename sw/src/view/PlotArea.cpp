@@ -10,6 +10,7 @@
 
 
 #include "Description.hpp"
+#include "TimemarkerDialog.hpp"
 
 
 const char* xlabel = "Time (CC)";
@@ -123,6 +124,12 @@ void PlotArea::onMotion(double x, double y) {
 }
 
 
+void PlotArea::cOnDialogResponse(GtkDialog* dialog, int response_id, gpointer user_data) {
+  TimemarkerDialog* self = static_cast<TimemarkerDialog*>(user_data);
+  self->onDialogResponse(response_id);
+}
+
+
 void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data) {
   PlotArea* self = static_cast<PlotArea*>(user_data);
   bool right = GDK_BUTTON_SECONDARY == gtk_gesture_single_get_current_button(GTK_GESTURE_SINGLE(gesture));
@@ -131,7 +138,10 @@ void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, d
 
 void PlotArea::onButtonPress(bool right, double x, double y) {
   if (right) {
-    std::cout << "Right click!" << std::endl;
+    GtkWindow* window = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(parent)));
+    TimemarkerDialog* timemarker = new TimemarkerDialog(GTK_WINDOW(window));
+    g_signal_connect(timemarker->parent, "response", G_CALLBACK(PlotArea::cOnDialogResponse), timemarker);
+    gtk_window_present(GTK_WINDOW(timemarker->parent));
   }
   else {
     // Dragging management

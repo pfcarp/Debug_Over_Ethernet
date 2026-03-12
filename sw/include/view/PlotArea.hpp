@@ -63,6 +63,7 @@ class PlotArea {
     static void cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
     void onButtonRelease();
     static void cOnButtonRelease(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
+    static void cOnDialogResponse(GtkDialog* dialog, int response_id, gpointer user_data);
     void setBackground();
     void handleZoom();
     void clampOffset();
