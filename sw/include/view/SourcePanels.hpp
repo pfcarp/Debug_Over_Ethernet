@@ -71,6 +71,5 @@ class SourcePanels {
     GtkWidget* parent;
     // Methods
     SourcePanels();
-    void update();
 
 };

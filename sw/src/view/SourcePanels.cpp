@@ -4,7 +4,7 @@
 #include "Packet.hpp"
 #include "Description.hpp"
 #include "TraceDatabase.hpp"
-#include <iostream>
+#include "PlotAreaTracker.hpp"
 
 
 SourcePanels::SourcePanels() {
@@ -101,12 +101,6 @@ SourcePanels::SourcePanels() {
   }
 }
 
-void SourcePanels::update() {
-  for (uint32_t i = 0; i < panels.widget.size(); i++) {
-    panels.widget[i].update();
-  }
-}
-
 
 PanelEntry::PanelEntry(const std::string& name, const Color& color, SourcePanels* parent): parent(parent) {
   // Show checkbox
@@ -126,10 +120,11 @@ PanelEntry::PanelEntry(const std::string& name, const Color& color, SourcePanels
   gtk_widget_set_halign(label, GTK_ALIGN_START);
 }
 
+
 void PanelEntry::onCheckToggle(GtkCheckButton* check) {
   const std::string name = std::string(gtk_label_get_text(GTK_LABEL(label)));
   Packet::ColorMap[name].alpha = gtk_check_button_get_active(check);
-  parent->update();
+  PlotAreaTracker::instance().update();
 }
 
 void PanelEntry::cOnCheckToggle(GObject* object, gpointer user_data) {
@@ -144,7 +139,7 @@ void PanelEntry::onColorSet(GtkColorDialogButton* button) {
   Packet::ColorMap[name].red   = color->red;
   Packet::ColorMap[name].blue  = color->blue;
   Packet::ColorMap[name].green = color->green;
-  parent->update();
+  PlotAreaTracker::instance().update();
 }
 
 

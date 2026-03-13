@@ -49,6 +49,9 @@ Controls.o:
 InterfaceSelector.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/InterfaceSelector.cpp -o $(OBJ)/InterfaceSelector.o $(GTK4FLAGS) $(CXXFLAGS)
 
+PlotAreaTracker.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/PlotAreaTracker.cpp -o $(OBJ)/PlotAreaTracker.o $(GTK4FLAGS) $(CXXFLAGS)
+
 PlotArea.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(VIEW)/PlotArea.cpp -o $(OBJ)/PlotArea.o $(GTK4FLAGS) $(CXXFLAGS)
 
@@ -84,6 +87,9 @@ Trace.o:
 
 TraceCollection.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/TraceCollection.cpp -o $(OBJ)/TraceColletion.o $(CXXFLAGS)
+
+TraceDatabase.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/TraceDatabase.cpp -o $(OBJ)/TraceDatabase.o $(CXXFLAGS)
 
 PacketFactory.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(CTRL)/PacketFactory.cpp -o $(OBJ)/PacketFactory.o $(CXXFLAGS)
@@ -128,7 +134,7 @@ tests: Dispatcher.o Packet.o Deformatter.o Stream.o PacketFactory.o
 gui/online: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/online.cpp $(wildcard object/*.o) -o $(BIN)/online-gui.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
 
-gui/live: Deformatter.o PacketFactory.o Packet.o PlotArea.o Color.o Trace.o TraceCollection.o SourcePanel.o SourcePanels.o Description.o TimemarkerDialog.o TimemarkerCollection.o Timemarker.o
+gui/live: Deformatter.o PacketFactory.o Packet.o PlotAreaTracker.o PlotArea.o Color.o Trace.o TraceCollection.o TraceDatabase.o SourcePanel.o SourcePanels.o Description.o TimemarkerDialog.o TimemarkerCollection.o Timemarker.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/live.cpp $(wildcard object/*.o) -o $(BIN)/live-gui.out $(GTK4FLAGS) $(CXXFLAGS)
 
 benchmark/packet: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o

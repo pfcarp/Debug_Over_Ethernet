@@ -16,38 +16,6 @@ class PlotArea {
   private:
     // Attributes
     uint32_t id;
-    struct {
-      double x      = 50.0;
-      double y      = 50.0;
-      double width  =  0.0;
-      double height =  0.0;
-    } plot;
-    struct {
-      double width;
-      double height;
-    } dimensions;
-    struct {
-      double scale = 1.0;
-      struct {
-        double x = 0.0;
-        double y = 0.0;
-      } offset;
-    } viewport;
-    struct {
-      double width;
-      double height;
-    } world;
-    struct {
-      struct {
-        double x = 0.0;
-        double y = 0.0;
-      } current;
-      struct {
-        double x = 0.0;
-        double y = 0.0;
-      } last;
-      bool dragging = false;
-    } mouse;
     cairo_t* cairo;
     // Methods
     const double adaptX(const double& value, const double& min, const double& interval) const;
@@ -74,8 +42,10 @@ class PlotArea {
     void plotScatter(const std::string& variant);
 
   public:
+    // Attributes
     GtkWidget* parent;
-    
-    PlotArea(unsigned width, unsigned height, uint32_t id);
+    // Methods
+    PlotArea(uint32_t id);
+    void update();
 
 };

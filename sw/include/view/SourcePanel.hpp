@@ -29,6 +29,5 @@ class SourcePanel {
     GtkWidget* parent;
     // Methods
     SourcePanel(uint32_t sourceID);
-    void update();
 
 };
