@@ -1,62 +1,75 @@
 #include "TimemarkerCollection.hpp"
 
 
+#include "Color.hpp"
+
+
+TimemarkerCollection::TimemarkerCollection() {
+  range.begin = collection.begin();
+  range.end = collection.end();
+}
+
+
 TimemarkerCollection& TimemarkerCollection::instance() {
   static TimemarkerCollection instance;
   return instance;
 }
 
 
-void TimemarkerCollection::add(Timemarker marker) {
-  collection.push_back(marker);
+void TimemarkerCollection::insert(Timemarker marker) {
+  collection.insert(marker);
+  resetScope();
+}
+
+
+void TimemarkerCollection::setScope(uint64_t lower, uint64_t upper) {
+  Timemarker begin(lower, Color(), "");
+  Timemarker end(upper, Color(), "");
+  range.begin = collection.lower_bound(begin);
+  range.end = collection.upper_bound(end);
+}
+
+void TimemarkerCollection::resetScope() {
+  range.begin = collection.begin();
+  range.end = collection.end();
 }
 
 
 size_t TimemarkerCollection::size() const {
-  return collection.size();
+  return std::distance(range.begin, range.end);
 }
 
 
 bool TimemarkerCollection::empty() const {
-  return collection.empty();
+  return size() == 0;
 }
 
 
-std::vector<Timemarker>::iterator TimemarkerCollection::begin() {
-  return collection.begin();
+std::set<Timemarker>::iterator TimemarkerCollection::begin() {
+  return range.begin;
 }
 
 
-std::vector<Timemarker>::iterator TimemarkerCollection::end() {
-  return collection.end();
+std::set<Timemarker>::iterator TimemarkerCollection::end() {
+  return range.end;
 }
 
 
-std::vector<Timemarker>::const_iterator TimemarkerCollection::begin() const {
-  return collection.begin();
+std::set<Timemarker>::const_iterator TimemarkerCollection::begin() const {
+  return range.begin;
 }
 
 
-std::vector<Timemarker>::const_iterator TimemarkerCollection::end() const {
-  return collection.end();
+std::set<Timemarker>::const_iterator TimemarkerCollection::end() const {
+  return range.end;
 }
 
 
-std::vector<Timemarker>::const_iterator TimemarkerCollection::cbegin() const {
-  return collection.cbegin();
+std::set<Timemarker>::const_iterator TimemarkerCollection::cbegin() const {
+  return range.begin;
 }
 
 
-std::vector<Timemarker>::const_iterator TimemarkerCollection::cend() const {
-  return collection.cend();
-}
-
-
-Timemarker& TimemarkerCollection::operator[](size_t i) {
-  return collection[i];
-}
-
-
-const Timemarker& TimemarkerCollection::operator[](size_t i) const {
-  return collection[i];
+std::set<Timemarker>::const_iterator TimemarkerCollection::cend() const {
+  return range.end;
 }

@@ -75,7 +75,7 @@ void TimemarkerDialog::onDialogResponse(int response_id) {
     const char* name = gtk_editable_get_text(GTK_EDITABLE(entry));
     const GdkRGBA* colorSelection = gtk_color_dialog_button_get_rgba(GTK_COLOR_DIALOG_BUTTON(color.picker));
     Color selection(colorSelection->red, colorSelection->green, colorSelection->blue, 1.0);
-    TimemarkerCollection::instance().add(Timemarker(timestamp, selection, std::string(name)));
+    TimemarkerCollection::instance().insert(Timemarker(timestamp, selection, std::string(name)));
   }
   gtk_window_destroy(GTK_WINDOW(parent));
 }

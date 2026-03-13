@@ -71,6 +71,7 @@ void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) 
   // axes
   cairo_save(cairo);
   drawAxes();
+  drawTimemarkerHeaders();
   cairo_restore(cairo);
 }
 
@@ -301,6 +302,48 @@ void PlotArea::plotScatter(const std::string& variant) {
     // Actually draw
     cairo_stroke(cairo);
   }
+}
+
+void PlotArea::drawTimemarkerHeaders() {
+  // Global parameters
+  const double padding = 8.0;
+  double x_min = factory.map.minTimestamp();
+  double x_max = factory.map.maxTimestamp();
+  double x_visible_range_min = x_min+(((-viewport.offset.x/plot.width)/viewport.scale)*x_max);
+  double x_visible_range_max = x_visible_range_min+((x_max-x_min)/viewport.scale);
+  // Loop over visible (i.e., in-range) time markers
+  TimemarkerCollection& collection = TimemarkerCollection::instance();
+  collection.setScope(x_visible_range_min, x_visible_range_max);
+  for (const auto& marker : collection) {
+    const Color& color = marker.getColor();
+    if (color.alpha > 0.0) {
+      double x = plot.x+adaptX(static_cast<double>(marker.getTime()), x_visible_range_min, x_visible_range_max-x_visible_range_min);
+      // Compute inscribed text dimensions
+      cairo_select_font_face(cairo, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+      cairo_set_font_size(cairo, 11);
+      cairo_text_extents_t ext;
+      cairo_text_extents(cairo, marker.getName().c_str(), &ext);
+      // Rectangle
+      //// Compute parameters
+      double rect_w = ext.width+(2*padding);
+      double rect_h = ext.height+(2*padding);
+      double rect_x = x-(rect_w/2.0);
+      double rect_y = plot.y-rect_h;
+      //// Draw
+      cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
+      cairo_rectangle(cairo, rect_x, rect_y, rect_w, rect_h);
+      cairo_fill(cairo);
+      // Label
+      //// Compute text position
+      double text_x = x-(ext.width/2.0)-ext.x_bearing;
+      double text_y = rect_y+((padding+ext.height)/2.0)-ext.y_bearing;
+      //// Draw text
+      cairo_set_source_rgb(cairo, 1, 1, 1);
+      cairo_move_to(cairo, text_x, text_y);
+      cairo_show_text(cairo, marker.getName().c_str());
+    }
+  }
+  collection.resetScope();
 }
 
 void PlotArea::drawAxes() {

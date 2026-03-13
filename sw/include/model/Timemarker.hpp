@@ -24,5 +24,7 @@ class Timemarker {
     const uint64_t& getTime() const;
     const Color& getColor() const;
     const std::string& getName() const;
+    bool operator<(const Timemarker& other) const;
+    bool operator<(const uint64_t& other) const;
 
 };
