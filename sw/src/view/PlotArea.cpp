@@ -5,19 +5,18 @@
 #include <cstddef>
 #include <cstdint>
 #include <algorithm>
-#include <iostream>
-#include <vector>
 
 
 #include "Description.hpp"
 #include "TimemarkerDialog.hpp"
 #include "TimemarkerCollection.hpp"
+#include "TraceDatabase.hpp"
 
 
 const char* xlabel = "Time (CC)";
 
 
-PlotArea::PlotArea(unsigned width, unsigned height, PacketFactory& factory): dimensions({width, height}), factory(factory) {
+PlotArea::PlotArea(unsigned width, unsigned height, uint32_t id): dimensions({width, height}), id(id) {
   parent = gtk_drawing_area_new();
   gtk_widget_set_hexpand(parent, TRUE);
   gtk_widget_set_vexpand(parent, TRUE);
@@ -63,7 +62,8 @@ void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) 
   cairo_scale(cairo, viewport.scale, viewport.scale);
   ////
   plotTimemarkers();
-  for (const std::string& variant : factory.map.getVariants()) {
+  const auto& variants = TraceDatabase::instance()[id].getVariants();
+  for (const std::string& variant : variants) {
     plotScatter(variant);
   }
   ////
@@ -146,16 +146,17 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
   double py = mouse.current.y-(plot.y);
   bool isInframe = (px >= 0) && (px <= plot.width) && (py >= 0) && (py <= plot.height);
   // Convert cursor to world coordinates BEFORE zoom
+  TraceDatabase& database = TraceDatabase::instance();
   //// X axis
-  auto xmin = factory.map.minTimestamp();
-  auto xmax = factory.map.maxTimestamp();
+  auto xmin = database.minTimestamp();
+  auto xmax = database.maxTimestamp();
   double visible_width_x = (xmax-xmin)/viewport.scale;
   double world_x_min = xmin+(((-viewport.offset.x/plot.width)/viewport.scale)*xmax);
   double local_x = (px/plot.width)*visible_width_x;
   double global_x = world_x_min+local_x;
   //// Y axis
-  auto ymin = factory.map.minCount();
-  auto ymax = factory.map.maxCount();
+  auto ymin = database.minCount();
+  auto ymax = database.maxCount();
   double visible_width_y = (ymax-ymin)/viewport.scale;
   double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
   double local_y = (1.0-(py/plot.height))*visible_width_y;
@@ -180,7 +181,7 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
       std::string description = "";
       auto candidates = getPointsInRadius(global_x, global_y, 2.0/sqrt(viewport.scale));
       for (const auto& candidate : candidates) {
-        std::string msg = factory.map.find(candidate.first, candidate.second);
+        std::string msg = database[id].find(candidate.first, candidate.second);
         if (msg != "") {
           description += msg+"\n";
         }
@@ -225,8 +226,9 @@ void PlotArea::clampOffset() {
 
 void PlotArea::plotTimemarkers() {
   TimemarkerCollection& collection = TimemarkerCollection::instance();
-  double x_min = factory.map.minTimestamp();
-  double x_max = factory.map.maxTimestamp();
+  TraceDatabase& database = TraceDatabase::instance();
+  double x_min = database.minTimestamp();
+  double x_max = database.maxTimestamp();
   double x_interval = x_max-x_min;
   for (const auto& marker : collection) {
     const Color& color = marker.getColor();
@@ -250,17 +252,18 @@ void PlotArea::plotCurve(const std::string& variant) {
   // Bother drawing iff the color is not completely transparent
   if (color.alpha > 0.0) {
     // parameter
-    double x_min = factory.map.minTimestamp();
-    double x_max = factory.map.maxTimestamp();
+    TraceDatabase& database = TraceDatabase::instance();
+    double x_min = database.minTimestamp();
+    double x_max = database.maxTimestamp();
     double x_interval = x_max-x_min;
-    double y_min = factory.map.minCount();
-    double y_max = factory.map.maxCount();
+    double y_min = database.minCount();
+    double y_max = database.maxCount();
     double y_interval = y_max-y_min;
     // Define line setup
     cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
     cairo_set_line_width(cairo, 2.0/viewport.scale);
     // Draw each curve
-    const auto& buffer = factory.map.entries(variant);
+    const auto& buffer = database[id].entries(variant);
     if (buffer.size() == 1) {
       const auto& entry = buffer.at(0);
       cairo_arc(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval), 2.0/sqrt(viewport.scale), 0, 2*M_PI);
@@ -284,16 +287,17 @@ void PlotArea::plotScatter(const std::string& variant) {
   // Bother drawing iff the color is not completely transparent
   if (color.alpha > 0.0) {
     // parameter
-    double x_min = factory.map.minTimestamp();
-    double x_max = factory.map.maxTimestamp();
+    TraceDatabase& database = TraceDatabase::instance();
+    double x_min = database.minTimestamp();
+    double x_max = database.maxTimestamp();
     double x_interval = x_max-x_min;
-    double y_min = factory.map.minCount();
-    double y_max = factory.map.maxCount();
+    double y_min = database.minCount();
+    double y_max = database.maxCount();
     double y_interval = y_max-y_min;
     // Define line setup
     cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
     // Draw each curve
-    const auto& buffer = factory.map.entries(variant);
+    const auto& buffer = database[id].entries(variant);
     for (int i = 0; i < buffer.size(); i++) {
       const auto& entry = buffer.at(i);
       cairo_arc(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval), 2.0/sqrt(viewport.scale), 0, 2*M_PI);
@@ -305,10 +309,11 @@ void PlotArea::plotScatter(const std::string& variant) {
 }
 
 void PlotArea::drawTimemarkerHeaders() {
+  TraceDatabase& database = TraceDatabase::instance();
   // Global parameters
   const double padding = 8.0;
-  double x_min = factory.map.minTimestamp();
-  double x_max = factory.map.maxTimestamp();
+  double x_min = database.minTimestamp();
+  double x_max = database.maxTimestamp();
   double x_visible_range_min = x_min+(((-viewport.offset.x/plot.width)/viewport.scale)*x_max);
   double x_visible_range_max = x_visible_range_min+((x_max-x_min)/viewport.scale);
   // Loop over visible (i.e., in-range) time markers
@@ -347,6 +352,7 @@ void PlotArea::drawTimemarkerHeaders() {
 }
 
 void PlotArea::drawAxes() {
+  TraceDatabase& database = TraceDatabase::instance();
   const int nticks = 10;
   const double tick_len = 5.0;
 
@@ -366,8 +372,8 @@ void PlotArea::drawAxes() {
   cairo_move_to(cairo, plot.x+(plot.width-extents.width)/2, dimensions.height-10);
   cairo_show_text(cairo, xlabel);
   // X ticks & labels (between edges)
-  auto xmin = factory.map.minTimestamp();
-  auto xmax = factory.map.maxTimestamp();
+  auto xmin = database.minTimestamp();
+  auto xmax = database.maxTimestamp();
   double visible_width_x = (xmax-xmin)/viewport.scale;
   double world_x_min = xmin+(((-viewport.offset.x/plot.width)/viewport.scale)*xmax);
   for (int i = 0; i <= nticks; i++) {
@@ -389,8 +395,8 @@ void PlotArea::drawAxes() {
   cairo_line_to(cairo, plot.x, dimensions.height-plot.y-plot.height);
   cairo_stroke(cairo);
   // Y ticks & labels
-  auto ymin = factory.map.minCount();
-  auto ymax = factory.map.maxCount();
+  auto ymin = database.minCount();
+  auto ymax = database.maxCount();
   double visible_width_y = (ymax-ymin)/viewport.scale;
   double world_y_min = ymin+ymax-((((plot.height-viewport.offset.y)/plot.height)/viewport.scale)*ymax);
   for (int i = 0; i <= nticks; i++) {

@@ -6,14 +6,13 @@
 
 
 #include "PlotArea.hpp"
-#include "PacketFactory.hpp"
 
 
 class SourcePanel {
 
   private:
     // Attributes
-    PacketFactory& factory;
+    uint32_t sourceID;
     struct {
       GtkWidget* box;
       GtkWidget* title;
@@ -29,7 +28,7 @@ class SourcePanel {
     // Attributes
     GtkWidget* parent;
     // Methods
-    SourcePanel(uint32_t sourceID, PacketFactory& factory);
+    SourcePanel(uint32_t sourceID);
     void update();
 
 };

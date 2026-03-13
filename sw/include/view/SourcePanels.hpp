@@ -6,7 +6,6 @@
 #include <vector>
 
 
-#include "PacketFactory.hpp"
 #include "SourcePanel.hpp"
 #include "Color.hpp"
 
@@ -71,7 +70,7 @@ class SourcePanels {
     // Attributes
     GtkWidget* parent;
     // Methods
-    SourcePanels(std::vector<PacketFactory>& factories);
+    SourcePanels();
     void update();
 
 };

@@ -1,12 +1,12 @@
 #pragma once
 
 
+#include <cstdint>
 #include <gtk/gtk.h>
 #include <string>
 
 
-#include "PacketFactory.hpp"
-#include "Trace.hpp"
+#include "TraceDatabase.hpp"
 #include "Packet.hpp"
 #include "Color.hpp"
 
@@ -15,6 +15,7 @@ class PlotArea {
 
   private:
     // Attributes
+    uint32_t id;
     struct {
       double x      = 50.0;
       double y      = 50.0;
@@ -48,7 +49,6 @@ class PlotArea {
       bool dragging = false;
     } mouse;
     cairo_t* cairo;
-    PacketFactory& factory;
     // Methods
     const double adaptX(const double& value, const double& min, const double& interval) const;
     const double adaptY(const double& value, const double& min, const double& interval) const;
@@ -76,6 +76,6 @@ class PlotArea {
   public:
     GtkWidget* parent;
     
-    PlotArea(unsigned width, unsigned height, PacketFactory& factory);
+    PlotArea(unsigned width, unsigned height, uint32_t id);
 
 };

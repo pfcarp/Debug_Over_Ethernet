@@ -22,8 +22,8 @@ class TraceCollection {
     Packet::Variant* add(std::string name, uint64_t ts, Packet::Variant pkt);
     uint64_t minTimestamp() const;
     uint64_t maxTimestamp() const;
-    uint64_t maxCount() const;
-    uint64_t minCount() const;
+    uint32_t maxCount() const;
+    uint32_t minCount() const;
     const std::vector<std::pair<uint64_t, uint32_t>>& entries(std::string name) const;
     const std::vector<std::string> getVariants() const;
     void setCumulative(const bool bit);

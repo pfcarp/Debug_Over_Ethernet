@@ -20,8 +20,8 @@ class Trace {
     Packet::Variant* add(uint64_t ts, Packet::Variant pkt);
     uint64_t minTimestamp(bool cumulative) const;
     uint64_t maxTimestamp(bool cumulative) const;
-    uint64_t maxCount(bool cumulative) const;
-    uint64_t minCount() const;
+    uint32_t maxCount(bool cumulative) const;
+    uint32_t minCount() const;
     const std::vector<std::pair<uint64_t, uint32_t>>& entries(bool cumulative) const;
     std::optional<std::vector<Packet::Variant>> find(uint64_t timestamp, uint32_t occurences, bool cumulative) const;
 };

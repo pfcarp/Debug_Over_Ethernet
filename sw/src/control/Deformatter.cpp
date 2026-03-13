@@ -10,7 +10,8 @@
 
 
 Deformatter::Deformatter() {
-  factories.resize(factoriesNumber);
+  for (uint32_t i = 0; i < factoriesNumber; i++)
+    factories.emplace_back(i);
 }
 
 

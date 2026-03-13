@@ -9,7 +9,7 @@
 #include "Tools.hpp"
 
 
-PacketFactory::PacketFactory() {}
+PacketFactory::PacketFactory(uint32_t id): map(TraceDatabase::instance()[id]) {}
 
 std::ostream& operator<<(std::ostream& os, const Packet::Base& e) {
   os << e.asString();

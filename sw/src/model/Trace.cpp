@@ -51,11 +51,11 @@ uint64_t Trace::maxTimestamp(bool cumulative) const {
   }
 }
 
-uint64_t Trace::minCount() const {
+uint32_t Trace::minCount() const {
   return 0;
 }
 
-uint64_t Trace::maxCount(bool cumulative) const {
+uint32_t Trace::maxCount(bool cumulative) const {
   return (cumulative)? accumulated.back().second : max;
 }
 

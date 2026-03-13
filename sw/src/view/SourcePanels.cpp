@@ -3,9 +3,11 @@
 
 #include "Packet.hpp"
 #include "Description.hpp"
+#include "TraceDatabase.hpp"
+#include <iostream>
 
 
-SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
+SourcePanels::SourcePanels() {
   parent = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   // Side panel
   side = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
@@ -87,11 +89,12 @@ SourcePanels::SourcePanels(std::vector<PacketFactory>& factories) {
   gtk_grid_set_row_spacing(GTK_GRID(panels.grid), 6);
   gtk_grid_set_column_spacing(GTK_GRID(panels.grid), 6);
   gtk_box_append(GTK_BOX(parent), panels.grid);
-  panels.widget.reserve(factories.size());
-  for (uint32_t i = 0; i < factories.size(); i++) {
-    panels.widget.emplace_back(i, factories[i]);
-    int rows = static_cast<int>(std::sqrt(factories.size()));
-    int cols = (factories.size()+rows-1)/rows;
+  TraceDatabase& database = TraceDatabase::instance();
+  panels.widget.reserve(database.size());
+  for (uint32_t i = 0; i < database.size(); i++) {
+    panels.widget.emplace_back(i);
+    int rows = static_cast<int>(std::sqrt(database.size()));
+    int cols = (database.size()+rows-1)/rows;
     int row = i/rows;
     int col = i%cols;
     gtk_grid_attach(GTK_GRID(panels.grid), panels.widget.back().parent, col, row, 1, 1);

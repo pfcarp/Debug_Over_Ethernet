@@ -5,6 +5,7 @@
 #include <memory>
 
 
+#include "TraceDatabase.hpp"
 #include "TraceCollection.hpp"
 #include "Packet.hpp"
 #include "Trace.hpp"
@@ -16,7 +17,7 @@ class PacketFactory {
   
   public:
     // Attributes
-    TraceCollection map;
+    TraceCollection& map;
 
   private:
     // Attibutes
@@ -332,7 +333,7 @@ class PacketFactory {
   public:
     // Attributes
     // Methods
-    PacketFactory();
+    PacketFactory(uint32_t id);
     bool insert(const uint8_t& byte);
     void setTimestamp(uint64_t t);
 
