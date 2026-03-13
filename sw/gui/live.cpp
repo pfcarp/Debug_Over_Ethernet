@@ -12,7 +12,7 @@
 #include "SourcePanels.hpp"
 #include "Deformatter.hpp"
 #include "PlotArea.hpp"
-#include "Events.hpp"
+#include "PlotAreaTracker.hpp"
 
 
 SourcePanels* panels;
@@ -295,15 +295,15 @@ class ParseTracePage: public Page {
     GtkWidget* percent_label;
     GtkWidget* spinner;
     std::vector<uint8_t>* buffer;
-    DeformatterVector* deformatter;
+    Deformatter* deformatter;
 
   public:
-    ParseTracePage(std::vector<uint8_t>* buffer, DeformatterVector* deformatter);
+    ParseTracePage(std::vector<uint8_t>* buffer, Deformatter* deformatter);
     void onActivate(GtkWidget* button);
 
 };
 
-ParseTracePage::ParseTracePage(std::vector<uint8_t>* buffer, DeformatterVector* deformatter): Page("Parse Trace"), buffer(buffer), deformatter(deformatter) {
+ParseTracePage::ParseTracePage(std::vector<uint8_t>* buffer, Deformatter* deformatter): Page("Parse Trace"), buffer(buffer), deformatter(deformatter) {
   page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 15);
   gtk_widget_set_valign(page, GTK_ALIGN_CENTER);
   gtk_widget_set_halign(page, GTK_ALIGN_CENTER);
@@ -384,12 +384,12 @@ class Wizard {
     static void cOnNext(GtkWidget* _, gpointer data);
 
   public:
-    Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, DeformatterVector* deformatter);
+    Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, Deformatter* deformatter);
     void onNext();
 
 };
 
-Wizard::Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, DeformatterVector* deformatter): parent(parent) {
+Wizard::Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, Deformatter* deformatter): parent(parent) {
   // create DialogBox
   dialog = gtk_dialog_new();
   gtk_window_set_application(GTK_WINDOW(dialog), app);
@@ -458,7 +458,7 @@ void Wizard::onNext() {
   }
   else if (current == steps.end()) {
     gtk_window_destroy(GTK_WINDOW(dialog));
-    panels->update();
+    PlotAreaTracker::instance().update();
   }
 }
 
@@ -470,7 +470,7 @@ void Wizard::cOnNext(GtkWidget* _, gpointer data) {
 
 static void onActivate(GtkApplication* app, gpointer _) {
   std::vector<uint8_t>* buffer = new std::vector<uint8_t>();
-  DeformatterVector* deformatter = new DeformatterVector();
+  Deformatter* deformatter = new Deformatter();
 
   GtkWidget* window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(window), "DoEth Live Tracer");
@@ -478,7 +478,7 @@ static void onActivate(GtkApplication* app, gpointer _) {
   gtk_window_present(GTK_WINDOW(window));
 
   Wizard* wiz = new Wizard(app, window, buffer, deformatter);
-  panels = new SourcePanels(deformatter->factories);
+  panels = new SourcePanels();
 
   gtk_window_set_child(GTK_WINDOW(window), panels->parent);
 }
