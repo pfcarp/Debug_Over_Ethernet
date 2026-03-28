@@ -276,7 +276,26 @@ void AcquireTracePage::onActivate(GtkWidget* _) {
   GtkWidget* visible = gtk_stack_get_visible_child(GTK_STACK(stack));
   if (visible == file.page) {
     std::ifstream binary(std::string(gtk_editable_get_text(GTK_EDITABLE(file.entry))), std::ios::binary);
-    if (!binary) throw std::runtime_error("Failed to open file");
+    if (!binary) {
+      throw std::runtime_error("Failed to open file");
+    }
+    // Header
+    std::vector<uint8_t> header(5+5+4+8);
+    binary.read(reinterpret_cast<char*>(header.data()), 5+5+4+8);
+    if (binary.gcount() < 5+5+4+8) {
+      throw std::runtime_error("File is too short");
+    }
+    //// Extract
+    std::string program(reinterpret_cast<const char*>(header.data()), 5);
+    std::string trace(reinterpret_cast<const char*>(header.data()+5), 5);
+    uint32_t version = *reinterpret_cast<uint32_t*>(header.data()+5+5);
+    uint64_t timestamp = *reinterpret_cast<uint64_t*>(header.data()+5+5+4);
+    //// Check
+    if (program != "DOETH") {
+      throw std::runtime_error("Unexpected file type! Got: "+program+" but DOETH expected.");
+    }
+    std::cout << "Reading trace of type "+trace << std::endl;
+    // Payload
     (*buffer) = std::vector<uint8_t>(std::istreambuf_iterator<char>(binary), std::istreambuf_iterator<char>());
   }
   else if (visible == ethernet.page) {

@@ -8,8 +8,11 @@ Options:
     --packet <packet>   Packet type
     --amount <amount>   Amount of packets to be generated int he trace (padded with Ignore packets is needed)
 """
+from os import write
 from docopt import docopt
 import random
+import struct
+import time
 
 
 class Packet():
@@ -413,6 +416,14 @@ class AtomFormatX():
     @staticmethod
     def generate():
         return bytes([0xC0+(random.randrange(64))])
+    
+
+class Random():
+
+    @staticmethod
+    def generate():
+        packets = [ ASync, Discard, Overflow, BranchFutureFlush, TraceInfo, Timestamp, TraceOn, FunctionReturn, Exception, ExceptionReturn, Resynchronization, CycleCountFormat2, CycleCountFormat1, CycleCountFormat3, NumberedDataSynchronizationMark, UnnumberedDataSynchronizationMark, Commit, CancelFormat1, Mispredict, CancelFormat2, CancelFormat3, ConditionalInstructionFormat2, ConditionalFlush, ConditionalResultFormat4, ConditionalResultFormat2, ConditionalResultFormat3, ConditionalResultFormat1, ConditionalInstructionFormat1, ConditionalInstructionFormat3, Ignore, Event, Context, AddressWithContext, TimestampMarker, ExactMatchAddress, ShortAddress, LongAddress, Q, AtomFormatX]
+        return random.choice(packets).generate()
 
 
 class TPIU():
@@ -509,7 +520,8 @@ class ETM():
         "ShortAddress"                      : ShortAddress,
         "LongAddress"                       : LongAddress,
         "Q"                                 : Q,
-        "AtomFormatX"                       : AtomFormatX
+        "AtomFormatX"                       : AtomFormatX,
+        "Random"                            : Random
     }
 
 
@@ -531,6 +543,13 @@ class Binary():
                 self.add(source, Ignore.generate())
         # dump binary
         with open(self.filename, "wb") as f:
+            # Header
+            program   = b"DOETH"
+            trace     = b"TPIU\x00"
+            version   = 1
+            timestamp = int(time.time())
+            f.write(struct.pack('<5s 5s I Q', program, trace, version, timestamp))
+            # Payload
             f.write(TPIU.format(self.buffers))
 
 
