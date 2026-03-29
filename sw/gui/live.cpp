@@ -10,12 +10,14 @@
 
 
 #include "SourcePanels.hpp"
+#include "RooflinePanel.hpp"
 #include "Deformatter.hpp"
 #include "PlotArea.hpp"
 #include "PlotAreaTracker.hpp"
 
 
 SourcePanels* panels;
+RooflinePanel* roofline;
 
 
 class Step {
@@ -496,10 +498,15 @@ static void onActivate(GtkApplication* app, gpointer _) {
   gtk_window_set_default_size(GTK_WINDOW(window), 1600, 900);
   gtk_window_present(GTK_WINDOW(window));
 
+  GtkWidget* notebook = gtk_notebook_new();
+
   Wizard* wiz = new Wizard(app, window, buffer, deformatter);
   panels = new SourcePanels();
+  roofline = new RooflinePanel();
 
-  gtk_window_set_child(GTK_WINDOW(window), panels->parent);
+  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), panels->parent, gtk_label_new("Global Monitor"));
+  gtk_notebook_append_page(GTK_NOTEBOOK(notebook), roofline->parent, gtk_label_new("Roofline"));
+  gtk_window_set_child(GTK_WINDOW(window), notebook);
 }
 
 
