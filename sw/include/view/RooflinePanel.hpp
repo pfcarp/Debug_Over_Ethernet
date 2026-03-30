@@ -35,10 +35,12 @@ class RooflinePanel {
             struct {
               GtkWidget* box;
               GtkWidget* label;
-              GtkWidget* event;
               GtkWidget* button;
             } title;
             GtkWidget* box;
+            std::vector<GtkWidget*> visibility;
+            std::vector<GtkColorDialog*> colordialog;
+            std::vector<GtkWidget*> color;
             std::vector<GtkAdjustment*> adjustment;
             std::vector<GtkWidget*> entry;
           } performance;
@@ -50,6 +52,9 @@ class RooflinePanel {
               GtkWidget* button;
             } title;
             GtkWidget* box;
+            std::vector<GtkWidget*> visibility;
+            std::vector<GtkColorDialog*> colordialog;
+            std::vector<GtkWidget*> color;
             std::vector<GtkAdjustment*> adjustment;
             std::vector<GtkWidget*> entry;
           } bandwidth;

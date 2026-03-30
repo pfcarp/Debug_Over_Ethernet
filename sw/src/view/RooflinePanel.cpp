@@ -82,12 +82,14 @@ RooflinePanel::RooflinePanel() {
   g_signal_connect(controls.platform.delimitations.performance.title.button, "clicked", G_CALLBACK(RooflinePanel::cOnPerformanceButtonClicked), this);
   ////// Pack
   gtk_box_append(GTK_BOX(controls.platform.delimitations.performance.title.box), controls.platform.delimitations.performance.title.label);
-  gtk_box_append(GTK_BOX(controls.platform.delimitations.performance.title.box), controls.platform.delimitations.performance.title.event);
   gtk_box_append(GTK_BOX(controls.platform.delimitations.performance.title.box), controls.platform.delimitations.performance.title.button);
   gtk_box_append(GTK_BOX(controls.box), controls.platform.delimitations.performance.title.box);
   ////// Entry
-  controls.platform.delimitations.performance.box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+  controls.platform.delimitations.performance.box = gtk_grid_new();
+  gtk_grid_set_row_spacing(GTK_GRID(controls.platform.delimitations.performance.box), 6);
+  gtk_grid_set_column_spacing(GTK_GRID(controls.platform.delimitations.performance.box), 12);
   gtk_box_append(GTK_BOX(controls.box), controls.platform.delimitations.performance.box);
+  controls.platform.delimitations.performance.colordialog.reserve(10);
   controls.platform.delimitations.performance.adjustment.reserve(10);
   controls.platform.delimitations.performance.entry.reserve(10);
   addPerformanceEntry();
@@ -109,6 +111,11 @@ RooflinePanel::RooflinePanel() {
   gtk_box_append(GTK_BOX(controls.platform.delimitations.bandwidth.title.box), controls.platform.delimitations.bandwidth.title.button);
   gtk_box_append(GTK_BOX(controls.box), controls.platform.delimitations.bandwidth.title.box);
   ////// Entry
+  controls.platform.delimitations.bandwidth.box = gtk_grid_new();
+  gtk_grid_set_row_spacing(GTK_GRID(controls.platform.delimitations.bandwidth.box), 6);
+  gtk_grid_set_column_spacing(GTK_GRID(controls.platform.delimitations.bandwidth.box), 12);
+  gtk_box_append(GTK_BOX(controls.box), controls.platform.delimitations.bandwidth.box);
+  controls.platform.delimitations.bandwidth.colordialog.reserve(10);
   controls.platform.delimitations.bandwidth.adjustment.reserve(10);
   controls.platform.delimitations.bandwidth.entry.reserve(10);
   addBandwidthEntry();
@@ -122,20 +129,50 @@ RooflinePanel::RooflinePanel() {
 
 
 void RooflinePanel::addPerformanceEntry() {
+  int row = controls.platform.delimitations.performance.visibility.size();
+  // Visibility checkbox
+  controls.platform.delimitations.performance.visibility.emplace_back(gtk_check_button_new());
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(controls.platform.delimitations.performance.visibility.back()), TRUE);
+  //g_signal_connect(checkbox, "toggled", G_CALLBACK(PanelEntry::cOnCheckToggle), this);
+  gtk_widget_set_halign(controls.platform.delimitations.performance.visibility.back(), GTK_ALIGN_CENTER);
+  gtk_grid_attach(GTK_GRID(controls.platform.delimitations.performance.box), controls.platform.delimitations.performance.visibility.back(), 0, row, 1, 1);
+  // Color picker
+  controls.platform.delimitations.performance.colordialog.emplace_back(gtk_color_dialog_new());
+  controls.platform.delimitations.performance.color.emplace_back(gtk_color_dialog_button_new(controls.platform.delimitations.performance.colordialog.back()));
+  gtk_widget_set_halign(controls.platform.delimitations.performance.color.back(), GTK_ALIGN_CENTER);
+  gtk_grid_attach(GTK_GRID(controls.platform.delimitations.performance.box), controls.platform.delimitations.performance.color.back(), 1, row, 1, 1);
+  // Spin button
   controls.platform.delimitations.performance.adjustment.emplace_back(gtk_adjustment_new(0.0, 0.0, 10000000000.0, 1000000.0, 1.0, 0.0));
   controls.platform.delimitations.performance.entry.emplace_back(gtk_spin_button_new(controls.platform.delimitations.performance.adjustment.back(), 0.1, 2)); // climb rate, digits
   gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(controls.platform.delimitations.performance.entry.back()), TRUE);
-  gtk_box_append(GTK_BOX(controls.platform.delimitations.performance.box), controls.platform.delimitations.performance.entry.back());
+  gtk_widget_set_hexpand(controls.platform.delimitations.performance.entry.back(), TRUE);
+  gtk_widget_set_vexpand(controls.platform.delimitations.performance.entry.back(), FALSE);
+  gtk_grid_attach(GTK_GRID(controls.platform.delimitations.performance.box), controls.platform.delimitations.performance.entry.back(), 2, row, 1, 1);
   // Disbale button is limit is reached
   gtk_widget_set_sensitive(controls.platform.delimitations.performance.title.button, controls.platform.delimitations.performance.entry.size() < 10);
 }
 
 
 void RooflinePanel::addBandwidthEntry() {
+  int row = controls.platform.delimitations.bandwidth.visibility.size();
+  // Visibility checkbox
+  controls.platform.delimitations.bandwidth.visibility.emplace_back(gtk_check_button_new());
+  gtk_check_button_set_active(GTK_CHECK_BUTTON(controls.platform.delimitations.bandwidth.visibility.back()), TRUE);
+  //g_signal_connect(checkbox, "toggled", G_CALLBACK(PanelEntry::cOnCheckToggle), this);
+  gtk_widget_set_halign(controls.platform.delimitations.bandwidth.visibility.back(), GTK_ALIGN_CENTER);
+  gtk_grid_attach(GTK_GRID(controls.platform.delimitations.bandwidth.box), controls.platform.delimitations.bandwidth.visibility.back(), 0, row, 1, 1);
+  // Color picker
+  controls.platform.delimitations.bandwidth.colordialog.emplace_back(gtk_color_dialog_new());
+  controls.platform.delimitations.bandwidth.color.emplace_back(gtk_color_dialog_button_new(controls.platform.delimitations.bandwidth.colordialog.back()));
+  gtk_widget_set_halign(controls.platform.delimitations.bandwidth.color.back(), GTK_ALIGN_CENTER);
+  gtk_grid_attach(GTK_GRID(controls.platform.delimitations.bandwidth.box), controls.platform.delimitations.bandwidth.color.back(), 1, row, 1, 1);
+  // Spin button
   controls.platform.delimitations.bandwidth.adjustment.emplace_back(gtk_adjustment_new(0.0, 0.0, 10000000000.0, 1000000.0, 1.0, 0.0));
   controls.platform.delimitations.bandwidth.entry.emplace_back(gtk_spin_button_new(controls.platform.delimitations.bandwidth.adjustment.back(), 0.1, 2)); // climb rate, digits
   gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(controls.platform.delimitations.bandwidth.entry.back()), TRUE);
-  gtk_box_append(GTK_BOX(controls.box), controls.platform.delimitations.bandwidth.entry.back());
+  gtk_widget_set_hexpand(controls.platform.delimitations.bandwidth.entry.back(), TRUE);
+  gtk_widget_set_vexpand(controls.platform.delimitations.bandwidth.entry.back(), FALSE);
+  gtk_grid_attach(GTK_GRID(controls.platform.delimitations.bandwidth.box), controls.platform.delimitations.bandwidth.entry.back(), 2, row, 1, 1);
   // Disbale button is limit is reached
   gtk_widget_set_sensitive(controls.platform.delimitations.bandwidth.title.button, controls.platform.delimitations.bandwidth.entry.size() < 10);
 }
