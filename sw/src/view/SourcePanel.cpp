@@ -4,7 +4,7 @@
 #include "PlotAreaTracker.hpp"
 
 
-SourcePanel::SourcePanel(uint32_t sourceID): sourceID(sourceID) {
+SourcePanel::SourcePanel(uint32_t sourceID, PlotAreaTracker& tracker): sourceID(sourceID), tracker(tracker) {
   parent = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
   // header
   header.box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
@@ -23,9 +23,8 @@ SourcePanel::SourcePanel(uint32_t sourceID): sourceID(sourceID) {
   gtk_box_append(GTK_BOX(header.box), header.label);
   gtk_box_append(GTK_BOX(header.box), header.switcher);
   // plot
-  plot = new PlotArea(sourceID);
+  plot = new PlotArea(sourceID, tracker);
   gtk_widget_queue_draw(plot->parent);
-  PlotAreaTracker::instance().link(plot);
   // pack all
   gtk_box_append(GTK_BOX(parent), header.box);
   gtk_box_append(GTK_BOX(parent), plot->parent);
@@ -33,7 +32,7 @@ SourcePanel::SourcePanel(uint32_t sourceID): sourceID(sourceID) {
 
 void SourcePanel::onCheckToggle(GtkSwitch* check) {
   TraceDatabase::instance()[sourceID].setCumulative(gtk_switch_get_active(check));
-  PlotAreaTracker::instance().update();
+  tracker.update();
 }
 
 void SourcePanel::cOnCheckToggle(GObject* object, GParamSpec* pspec, gpointer user_data) {

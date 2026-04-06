@@ -1,10 +1,7 @@
 #include "PlotAreaTracker.hpp"
 
 
-PlotAreaTracker& PlotAreaTracker::instance() {
-  static PlotAreaTracker instance;
-  return instance;
-}
+PlotAreaTracker::PlotAreaTracker() {}
 
 
 void PlotAreaTracker::link(PlotArea* plot) {

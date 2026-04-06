@@ -13,7 +13,6 @@
 #include "RooflinePanel.hpp"
 #include "Deformatter.hpp"
 #include "PlotArea.hpp"
-#include "PlotAreaTracker.hpp"
 
 
 SourcePanels* panels;
@@ -479,7 +478,7 @@ void Wizard::onNext() {
   }
   else if (current == steps.end()) {
     gtk_window_destroy(GTK_WINDOW(dialog));
-    PlotAreaTracker::instance().update();
+    panels->tracker.update();
   }
 }
 

@@ -61,6 +61,7 @@ class RooflinePanel {
         } delimitations;
       } platform;
     } controls;
+    PlotAreaTracker tracker;
     PlotArea* plot;
     // Methods
     void addPerformanceEntry();

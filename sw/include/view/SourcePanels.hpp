@@ -6,6 +6,7 @@
 #include <vector>
 
 
+#include "PlotAreaTracker.hpp"
 #include "SourcePanel.hpp"
 #include "Color.hpp"
 
@@ -69,6 +70,7 @@ class SourcePanels {
   public:
     // Attributes
     GtkWidget* parent;
+    PlotAreaTracker tracker;
     // Methods
     SourcePanels();
 

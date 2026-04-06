@@ -6,9 +6,16 @@
 #include <string>
 
 
+#include "PlotAreaTracker.hpp"
 #include "TraceDatabase.hpp"
 #include "Packet.hpp"
 #include "Color.hpp"
+
+
+/**
+ * Forward declaration
+ */
+class PlotAreaTracker;
 
 
 class PlotArea {
@@ -16,6 +23,7 @@ class PlotArea {
   private:
     // Attributes
     uint32_t id;
+    PlotAreaTracker& tracker;
     cairo_t* cairo;
     // Methods
     const double adaptX(const double& value, const double& min, const double& interval) const;
@@ -31,7 +39,8 @@ class PlotArea {
     static void cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
     void onButtonRelease();
     static void cOnButtonRelease(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
-    static void cOnDialogResponse(GtkDialog* dialog, int response_id, gpointer user_data);
+    static void cOnDialogResponse(GtkDialog* _, int response_id, gpointer user_data);
+    static void cOnDialogResponseUpdate(GtkDialog* _, int _1, gpointer user_data);
     void setBackground();
     void handleZoom();
     void clampOffset();
@@ -45,7 +54,7 @@ class PlotArea {
     // Attributes
     GtkWidget* parent;
     // Methods
-    PlotArea(uint32_t id);
+    PlotArea(uint32_t id, PlotAreaTracker& tracker);
     void update();
 
 };

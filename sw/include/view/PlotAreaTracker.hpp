@@ -7,6 +7,12 @@
 #include "PlotArea.hpp"
 
 
+/**
+ * Forward declaration
+ */
+class PlotArea;
+
+
 // TODO: assumes that plots are all the same dimensions. Might not be the case for all.
 class PlotAreaTracker {
   
@@ -14,7 +20,6 @@ class PlotAreaTracker {
     // Attributes
     std::vector<PlotArea*> plots;
     // Methods
-    PlotAreaTracker() = default;
 
   public:
     // Attributes
@@ -47,7 +52,7 @@ class PlotAreaTracker {
       bool dragging = false;
     } mouse;
     // Methods
-    static PlotAreaTracker& instance();
+    PlotAreaTracker();
     PlotAreaTracker(const PlotAreaTracker&) = delete;
     PlotAreaTracker& operator=(const PlotAreaTracker&) = delete;
     void link(PlotArea* plot);

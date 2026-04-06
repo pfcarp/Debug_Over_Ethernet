@@ -5,6 +5,7 @@
 #include <cstdint>
 
 
+#include "PlotAreaTracker.hpp"
 #include "PlotArea.hpp"
 
 
@@ -13,6 +14,7 @@ class SourcePanel {
   private:
     // Attributes
     uint32_t sourceID;
+    PlotAreaTracker& tracker; 
     struct {
       GtkWidget* box;
       GtkWidget* title;
@@ -28,6 +30,6 @@ class SourcePanel {
     // Attributes
     GtkWidget* parent;
     // Methods
-    SourcePanel(uint32_t sourceID);
+    SourcePanel(uint32_t sourceID, PlotAreaTracker& tracker);
 
 };

@@ -10,14 +10,13 @@
 #include "Description.hpp"
 #include "TimemarkerDialog.hpp"
 #include "TimemarkerCollection.hpp"
-#include "TraceDatabase.hpp"
-#include "PlotAreaTracker.hpp"
 
 
 const char* xlabel = "Time (CC)";
 
 
-PlotArea::PlotArea(uint32_t id): id(id) {
+PlotArea::PlotArea(uint32_t id, PlotAreaTracker& tracker): id(id), tracker(tracker) {
+  tracker.link(this);
   parent = gtk_drawing_area_new();
   gtk_widget_set_hexpand(parent, TRUE);
   gtk_widget_set_vexpand(parent, TRUE);
@@ -50,7 +49,6 @@ void PlotArea::cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height,
 }
 
 void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   // update geometries
   cairo = cr;
   tracker.dimensions.width = width;
@@ -89,7 +87,6 @@ gboolean PlotArea::cOnScroll(GtkEventControllerScroll* controller, double dx, do
 }
 
 gboolean PlotArea::onScroll(double dy) {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   // Convert mouse position to plot-local coordinates
   double px = tracker.mouse.current.x-(tracker.plot.x);
   double py = tracker.mouse.current.y-(tracker.plot.y);
@@ -107,7 +104,7 @@ gboolean PlotArea::onScroll(double dy) {
   tracker.viewport.offset.y = py-(world_y*tracker.viewport.scale);
   // Clamp offset to prevent empty areas
   clampOffset();
-  PlotAreaTracker::instance().update();
+  tracker.update();
   return TRUE;
 }
 
@@ -118,7 +115,6 @@ void PlotArea::cOnMotion(GtkEventControllerMotion* controller, double x, double 
 }
 
 void PlotArea::onMotion(double x, double y) {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   // Keep track of current position (for scroll)
   tracker.mouse.current.x = x;
   tracker.mouse.current.y = y;
@@ -129,16 +125,21 @@ void PlotArea::onMotion(double x, double y) {
     tracker.mouse.last.x = x;
     tracker.mouse.last.y = y;
     clampOffset();   // same clamping logic used in zoom
-    PlotAreaTracker::instance().update();
+    tracker.update();
   }
 }
 
 
-void PlotArea::cOnDialogResponse(GtkDialog* dialog, int response_id, gpointer user_data) {
+void PlotArea::cOnDialogResponse(GtkDialog* _, int response_id, gpointer user_data) {
   TimemarkerDialog* self = static_cast<TimemarkerDialog*>(user_data);
   self->onDialogResponse(response_id);
   delete self;
-  PlotAreaTracker::instance().update();
+}
+
+
+void PlotArea::cOnDialogResponseUpdate(GtkDialog* _, int _1, gpointer user_data) {
+  PlotAreaTracker* self = static_cast<PlotAreaTracker*>(user_data);
+  self->update();
 }
 
 
@@ -149,7 +150,6 @@ void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, d
 }
 
 void PlotArea::onButtonPress(bool right, double x, double y) {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   // Convert mouse position to plot-local coordinates
   double px = tracker.mouse.current.x-(tracker.plot.x);
   double py = tracker.mouse.current.y-(tracker.plot.y);
@@ -175,6 +175,7 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
       GtkWindow* window = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(parent)));
       TimemarkerDialog* timemarker = new TimemarkerDialog(GTK_WINDOW(window), global_x);
       g_signal_connect(timemarker->parent, "response", G_CALLBACK(PlotArea::cOnDialogResponse), timemarker);
+      g_signal_connect(timemarker->parent, "response", G_CALLBACK(PlotArea::cOnDialogResponseUpdate), &tracker);
       gtk_window_present(GTK_WINDOW(timemarker->parent));
     }
   }
@@ -211,7 +212,6 @@ void PlotArea::cOnButtonRelease(GtkGestureClick* gesture, int n_press, double x,
 }
 
 void PlotArea::onButtonRelease() {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   tracker.mouse.dragging = false;
 }
 
@@ -223,21 +223,18 @@ void PlotArea::setBackground() {
 
 
 void PlotArea::handleZoom() {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   cairo_translate(cairo, tracker.viewport.offset.x, tracker.viewport.offset.y);
   cairo_scale(cairo, tracker.viewport.scale, tracker.viewport.scale);
 }
 
 
 void PlotArea::clampOffset() {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   tracker.viewport.offset.x = std::clamp(tracker.viewport.offset.x, -(tracker.plot.width)*(tracker.viewport.scale-1), 0.0);
   tracker.viewport.offset.y = std::clamp(tracker.viewport.offset.y, -(tracker.plot.height)*(tracker.viewport.scale-1), 0.0);
 }
 
 
 void PlotArea::plotTimemarkers() {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   TimemarkerCollection& collection = TimemarkerCollection::instance();
   TraceDatabase& database = TraceDatabase::instance();
   double x_min = database.minTimestamp();
@@ -261,7 +258,6 @@ void PlotArea::plotTimemarkers() {
 
 
 void PlotArea::plotCurve(const std::string& variant) {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   Color color = Packet::ColorMap[variant];
   // Bother drawing iff the color is not completely transparent
   if (color.alpha > 0.0) {
@@ -297,7 +293,6 @@ void PlotArea::plotCurve(const std::string& variant) {
 }
 
 void PlotArea::plotScatter(const std::string& variant) {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   Color color = Packet::ColorMap[variant];
   // Bother drawing iff the color is not completely transparent
   if (color.alpha > 0.0) {
@@ -324,7 +319,6 @@ void PlotArea::plotScatter(const std::string& variant) {
 }
 
 void PlotArea::drawTimemarkerHeaders() {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   TraceDatabase& database = TraceDatabase::instance();
   // Global parameters
   const double padding = 8.0;
@@ -368,7 +362,6 @@ void PlotArea::drawTimemarkerHeaders() {
 }
 
 void PlotArea::drawAxes() {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   TraceDatabase& database = TraceDatabase::instance();
   const int nticks = 10;
   const double tick_len = 5.0;
@@ -433,12 +426,10 @@ void PlotArea::drawAxes() {
 
 
 const double PlotArea::adaptX(const double& value, const double& min, const double& interval) const {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   return (value-min)/interval*tracker.plot.width;
 }
 
 const double PlotArea::adaptY(const double& value, const double& min, const double& interval) const {
-  PlotAreaTracker& tracker = PlotAreaTracker::instance();
   return tracker.plot.height-((value-min)/interval*tracker.plot.height);
 }
 

@@ -92,7 +92,7 @@ SourcePanels::SourcePanels() {
   TraceDatabase& database = TraceDatabase::instance();
   panels.widget.reserve(database.size());
   for (uint32_t i = 0; i < database.size(); i++) {
-    panels.widget.emplace_back(i);
+    panels.widget.emplace_back(i, tracker);
     int rows = static_cast<int>(std::sqrt(database.size()));
     int cols = (database.size()+rows-1)/rows;
     int row = i/rows;
@@ -124,7 +124,7 @@ PanelEntry::PanelEntry(const std::string& name, const Color& color, SourcePanels
 void PanelEntry::onCheckToggle(GtkCheckButton* check) {
   const std::string name = std::string(gtk_label_get_text(GTK_LABEL(label)));
   Packet::ColorMap[name].alpha = gtk_check_button_get_active(check);
-  PlotAreaTracker::instance().update();
+  parent->tracker.update();
 }
 
 void PanelEntry::cOnCheckToggle(GObject* object, gpointer user_data) {
@@ -139,7 +139,7 @@ void PanelEntry::onColorSet(GtkColorDialogButton* button) {
   Packet::ColorMap[name].red   = color->red;
   Packet::ColorMap[name].blue  = color->blue;
   Packet::ColorMap[name].green = color->green;
-  PlotAreaTracker::instance().update();
+  parent->tracker.update();
 }
 
 

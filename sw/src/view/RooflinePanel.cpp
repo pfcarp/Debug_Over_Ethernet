@@ -120,7 +120,7 @@ RooflinePanel::RooflinePanel() {
   controls.platform.delimitations.bandwidth.entry.reserve(10);
   addBandwidthEntry();
   // Plot
-  plot = new PlotArea(0);
+  plot = new PlotArea(0, tracker);
   // Pack
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(controls.scrollable), controls.box);
   gtk_box_append(GTK_BOX(parent), controls.scrollable);
