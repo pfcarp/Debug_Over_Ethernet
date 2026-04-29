@@ -22,6 +22,9 @@ case class TPIUFilter(dataWidth: Int) extends Component {
     val push =  slave(Flow(Bits(dataWidth bits)))
     val pop  = master(Flow(Bits(dataWidth bits)))
   }
+  val debug = new Bundle {
+    val errorState = out(Bool())
+  }
 
   val fsm = new StateMachine {
     val idle: State = new State with EntryPoint {
@@ -73,6 +76,8 @@ case class TPIUFilter(dataWidth: Int) extends Component {
     }
     val error: State = new State {}
   }
+
+  debug.errorState := fsm.isActive(fsm.error)   //checkState(fsm.error)
 
   io.pop << io.push.throwWhen(!(
     (fsm.isActive(fsm.waitingForBeat0) && fsm.isEntering(fsm.waitingForBeat1)) ||
