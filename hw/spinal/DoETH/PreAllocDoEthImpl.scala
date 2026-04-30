@@ -25,9 +25,17 @@ case class PreAllocDoEthImpl(ingressWidth: Int, outgressWidth: Int) extends Comp
     }
   }
   val debug = new Bundle {
+      val errorState = out(Bool())
+      val filterPushValid = out(Bool())
+      val filterPopValid = out(Bool())
+      val queueHead = out(UInt(8 bits))
+      val queuePushReady = out(Bool())
+      val queuePopReady = out(Bool())
+
       val buffHead0 = out(UInt(8 bits))
       val buffHead1 = out(UInt(8 bits))
-      val errorState = out(Bool())
+      
+
     }
 
   val subordinateDomain = ClockDomain(
@@ -52,11 +60,18 @@ case class PreAllocDoEthImpl(ingressWidth: Int, outgressWidth: Int) extends Comp
 
   val scd = new ClockingArea(subordinateDomain) {
     val filter = TPIUFilter(ingressWidth)
-    debug.errorState := filter.debug.errorState
     val queue  = MemQueue(ingressWidth, ((4 KiB)/ingressWidth).toInt)
     filter.io.push << io.subordinate.push
     queue.io.push << filter.io.pop.toStream
     StreamWidthAdapter(queue.io.pop, cdc.io.push)
+
+
+    debug.errorState := filter.debug.errorState
+    debug.filterPushValid := filter.io.push.valid
+    debug.filterPopValid := filter.io.pop.valid
+    debug.queueHead := queue.debug.head
+    debug.queuePopReady := queue.io.pop.ready
+    debug.queuePushReady := queue.io.push.ready
   }
   val pcd = new ClockingArea(managerDomain) {
     val flush  = PreAllocPingPongBuffer(outgressWidth, ((4 KiB)/outgressWidth).toInt, 1024)

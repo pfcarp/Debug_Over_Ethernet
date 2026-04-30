@@ -1,0 +1,116 @@
+# ----- REMOVE LINES ABOVE HERE --------------------------
+#
+# This license is valid from Mon Mar 02 23:11:40 UTC 2026.
+#
+# This is license NODELOCKED to HOSTID=54bf648104e4;
+# there is no need to run lmgrd for this license.
+#
+#
+#  This license is valid for evaluation ( 120 days ) from Mon Mar 02 23:11:40 UTC 2026
+INCREMENT xxv_eth_mac_pcs xilinxd 2026.01 01-jul-2026 uncounted \
+A002B7603592 \
+VENDOR_STRING=License_Type:Hardware_Evaluation;patrickcarpanedo@gmail.com,xxv_eth_mac_pcs,ip,evaluation,_212439856_0_0_267 \
+HOSTID=54bf648104e4 ISSUER="Xilinx Inc" NOTICE="The license \
+for this core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." START=02-Mar-2026 \
+TS_OK
+#
+#  This license is valid for evaluation ( 120 days ) from Mon Mar 02 23:11:40 UTC 2026
+INCREMENT ten_gig_eth_mac xilinxd 2026.01 01-jul-2026 uncounted \
+0E05915AA4FE \
+VENDOR_STRING=License_Type:Hardware_Evaluation;patrickcarpanedo@gmail.com,ten_gig_eth_mac,ip,evaluation,_212439856_0_0_527 \
+HOSTID=54bf648104e4 ISSUER="Xilinx Inc" NOTICE="The license \
+for this core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." START=02-Mar-2026 \
+TS_OK
+#
+# Licenses for ten_gig_eth_mac_v3_0
+FEATURE ten_gig_eth_mac_v3_0 xilinxd 1.0 01-jul-2026 uncounted \
+64FEB51F7E07 VENDOR_STRING=License_Type:Hardware_Evaluation \
+HOSTID=54bf648104e4 ISSUER=Xilinx NOTICE="The license for this \
+core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." TS_OK
+#
+# Licenses for ten_gig_eth_mac_v6
+FEATURE ten_gig_eth_mac_v6 xilinxd 1.0 01-jul-2026 uncounted \
+EE214E61E91A VENDOR_STRING=License_Type:Hardware_Evaluation \
+HOSTID=54bf648104e4 ISSUER=Xilinx NOTICE="The license for this \
+core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." TS_OK
+#
+# Licenses for ten_gig_eth_mac_v7
+FEATURE ten_gig_eth_mac_v7 xilinxd 1.0 01-jul-2026 uncounted \
+C11BEF687D00 VENDOR_STRING=License_Type:Hardware_Evaluation \
+HOSTID=54bf648104e4 ISSUER=Xilinx NOTICE="The license for this \
+core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." TS_OK
+#
+# Licenses for ten_gig_eth_mac_v9
+FEATURE ten_gig_eth_mac_v9 xilinxd 1.0 01-jul-2026 uncounted \
+251A19DE0D84 VENDOR_STRING=License_Type:Hardware_Evaluation \
+HOSTID=54bf648104e4 ISSUER=Xilinx NOTICE="The license for this \
+core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." TS_OK
+#
+# Licenses for ten_gig_eth_mac_v8
+FEATURE ten_gig_eth_mac_v8 xilinxd 1.0 01-jul-2026 uncounted \
+AA9DB84FA1DE VENDOR_STRING=License_Type:Hardware_Evaluation \
+HOSTID=54bf648104e4 ISSUER=Xilinx NOTICE="The license for this \
+core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." TS_OK
+#
+# Licenses for ten_gig_eth_mac_v4_0
+FEATURE ten_gig_eth_mac_v4_0 xilinxd 1.0 01-jul-2026 uncounted \
+932BC4940A29 VENDOR_STRING=License_Type:Hardware_Evaluation \
+HOSTID=54bf648104e4 ISSUER=Xilinx NOTICE="The license for this \
+core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." TS_OK
+#
+# Licenses for ten_gig_eth_mac_v5_0
+FEATURE ten_gig_eth_mac_v5_0 xilinxd 1.0 01-jul-2026 uncounted \
+91CF63491AD3 VENDOR_STRING=License_Type:Hardware_Evaluation \
+HOSTID=54bf648104e4 ISSUER=Xilinx NOTICE="The license for this \
+core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." TS_OK
+#
+#  This license is valid for evaluation ( 120 days ) from Mon Mar 02 23:11:40 UTC 2026
+INCREMENT xxv_mac_pcs xilinxd 2026.01 01-jul-2026 uncounted \
+38FE6FB497E2 \
+VENDOR_STRING=License_Type:Hardware_Evaluation;patrickcarpanedo@gmail.com,xxv_mac_pcs,ip,evaluation,_212439856_0_0_902 \
+HOSTID=54bf648104e4 ISSUER="Xilinx Inc" NOTICE="The license \
+for this core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." START=02-Mar-2026 \
+TS_OK
+#
+#  This license is valid for evaluation ( 120 days ) from Mon Mar 02 23:11:40 UTC 2026
+INCREMENT x_eth_mac xilinxd 2026.01 01-jul-2026 uncounted \
+B2891484740F \
+VENDOR_STRING=License_Type:Hardware_Evaluation;patrickcarpanedo@gmail.com,x_eth_mac,ip,evaluation,_212439856_0_0_702 \
+HOSTID=54bf648104e4 ISSUER="Xilinx Inc" NOTICE="The license \
+for this core was generated for patrickcarpanedo@gmail.com on \
+03/03/2026It is the responsibility of the Licensee of this \
+core to adhere to all terms and conditions of the applicable \
+license agreement when using this core." START=02-Mar-2026 \
+TS_OK
+#
+# ----- REMOVE LINES BELOW HERE --------------------------

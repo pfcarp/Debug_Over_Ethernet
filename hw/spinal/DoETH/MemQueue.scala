@@ -11,6 +11,9 @@ case class MemQueue(dataWidth: Int, depth: Int) extends Component {
     val push =  slave(Stream(Bits(dataWidth bits)))
     val pop  = master(Stream(Bits(dataWidth bits)))
   }
+  val debug = new Bundle {
+    val head = out(UInt(8 bits))
+  }
 
   // Registers
   val head  = Counter(log2Up(depth) bits, io.push.fire)
@@ -28,4 +31,6 @@ case class MemQueue(dataWidth: Int, depth: Int) extends Component {
   io.pop.valid   := count =/= 0
   io.pop.payload := buffer.readAsync(tail)
 
+
+  debug.head := head.resized
 }

@@ -9,8 +9,8 @@ import spinal.lib.fsm._
 object TPIUFilter {
 
   object Sync {
-    val Full: BigInt = BigInt("FFFFFFFF", 16)
-    val Half: BigInt = BigInt("0000FFFF", 16)
+    val Full: BigInt = BigInt("7FFFFFFF", 16)
+    val Half: BigInt = BigInt("7FFF7FFF", 16)
   }
 
 }
@@ -26,6 +26,7 @@ case class TPIUFilter(dataWidth: Int) extends Component {
     val errorState = out(Bool())
   }
 
+
   val fsm = new StateMachine {
     val idle: State = new State with EntryPoint {
       whenIsActive {
@@ -36,12 +37,14 @@ case class TPIUFilter(dataWidth: Int) extends Component {
     }
     val waitingForBeat0: State = new State {
       whenIsActive {
-        when (io.push.valid && (io.push.payload === B(TPIUFilter.Sync.Full))) {
+      when(io.push.valid && (io.push.payload =/= B(TPIUFilter.Sync.Full))){ //this case is fine as a continuous full syncs does not lend itself to be on error. it is only an error is data is recieved and then a full sync is followed
+        when (io.push.valid && (io.push.payload === B(TPIUFilter.Sync.Full))) {//P.C. changed here
           goto(error)
         }
         .elsewhen (io.push.valid && (io.push.payload =/= B(TPIUFilter.Sync.Half))) {
           goto(waitingForBeat1)
         }
+      }
       }
     }
     val waitingForBeat1: State = new State {

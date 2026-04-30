@@ -20,13 +20,18 @@ object TPIUFilterSim extends App {
     
     /*  */
     var bootstrapped = false
+    var repeatingSync = true
     FlowDriver(dut.io.push, dut.clockDomain) { payload =>
       if (!bootstrapped) {
         payload #= TPIUFilter.Sync.Full
         bootstrapped = true
       }
       else {
-        if (rand.nextInt(100) < 50)
+        if(repeatingSync){
+          payload #= TPIUFilter.Sync.Full
+          repeatingSync=false
+        }
+        else if (rand.nextInt(100) < 50)
           payload #= TPIUFilter.Sync.Half
         else
           payload.randomize()
