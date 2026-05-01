@@ -34,10 +34,13 @@ object PreAllocFlushQueueSim extends App {
       scoreboard.pushRef(payload.toBigInt)
     }
 
-    // /*  */
-    // StreamMonitor(dut.io.pop, dut.clockDomain) { payload =>
-    //   if (((dut.tail>6)||(dut.tail<1)))scoreboard.pushDut(payload.toBigInt)
-    // }
+    /*  */
+    StreamMonitor(dut.io.pop, dut.clockDomain) { payload =>
+      if (dut.tail.value.toInt>1 && dut.tail.value.toInt<7){
+        //printf("this is the tail:%d\n",dut.tail.value.toInt)
+        scoreboard.pushDut(payload.data.toBigInt)
+        }
+    }
 
     dut.clockDomain.forkStimulus(10)
 

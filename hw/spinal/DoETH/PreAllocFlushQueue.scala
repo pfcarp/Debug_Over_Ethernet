@@ -92,6 +92,6 @@ case class PreAllocFlushQueue(dataWidth: Int, depth: Int, timeout: Int) extends 
 
   // Pop
   io.pop.valid   := fsm.isActive(fsm.flush)
-  io.pop.payload.data := Mux(tail >= head.value, B(dataWidth bits, default -> True), buffer.readAsync(tail.resized))
+  io.pop.payload.data := Mux(tail >= head.value && tail=/=depth-1, B(dataWidth bits, default -> True), buffer.readAsync(tail.resized))//should the endword end the packet or the range of the useful data?
   io.pop.payload.last := Mux(io.pop.fire && (tail === depth-1),True,False)
 }
