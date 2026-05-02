@@ -8,9 +8,6 @@
 #include <thread>
 
 
-#include "Deformatter.hpp"
-
-
 class Sniffer {
 
   private:
@@ -19,8 +16,7 @@ class Sniffer {
     std::string name;
     pcap_t* interface = nullptr;
     char errbuf[PCAP_ERRBUF_SIZE];
-    Deformatter& deformatter;
-    std::vector<uint8_t> recording;
+    std::vector<uint8_t>* buffer;
     uint64_t timestamp = 0;
     std::thread captureThread;
     // Methods
@@ -34,7 +30,7 @@ class Sniffer {
   public:
     // Attributes
     // Methods
-    Sniffer(Deformatter& deformatter);
+    Sniffer(std::vector<uint8_t>* buffer);
     std::vector<std::string> getDevices();
     void pickDevice(std::string interface);
     void unpickDevice();

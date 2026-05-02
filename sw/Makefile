@@ -146,6 +146,9 @@ benchmark/packet: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
 benchmark/factory: PacketFactory.o Packet.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) benchmark/factory.cpp $(OBJ)/*.o -o $(BIN)/factory-benchmark.out $(CXXFLAGS)
 
+listener/offline: Sniffer.o
+	g++ $(DEBUG) $(OPT) $(INCLUDE) listener/offline.cpp $(OBJ)/*.o -o $(BIN)/offline-listener.out $(CXXFLAGS) $(PCAPFLAGS)
+
 
 clean:
 	rm -f $(BIN)/*.out

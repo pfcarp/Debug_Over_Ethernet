@@ -9,8 +9,8 @@
 #include <cstring>
 
 
-Sniffer::Sniffer(Deformatter& deformatter): deformatter(deformatter) {
-  recording.resize(10*1024);
+Sniffer::Sniffer(std::vector<uint8_t>* buffer): buffer(buffer) {
+  buffer->reserve(100*1024*1024);
 }
 
 inline bool Sniffer::hasHeader(const u_char* packet) const {
@@ -30,40 +30,12 @@ inline bool Sniffer::areNext4BytesAllSet(const u_char* packet) const {
 
 void Sniffer::onPacket(const pcap_pkthdr* header, const u_char* packet) {
   // Must be larger than 2+8 (i.e., 0xABBA+0xEBBE000000000000)
-  // printf("Packet length: %u\n", header->len);
-  if (header->len > 10+headerOffset) {
-    if (hasHeader(&packet[headerOffset]) && hasFooter(&packet[header->len-8])) {
-      // From here, jump 8 byte by 8 byte (lower half: data, upper half: zeroes)
-      // printf("Valid header and footer found\n");
-      for (size_t i = 2+headerOffset; i < header->len-8; i += 4) {
-        // If next four byte do not compose 0xffffffff, do not skip
-        // printf("index: %d  packet_size is %d\n",i,header->len);
-        // printf("0x%x\n",packet[i]);
-        if (!(areNext4BytesAllSet(&packet[i]) && areNext4BytesAllSet(&packet[i+4]))) {
-          // printf("1\n");
-          // Check if timestamp packet index
-          for (int j = 0; j < 4; j++) {
-            deformatter.insert(packet[i+j]);
-            // printf("0x%x\n",packet[i+j]);
-            // recording.push_back(packet[i+j]);
-          }
-          // recording.push_back(packet[i]);
-        }
-        else {
-          // printf("Skipping 4 bytes at index %d\n", i);
-          i += 4;
-        }
-      }
-    }
-    else {
-      std::cerr << "Expected header and/or footer (0xABBA, 0xEBBE) not found..." << std::endl;
-    }
+  if ((header->len > 10+headerOffset) && hasHeader(&packet[headerOffset]) && hasFooter(&packet[header->len-8])) {
+    buffer->insert(buffer->end(), packet+2+headerOffset, packet+header->len-8);
   }
-}
-
-void Sniffer::dispatch(u_char* user, const pcap_pkthdr* header, const u_char* packet) {
-  Sniffer* self = reinterpret_cast<Sniffer*>(user);
-  self->onPacket(header, packet);
+  //else {
+  //  std::cerr << "Expected header and/or footer (0xABBA, 0xEBBE) not found..." << std::endl;
+  //}
 }
 
 std::vector<std::string> Sniffer::getDevices() {
@@ -85,6 +57,11 @@ std::vector<std::string> Sniffer::getDevices() {
   return interfaces;
 }
 
+void Sniffer::dispatch(u_char* user, const pcap_pkthdr* header, const u_char* packet) {
+  Sniffer* self = reinterpret_cast<Sniffer*>(user);
+  self->onPacket(header, packet);
+}
+
 void Sniffer::pickDevice(std::string newInterfaceName) {
   // Close current interface is one is already opened
   if (interface != nullptr) {
@@ -104,8 +81,7 @@ void Sniffer::pickDevice(std::string newInterfaceName) {
   pcap_activate(interface);
 
   // Start sniffing
-  // captureThread = std::thread(&Sniffer::captureLoop, this);
-  captureLoop();
+  captureThread = std::thread(&Sniffer::captureLoop, this);
 }
 
 void Sniffer::captureLoop() {
@@ -115,8 +91,8 @@ void Sniffer::captureLoop() {
 void Sniffer::unpickDevice() {
   if (interface != nullptr) {
     pcap_breakloop(interface);
-    // if (captureThread.joinable())
-    //   captureThread.join();
+    if (captureThread.joinable())
+      captureThread.join();
     printStats();
     pcap_close(interface);
     interface = nullptr;
@@ -128,11 +104,10 @@ void Sniffer::printStats() {
         struct pcap_stat stats;
         
         if (pcap_stats(interface, &stats) == 0) {
-            std::cout << "\n=== Packet Capture Statistics ===" << std::endl;
+            std::cout << "Packet Capture Statistics:" << std::endl;
             std::cout << "Packets received: " << stats.ps_recv << std::endl;
             std::cout << "Packets dropped by kernel: " << stats.ps_drop << std::endl;
             std::cout << "Packets dropped by interface: " << stats.ps_ifdrop << std::endl;
-            
             // Calculate drop percentage if any packets were received
             if (stats.ps_recv > 0) {
                 double dropRate = (static_cast<double>(stats.ps_drop) / stats.ps_recv) * 100.0;
@@ -150,15 +125,7 @@ Sniffer::~Sniffer() {
   // Close pcap
   if (interface != nullptr) {
     pcap_breakloop(interface);
-    printStats();
     pcap_close(interface);
     interface = nullptr;
   }
-  // Dump recording
-  std::ofstream out("dump.bin", std::ios::binary);
-  std::cout<<""<<std::endl;
-  if (!out) {
-    throw std::runtime_error("Failed to open file: dump.bin");
-  }
-  out.write(reinterpret_cast<const char*>(recording.data()), recording.size());
 }
