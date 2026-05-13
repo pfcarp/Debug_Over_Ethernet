@@ -23,7 +23,7 @@ class Deformatter {
     
   public:
     constexpr static const uint32_t frameWidth = 16; // TPIU trace width
-    constexpr static const uint32_t timestampWidth = 4; // timestamp width
+    constexpr static const uint32_t timestampWidth = 0; //4; // timestamp width
     constexpr static const uint32_t workFrameWidth = frameWidth+timestampWidth;
     constexpr static const uint32_t factoriesNumber = 4;
     // Attributes
@@ -34,6 +34,7 @@ class Deformatter {
     bool insert_bytes(const uint8_t * chunk, size_t chunk_len);
     bool toInsertInPrevious(const uint8_t& aux, const uint8_t& offset) const;
     void setTimestamp();
+    void setTimestamp(uint32_t relative);
     uint64_t getTimestamp();
     Deformatter();
     virtual ~Deformatter();

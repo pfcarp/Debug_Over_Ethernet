@@ -23,9 +23,17 @@ bool Deformatter::insert(const uint8_t& byte) {
   // Insert new byte
   frame[counter] = byte;
   counter++;
+  // Ignore padding
+  if ((counter == timestampWidth+frameWidth/2) || (counter == workFrameWidth))
+    if ((frame[counter-1] == 0xff) && (frame[counter-2] == 0xff) && (frame[counter-3] == 0xff) && (frame[counter-4] == 0xff) &&
+        (frame[counter-5] == 0xff) && (frame[counter-6] == 0xff) && (frame[counter-7] == 0xff) && (frame[counter-8] == 0xff))
+      counter -= frameWidth/2;
   // If frame size reached: Format frame
   if (counter == workFrameWidth) [[unlikely]] {
-    setTimestamp();
+    if (timestampWidth > 0)
+      setTimestamp();
+    else
+      setTimestamp(1);
     deformat();
     counter = 0;
   }
@@ -105,6 +113,13 @@ void Deformatter::deformat() {
 void Deformatter::setTimestamp() {
   uint32_t relative; // relative timestamp
   std::memcpy(&relative, frame, timestampWidth);
+  timestamp += relative;
+  for (size_t i = 0; i < factoriesNumber; i++) {
+    factories[i].setTimestamp(timestamp);
+  }
+}
+
+void Deformatter::setTimestamp(uint32_t relative) {
   timestamp += relative;
   for (size_t i = 0; i < factoriesNumber; i++) {
     factories[i].setTimestamp(timestamp);
