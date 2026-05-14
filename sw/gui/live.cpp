@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <gtk/gtk.h>
+#include <ostream>
 #include <vector>
 #include <string>
 #include <map>
@@ -7,8 +8,10 @@
 #include <fstream>
 #include <thread>
 #include <algorithm>
+#include <chrono>
 
 
+#include "Sniffer.hpp"
 #include "SourcePanels.hpp"
 #include "RooflinePanel.hpp"
 #include "Deformatter.hpp"
@@ -135,44 +138,137 @@ class AcquireTracePage: public Page {
       GtkWidget* page;
       GtkWidget* title[2];
       GtkWidget* desc[2];
-      GtkWidget* row[2];
+      GtkWidget* row[3];
       GtkWidget* combo;
       GtkWidget* play;
       GtkWidget* stop;
+      GtkWidget* buffer_size_label;
+      GtkWidget* spinner;
+      guint      timeout_id = 0;
       GtkWidget* entry;
       GtkWidget* browse;
       GtkWidget* check;
     } ethernet;
     std::vector<uint8_t>* buffer;
+    Sniffer* sniffer;
     // Methods
+    std::string getCurrentTimestamp();
     static void on_browse_clicked(GtkButton *btn, gpointer user_data);
     static void on_file_selected(GObject *source, GAsyncResult *res, gpointer data);
+    static void cOnPlayClicked(GtkWidget* _, gpointer data);
+    static void cOnStopClicked(GtkWidget* _, gpointer data);
+    static void cOnCheckToggle(GtkWidget* _, gpointer data);
+    static gboolean cUpdateLabel(gpointer data);
+    void onPlayClicked();
+    void onStopClicked();
+    void onCheckToggle();
+    gboolean updateLabel();
 
   public:
-    AcquireTracePage(std::vector<uint8_t>* buffer);
+    AcquireTracePage(std::vector<uint8_t>* buffer, Sniffer* sniffer);
     void onActivate(GtkWidget* _);
 
 };
 
+std::string AcquireTracePage::getCurrentTimestamp() {
+  // Get current time
+  auto now = std::chrono::system_clock::now();
+  std::time_t now_time = std::chrono::system_clock::to_time_t(now);
+  // Convert to local time
+  std::tm local_time = *std::localtime(&now_time);
+  // Format as a string (e.g., "2026-05-02-14-30-45")
+  std::ostringstream oss;
+  oss << std::put_time(&local_time, "%Y-%m-%d-%H-%M-%S");
+  return oss.str();
+}
+
 void AcquireTracePage::on_browse_clicked(GtkButton *btn, gpointer user_data) {
-  GtkWidget *entry = GTK_WIDGET(user_data);
-  GtkFileDialog *dialog = gtk_file_dialog_new();
-  gtk_file_dialog_open(dialog, NULL, NULL, on_file_selected, entry);
+  GtkWidget* entry = GTK_WIDGET(user_data);
+  GtkFileDialog* dialog = gtk_file_dialog_new();
+  gtk_file_dialog_set_title(dialog, "Select a Folder");
+  gtk_file_dialog_set_modal(dialog, TRUE);
+  gtk_file_dialog_select_folder(dialog, NULL, NULL, on_file_selected, entry);
 }
 
 void AcquireTracePage::on_file_selected(GObject *source, GAsyncResult *res, gpointer data) {
-  GtkWidget *entry = GTK_WIDGET(data);
-  GFile *file = gtk_file_dialog_open_finish(GTK_FILE_DIALOG(source), res, NULL);
-  if (file) {
-    char *path = g_file_get_path(file);
+  GtkWidget* entry = GTK_WIDGET(data);
+  GFile* folder = gtk_file_dialog_select_folder_finish(GTK_FILE_DIALOG(source), res, NULL);
+  if (folder) {
+    char* path = g_file_get_path(folder);
     gtk_editable_set_text(GTK_EDITABLE(entry), path);
     g_free(path);
-    g_object_unref(file);
+    g_object_unref(folder);
   }
-  g_object_unref(source);
 }
 
-AcquireTracePage::AcquireTracePage(std::vector<uint8_t>* buffer): Page("Acquire Trace"), buffer(buffer) {
+void AcquireTracePage::cOnPlayClicked(GtkWidget* _, gpointer user_data) {
+  AcquireTracePage* self = static_cast<AcquireTracePage*>(user_data);
+  self->onPlayClicked();
+}
+
+void AcquireTracePage::cOnStopClicked(GtkWidget* _, gpointer user_data) {
+  AcquireTracePage* self = static_cast<AcquireTracePage*>(user_data);
+  self->onStopClicked();
+}
+
+void AcquireTracePage::cOnCheckToggle(GtkWidget* _, gpointer user_data) {
+  AcquireTracePage* self = static_cast<AcquireTracePage*>(user_data);
+  self->onCheckToggle();
+}
+
+gboolean AcquireTracePage::cUpdateLabel(gpointer user_data) {
+  AcquireTracePage* self = static_cast<AcquireTracePage*>(user_data);
+  return self->updateLabel();
+}
+
+void AcquireTracePage::onPlayClicked() {
+  const gchar* selectedText = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(ethernet.combo));
+  if (selectedText != NULL) {
+    std::string selection(selectedText);
+    g_free((gpointer)selectedText);
+    // disable actions
+    gtk_widget_set_sensitive(GTK_WIDGET(ethernet.combo), FALSE);
+    gtk_widget_set_sensitive(GTK_WIDGET(ethernet.play) , FALSE);
+    gtk_widget_set_sensitive(GTK_WIDGET(ethernet.stop) , TRUE );
+    // pick device selection
+    sniffer->pickDevice(selection);
+    //// Start update thread
+    gtk_spinner_start(GTK_SPINNER(ethernet.spinner));
+    gtk_widget_set_visible(ethernet.spinner, TRUE);
+    ethernet.timeout_id = g_timeout_add(100, (GSourceFunc)cUpdateLabel, this);
+  }
+}
+
+void AcquireTracePage::onStopClicked() {
+  // Unpick device
+  sniffer->unpickDevice();
+  // Enable actions
+  gtk_widget_set_sensitive(GTK_WIDGET(ethernet.combo), TRUE );
+  gtk_widget_set_sensitive(GTK_WIDGET(ethernet.play) , TRUE );
+  gtk_widget_set_sensitive(GTK_WIDGET(ethernet.stop) , FALSE);
+  // Stop update thread
+  gtk_spinner_stop(GTK_SPINNER(ethernet.spinner));
+  gtk_widget_set_visible(ethernet.spinner, FALSE);
+  if (ethernet.timeout_id != 0) {
+    g_source_remove(ethernet.timeout_id);
+    ethernet.timeout_id = 0;
+  }
+}
+
+void AcquireTracePage::onCheckToggle() {
+  bool active = gtk_check_button_get_active(GTK_CHECK_BUTTON(ethernet.check));
+  gtk_widget_set_sensitive(GTK_WIDGET(ethernet.entry) , active);
+  gtk_widget_set_sensitive(GTK_WIDGET(ethernet.browse), active);
+}
+
+gboolean AcquireTracePage::updateLabel() {
+  gchar* text = g_strdup_printf("Data captured: %lu Bytes", buffer->size());
+  gtk_label_set_text(GTK_LABEL(ethernet.buffer_size_label), text);
+  g_free(text);
+  return G_SOURCE_CONTINUE; // Keep the timeout running
+}
+
+AcquireTracePage::AcquireTracePage(std::vector<uint8_t>* buffer, Sniffer* sniffer): Page("Acquire Trace"), buffer(buffer), sniffer(sniffer) {
   page = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
 
   // Stack container
@@ -231,43 +327,66 @@ AcquireTracePage::AcquireTracePage(std::vector<uint8_t>* buffer): Page("Acquire 
   ethernet.row[0] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
   ////// Combo box text
   ethernet.combo = gtk_combo_box_text_new();
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(ethernet.combo), NULL, "eth0");
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(ethernet.combo), NULL, "eth1");
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(ethernet.combo), NULL, "lo");
+  for (const auto& device : sniffer->getDevices()) {
+    gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(ethernet.combo), NULL, device.c_str());
+  }
   gtk_widget_set_hexpand(ethernet.combo, TRUE);
   gtk_box_append(GTK_BOX(ethernet.row[0]), ethernet.combo);
   ////// Play button
   ethernet.play = gtk_button_new_from_icon_name("media-playback-start");
+  g_signal_connect(ethernet.play, "clicked", G_CALLBACK(cOnPlayClicked), this);
   gtk_box_append(GTK_BOX(ethernet.row[0]), ethernet.play);
   ////// Stop button
   ethernet.stop = gtk_button_new_from_icon_name("media-playback-stop");
+  g_signal_connect(ethernet.stop, "clicked", G_CALLBACK(cOnStopClicked), this);
+  gtk_widget_set_sensitive(GTK_WIDGET(ethernet.stop) , FALSE);
   gtk_box_append(GTK_BOX(ethernet.row[0]), ethernet.stop);
   ////// Push top row into main box
   gtk_box_append(GTK_BOX(ethernet.page), ethernet.row[0]);
+  ////// 
+  ethernet.row[1] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  gtk_widget_set_halign(ethernet.row[1], GTK_ALIGN_CENTER);
+  //////// Label
+  ethernet.buffer_size_label = gtk_label_new("Data captured: 0 Bytes");
+  gtk_box_append(GTK_BOX(ethernet.row[1]), ethernet.buffer_size_label);
+  //////// Spinner
+  ethernet.spinner = gtk_spinner_new();
+  gtk_widget_set_visible(ethernet.spinner, FALSE);
+  gtk_box_append(GTK_BOX(ethernet.row[1]), ethernet.spinner);
+  ////// Push top row into main box
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.row[1]);
   //// TRACE SAVING SECTION
   ////// Title label
   ethernet.title[1] = gtk_label_new("Save trace?");
   gtk_widget_add_css_class(ethernet.title[1], "heading");
   gtk_box_append(GTK_BOX(ethernet.page), ethernet.title[1]);
   ////// Description
-  ethernet.desc[1] = gtk_label_new("Select a destination to store the recoding of the trace by clicking the 'Browse' button. Confirm the action by checking the box below.");
+  ethernet.desc[1] = gtk_label_new("Select a destination (folder) to store the recoding of the trace by clicking the 'Browse' button. Confirm the action by checking the box below.");
   gtk_label_set_wrap(GTK_LABEL(ethernet.desc[1]), TRUE);
   gtk_label_set_justify(GTK_LABEL(ethernet.desc[1]), GTK_JUSTIFY_CENTER);
   gtk_widget_set_halign(ethernet.desc[1], GTK_ALIGN_CENTER);
   gtk_box_append(GTK_BOX(ethernet.page), ethernet.desc[1]);
   ////// File picker row
-  ethernet.row[1] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  ethernet.row[2] = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  ////// Checkbox
+  ethernet.check = gtk_check_button_new();
+  g_signal_connect(ethernet.check, "toggled", G_CALLBACK(cOnCheckToggle), this);
+  gtk_widget_set_halign(ethernet.check, GTK_ALIGN_CENTER);
+  gtk_widget_set_margin_start(ethernet.check, 10); // Left margin
+  gtk_widget_set_margin_end(ethernet.check, 10);   // Right margin
+  ////// Entry
   ethernet.entry = gtk_entry_new();
+  gtk_widget_set_sensitive(GTK_WIDGET(ethernet.entry) , FALSE);
   gtk_widget_set_hexpand(ethernet.entry, TRUE);
   ethernet.browse = gtk_button_new_with_label("Browse");
+  gtk_widget_set_sensitive(GTK_WIDGET(ethernet.browse), FALSE);
   ////// Connect browse button (reuse your previous pattern) */
   g_signal_connect(ethernet.browse, "clicked", G_CALLBACK(on_browse_clicked), ethernet.entry);
-  gtk_box_append(GTK_BOX(ethernet.row[1]), ethernet.entry);
-  gtk_box_append(GTK_BOX(ethernet.row[1]), ethernet.browse);
-  gtk_box_append(GTK_BOX(ethernet.page), ethernet.row[1]);
-  ////// Checkbox
-  ethernet.check = gtk_check_button_new_with_label("Enable saving");
-  gtk_box_append(GTK_BOX(ethernet.page), ethernet.check);
+  // pack all in row 2
+  gtk_box_append(GTK_BOX(ethernet.row[2]), ethernet.check);
+  gtk_box_append(GTK_BOX(ethernet.row[2]), ethernet.entry);
+  gtk_box_append(GTK_BOX(ethernet.row[2]), ethernet.browse);
+  gtk_box_append(GTK_BOX(ethernet.page), ethernet.row[2]);
   // Add switcher + stack to page
   gtk_box_append(GTK_BOX(page), switcher);
   gtk_box_append(GTK_BOX(page), stack);
@@ -300,7 +419,36 @@ void AcquireTracePage::onActivate(GtkWidget* _) {
     (*buffer) = std::vector<uint8_t>(std::istreambuf_iterator<char>(binary), std::istreambuf_iterator<char>());
   }
   else if (visible == ethernet.page) {
-    std::cout << "Ethernet selected" << std::endl;
+    //// Get destination from entry
+    const char* path = gtk_editable_get_text(GTK_EDITABLE(ethernet.entry));
+    if (g_file_test(path, G_FILE_TEST_EXISTS)) {
+      std::string filename = "";
+      if (g_file_test(path, G_FILE_TEST_IS_DIR)) {
+        filename = std::string(path)+"/"+getCurrentTimestamp()+".bin";
+      }
+      else if (g_file_test(path, G_FILE_TEST_IS_REGULAR)) {
+        filename = std::string(path);
+      }
+      else {
+        throw std::runtime_error(std::string(path)+" exists but is neither a file nor a directory.");
+      }
+      //// Dump data
+      ////// Open the file in binary mode
+      std::ofstream out_file(filename, std::ios::binary);
+      if (!out_file) {
+        throw std::runtime_error("Failed to open file for writing.");
+      }
+      ////// Write header
+      std::vector<std::string> metadata = {"DOETH", "TPIU ", "v0.1", "00000000"};
+      for (const auto& meta : metadata)
+        out_file.write(reinterpret_cast<const char*>(meta.data()), meta.size());
+      ////// Write the entire buffer as binary data
+      out_file.write(reinterpret_cast<const char*>(buffer->data()), buffer->size());
+      out_file.close();
+    }
+    else {
+      throw std::runtime_error("Failed to open file for writing.");
+    }
   }
 }
 
@@ -404,12 +552,12 @@ class Wizard {
     static void cOnNext(GtkWidget* _, gpointer data);
 
   public:
-    Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, Deformatter* deformatter);
+    Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, Sniffer* sniffer, Deformatter* deformatter);
     void onNext();
 
 };
 
-Wizard::Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, Deformatter* deformatter): parent(parent) {
+Wizard::Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buffer, Sniffer* sniffer, Deformatter* deformatter): parent(parent) {
   // create DialogBox
   dialog = gtk_dialog_new();
   gtk_window_set_application(GTK_WINDOW(dialog), app);
@@ -442,7 +590,7 @@ Wizard::Wizard(GtkApplication* app, GtkWidget* parent, std::vector<uint8_t>* buf
   gtk_paned_set_end_child(GTK_PANED(paned), stack);
   // Setup steps
   steps.push_back(new StartPage());
-  steps.push_back(new AcquireTracePage(buffer));
+  steps.push_back(new AcquireTracePage(buffer, sniffer));
   steps.push_back(new ParseTracePage(buffer, deformatter));
   //// Connect step-page
   for (const auto& page : steps) {
@@ -490,6 +638,7 @@ void Wizard::cOnNext(GtkWidget* _, gpointer data) {
 
 static void onActivate(GtkApplication* app, gpointer _) {
   std::vector<uint8_t>* buffer = new std::vector<uint8_t>();
+  Sniffer* sniffer = new Sniffer(buffer);
   Deformatter* deformatter = new Deformatter();
 
   GtkWidget* window = gtk_application_window_new(app);
@@ -499,7 +648,7 @@ static void onActivate(GtkApplication* app, gpointer _) {
 
   GtkWidget* notebook = gtk_notebook_new();
 
-  Wizard* wiz = new Wizard(app, window, buffer, deformatter);
+  Wizard* wiz = new Wizard(app, window, buffer, sniffer, deformatter);
   panels = new SourcePanels();
   roofline = new RooflinePanel();
 
