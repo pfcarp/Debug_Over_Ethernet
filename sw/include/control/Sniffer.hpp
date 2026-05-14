@@ -1,0 +1,40 @@
+#pragma once
+
+
+#include <cstdint>
+#include <pcap.h>
+#include <string>
+#include <vector>
+#include <thread>
+
+
+class Sniffer {
+
+  private:
+    // Attributes
+    const unsigned int headerOffset = 14;
+    std::string name;
+    pcap_t* interface = nullptr;
+    char errbuf[PCAP_ERRBUF_SIZE];
+    std::vector<uint8_t>* buffer;
+    uint64_t timestamp = 0;
+    std::thread captureThread;
+    // Methods
+    void onPacket(const pcap_pkthdr* header, const u_char* packet);
+    static void dispatch(u_char* user, const pcap_pkthdr* header, const u_char* packet);
+    bool hasHeader(const u_char* packet) const;
+    bool hasFooter(const u_char* packet) const;
+    bool areNext4BytesAllSet(const u_char* packet) const;
+    void captureLoop();
+
+  public:
+    // Attributes
+    // Methods
+    Sniffer(std::vector<uint8_t>* buffer);
+    std::vector<std::string> getDevices();
+    void pickDevice(std::string interface);
+    void unpickDevice();
+    ~Sniffer();
+    void printStats();
+
+};
