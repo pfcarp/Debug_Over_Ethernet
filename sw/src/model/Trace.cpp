@@ -21,6 +21,10 @@ Packet::Variant* Trace::add(uint64_t ts, Packet::Variant pkt) {
   return &seq.back();
 }
 
+bool Trace::isEmpty() const {
+  return data.empty();
+}
+
 uint64_t Trace::minTimestamp(bool cumulative) const {
   if (cumulative) {
     if (accumulated.empty()) {

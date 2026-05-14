@@ -23,6 +23,7 @@ class TraceDatabase {
     TraceDatabase& operator=(const TraceDatabase&) = delete;
     size_t size() const;
     bool empty() const;
+    bool isEmpty(const std::string name);
     std::vector<TraceCollection>::iterator begin();
     std::vector<TraceCollection>::iterator end();
     std::vector<TraceCollection>::const_iterator begin() const;

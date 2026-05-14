@@ -647,7 +647,7 @@ void Wizard::onNext() {
   }
   else if (current == steps.end()) {
     gtk_window_destroy(GTK_WINDOW(dialog));
-    panels->tracker.update();
+    panels->update();
   }
 }
 

@@ -9,6 +9,10 @@ Packet::Variant* TraceCollection::add(std::string name, uint64_t ts, Packet::Var
   return map[name].add(ts, pkt);
 }
 
+bool TraceCollection::isEmpty(const std::string name) {
+  return map[name].isEmpty();
+}
+
 uint64_t TraceCollection::minTimestamp() const {
   uint64_t res = UINT64_MAX;
   for (const auto& pair : map) {

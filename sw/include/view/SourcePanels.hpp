@@ -73,5 +73,6 @@ class SourcePanels {
     PlotAreaTracker tracker;
     // Methods
     SourcePanels();
+    void update();
 
 };

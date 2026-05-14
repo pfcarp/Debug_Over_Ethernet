@@ -5,6 +5,7 @@
 #include "Description.hpp"
 #include "TraceDatabase.hpp"
 #include "PlotAreaTracker.hpp"
+#include <iostream>
 
 
 SourcePanels::SourcePanels() {
@@ -35,16 +36,6 @@ SourcePanels::SourcePanels() {
   gtk_widget_set_hexpand(control.title.packet, TRUE);
   gtk_grid_attach(GTK_GRID(control.grid), control.title.packet, 2, 0, 1, 1);
   gtk_widget_set_halign(control.title.packet, GTK_ALIGN_START);
-  ////// Create entry for each packet
-  control.entries.reserve(Packet::ColorMap.size());
-  int row = 1;
-  for (const auto& [name, color] : Packet::ColorMap) {
-    control.entries.emplace_back(name, color, this);
-    gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().checkbox   , 0, row, 1, 1);
-    gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().colorpicker, 1, row, 1, 1);
-    gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().label      , 2, row, 1, 1);
-    row++;
-  }
   gtk_widget_set_hexpand(control.grid, FALSE);
   gtk_widget_set_vexpand(control.grid, TRUE);
   gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(control.box), control.grid);
@@ -101,6 +92,25 @@ SourcePanels::SourcePanels() {
   }
 }
 
+void SourcePanels::update() {
+  tracker.update();
+  auto& database = TraceDatabase::instance();
+  ////// Create entry for each packet
+  control.entries.reserve(Packet::ColorMap.size());
+  int row = 1;
+  for (auto& [variant, color] : Packet::ColorMap) {
+    if (database.isEmpty(variant)) {
+      color.alpha = 0.0;
+    }
+    else {
+      control.entries.emplace_back(variant, color, this);
+      gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().checkbox   , 0, row, 1, 1);
+      gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().colorpicker, 1, row, 1, 1);
+      gtk_grid_attach(GTK_GRID(control.grid), control.entries.back().label      , 2, row, 1, 1);
+      row++;
+    }
+  }
+}
 
 PanelEntry::PanelEntry(const std::string& name, const Color& color, SourcePanels* parent): parent(parent) {
   // Show checkbox

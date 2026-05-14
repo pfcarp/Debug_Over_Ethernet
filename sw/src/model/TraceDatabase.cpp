@@ -22,6 +22,13 @@ bool TraceDatabase::empty() const {
   return collection.empty();
 }
 
+bool TraceDatabase::isEmpty(const std::string name) {
+  bool empty = true;
+  for (auto& c : collection)
+    empty &= c.isEmpty(name);
+  return empty;
+}
+
 
 std::vector<TraceCollection>::iterator TraceDatabase::begin() {
   return collection.begin();

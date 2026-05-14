@@ -18,6 +18,7 @@ class Trace {
 
   public:
     Packet::Variant* add(uint64_t ts, Packet::Variant pkt);
+    bool isEmpty() const;
     uint64_t minTimestamp(bool cumulative) const;
     uint64_t maxTimestamp(bool cumulative) const;
     uint32_t maxCount(bool cumulative) const;

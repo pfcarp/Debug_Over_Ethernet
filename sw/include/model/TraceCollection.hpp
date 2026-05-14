@@ -20,6 +20,7 @@ class TraceCollection {
     std::map<std::string, Trace> map;
     // Methods
     Packet::Variant* add(std::string name, uint64_t ts, Packet::Variant pkt);
+    bool isEmpty(const std::string name);
     uint64_t minTimestamp() const;
     uint64_t maxTimestamp() const;
     uint32_t maxCount() const;
