@@ -153,8 +153,10 @@ class AcquireTracePage: public Page {
     Sniffer* sniffer;
     // Methods
     std::string getCurrentTimestamp();
-    static void on_browse_clicked(GtkButton *btn, gpointer user_data);
-    static void on_file_selected(GObject *source, GAsyncResult *res, gpointer data);
+    static void cOnFileBrowseClicked(GtkButton *btn, gpointer user_data);
+    static void cOnFolderBrowseClicked(GtkButton *btn, gpointer user_data);
+    static void cOnFileSelected(GObject *source, GAsyncResult *res, gpointer data);
+    static void cOnFolderSelected(GObject *source, GAsyncResult *res, gpointer data);
     static void cOnPlayClicked(GtkWidget* _, gpointer data);
     static void cOnStopClicked(GtkWidget* _, gpointer data);
     static void cOnCheckToggle(GtkWidget* _, gpointer data);
@@ -182,15 +184,34 @@ std::string AcquireTracePage::getCurrentTimestamp() {
   return oss.str();
 }
 
-void AcquireTracePage::on_browse_clicked(GtkButton *btn, gpointer user_data) {
+void AcquireTracePage::cOnFileBrowseClicked(GtkButton *btn, gpointer user_data) {
   GtkWidget* entry = GTK_WIDGET(user_data);
   GtkFileDialog* dialog = gtk_file_dialog_new();
-  gtk_file_dialog_set_title(dialog, "Select a Folder");
+  gtk_file_dialog_set_title(dialog, "Select a file");
   gtk_file_dialog_set_modal(dialog, TRUE);
-  gtk_file_dialog_select_folder(dialog, NULL, NULL, on_file_selected, entry);
+  gtk_file_dialog_open(dialog, NULL, NULL, cOnFileSelected, entry);
 }
 
-void AcquireTracePage::on_file_selected(GObject *source, GAsyncResult *res, gpointer data) {
+void AcquireTracePage::cOnFileSelected(GObject *source, GAsyncResult *res, gpointer data) {
+  GtkWidget* entry = GTK_WIDGET(data);
+  GFile* file = gtk_file_dialog_open_finish(GTK_FILE_DIALOG(source), res, NULL);
+  if (file) {
+    char* path = g_file_get_path(file);
+    gtk_editable_set_text(GTK_EDITABLE(entry), path);
+    g_free(path);
+    g_object_unref(file);
+  }
+}
+
+void AcquireTracePage::cOnFolderBrowseClicked(GtkButton *btn, gpointer user_data) {
+  GtkWidget* entry = GTK_WIDGET(user_data);
+  GtkFileDialog* dialog = gtk_file_dialog_new();
+  gtk_file_dialog_set_title(dialog, "Select a folder");
+  gtk_file_dialog_set_modal(dialog, TRUE);
+  gtk_file_dialog_select_folder(dialog, NULL, NULL, cOnFolderSelected, entry);
+}
+
+void AcquireTracePage::cOnFolderSelected(GObject *source, GAsyncResult *res, gpointer data) {
   GtkWidget* entry = GTK_WIDGET(data);
   GFile* folder = gtk_file_dialog_select_folder_finish(GTK_FILE_DIALOG(source), res, NULL);
   if (folder) {
@@ -299,7 +320,7 @@ AcquireTracePage::AcquireTracePage(std::vector<uint8_t>* buffer, Sniffer* sniffe
   ////// Store entry pointer inside button for callback access
   g_object_set_data(G_OBJECT(file.browse), "entry", file.entry);
   ////// Browse callback
-  g_signal_connect(file.browse, "clicked", G_CALLBACK(on_browse_clicked), file.entry);
+  g_signal_connect(file.browse, "clicked", G_CALLBACK(cOnFileBrowseClicked), file.entry);
   //// Assemble row
   gtk_box_append(GTK_BOX(file.row), file.entry);
   gtk_box_append(GTK_BOX(file.row), file.browse);
@@ -381,7 +402,7 @@ AcquireTracePage::AcquireTracePage(std::vector<uint8_t>* buffer, Sniffer* sniffe
   ethernet.browse = gtk_button_new_with_label("Browse");
   gtk_widget_set_sensitive(GTK_WIDGET(ethernet.browse), FALSE);
   ////// Connect browse button (reuse your previous pattern) */
-  g_signal_connect(ethernet.browse, "clicked", G_CALLBACK(on_browse_clicked), ethernet.entry);
+  g_signal_connect(ethernet.browse, "clicked", G_CALLBACK(cOnFolderBrowseClicked), ethernet.entry);
   // pack all in row 2
   gtk_box_append(GTK_BOX(ethernet.row[2]), ethernet.check);
   gtk_box_append(GTK_BOX(ethernet.row[2]), ethernet.entry);
