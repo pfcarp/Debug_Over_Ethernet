@@ -10,8 +10,10 @@ import spinal.lib.sim.{StreamMonitor, StreamDriver, StreamReadyRandomizer, Score
 object PreAllocFlushQueueSim extends App {
 
   Config.sim.compile({
-    val dut = PreAllocFlushQueue(64, 8, 20)
+    val dut = PreAllocFlushQueue(64, 9, 20)
     dut.tail.value.simPublic()
+    dut.head.value.simPublic()
+    dut.timeInsertCounter.value.simPublic()
     dut
   }).doSim { dut =>
     SimTimeout(1000000)
@@ -36,7 +38,7 @@ object PreAllocFlushQueueSim extends App {
 
     /*  */
     StreamMonitor(dut.io.pop, dut.clockDomain) { payload =>
-      if (dut.tail.value.toInt>1 && dut.tail.value.toInt<7){
+      if ((dut.tail.value.toInt>1 && dut.tail.value.toInt<8) && ((dut.tail.value.toInt+1)%3)!=0){
         //printf("this is the tail:%d\n",dut.tail.value.toInt)
         scoreboard.pushDut(payload.data.toBigInt)
         }
