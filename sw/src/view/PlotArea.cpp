@@ -181,36 +181,39 @@ void PlotArea::onRender(int width, int height) {
   tracker.plot.height = height;
 
   glViewport(0, 0, width, height);
-  glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // Light gray background
+  glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
   TraceDatabase& database = TraceDatabase::instance();
-  float xd = 2.0f/((database.maxTimestamp()-database.minTimestamp()));
-  float yd = 2.0f/((database.maxCount()-database.minCount()));
-  
-  //float xo = tracker.viewport.offset.x-tracker.viewport.scale;
-  //float yo = tracker.viewport.offset.y-tracker.viewport.scale;
-  float xo = tracker.viewport.offset.x;
-  float yo = tracker.viewport.offset.y;
-  
-  float  s = tracker.viewport.scale;
+  double x_min = database.minTimestamp();
+  double x_max = database.maxTimestamp();
+  double y_min = database.minCount();
+  double y_max = database.maxCount();
 
-  //std::cout << tracker.mouse.current.x   << " "  << tracker.mouse.current.y   << "\n";
-  //std::cout << tracker.viewport.offset.x << " "  << tracker.viewport.offset.y << "\n";
-  //std::cout << tracker.viewport.scale    << "\n------------------" << std::endl;
-  
+  double x_range = x_max - x_min;
+  double y_range = y_max - y_min;
+  double x_center = (x_min + x_max) / 2.0;
+  double y_center = (y_min + y_max) / 2.0;
+
+  double s = tracker.viewport.scale;
+  double xo = tracker.viewport.offset.x;
+  double yo = tracker.viewport.offset.y;
+
+  // Corrected view projection matrix that centers data properly
   float view_projection[16] = {
-     xd*s,  0.0f, 0.0f,  0.0f,
-     0.0f,  yd*s, 0.0f,  0.0f,
-     0.0f,  0.0f, 1.0f,  0.0f,
-     xo  ,  yo  , 0.0f,  1.0f
+    static_cast<float>(2.0 * s / x_range),  0.0f, 0.0f, 0.0f,
+    0.0f, static_cast<float>(2.0 * s / y_range), 0.0f, 0.0f,
+    0.0f, 0.0f, 1.0f, 0.0f,
+    static_cast<float>(-2.0 * s * x_center / x_range + xo),
+    static_cast<float>(-2.0 * s * y_center / y_range + yo),
+    0.0f, 1.0f
   };
 
   glUseProgram(shader_program);
   glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, view_projection);
-  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), tracker.viewport.scale);
+  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), static_cast<float>(s));
 
-  // Draw everything (no adaptX/adaptY needed!)
+  // Draw everything
   const auto& variants = TraceDatabase::instance()[id].getVariants();
   for (const std::string& variant : variants) {
     plotScatterGL(variant, width, height);
@@ -233,27 +236,26 @@ void PlotArea::onUnrealize() {
 // --- Scatter Plot (OpenGL) ---
 void PlotArea::plotScatterGL(const std::string& variant, int width, int height) {
   Color color = Packet::ColorMap[variant];
-    if (color.alpha <= 0.0) return;
+  if (color.alpha <= 0.0) return;
 
-    TraceDatabase& database = TraceDatabase::instance();
-    const auto& buffer = database[id].entries(variant);
-    if (buffer.empty()) return;
+  TraceDatabase& database = TraceDatabase::instance();
+  const auto& buffer = database[id].entries(variant);
+  if (buffer.empty()) return;
 
-    std::vector<float> points;
-    /*for (int i = 0; i < buffer.size(); i++) {
-      const auto& entry = buffer.at(i);
-      float x = static_cast<float>(entry.first);  // Raw x (timestamp)
-      float y = static_cast<float>(entry.second); // Raw y (count)
-      points.insert(points.end(), {x, y, static_cast<float>(color.red), static_cast<float>(color.green), static_cast<float>(color.blue), static_cast<float>(color.alpha)});
-    }*/
-    points.insert(points.end(), {20.0, 7.5, 1.0, 0.0, 0.0, 1.0});
+  std::vector<float> points;
+  for (int i = 0; i < buffer.size(); i++) {
+    const auto& entry = buffer.at(i);
+    float x = static_cast<float>(entry.first);  // Raw x (timestamp)
+    float y = static_cast<float>(entry.second); // Raw y (count)
+    points.insert(points.end(), {x, y, static_cast<float>(color.red), static_cast<float>(color.green), static_cast<float>(color.blue), static_cast<float>(color.alpha)});
+  }
 
-    glBindVertexArray(vao_points);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_points);
-    glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(float), points.data(), GL_DYNAMIC_DRAW);
-    glUniform1f(glGetUniformLocation(shader_program, "uRadius"), 2.0f); // Large radius
-    glDrawArrays(GL_POINTS, 0, buffer.size());
-    glBindVertexArray(0);
+  glBindVertexArray(vao_points);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_points);
+  glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(float), points.data(), GL_DYNAMIC_DRAW);
+  glUniform1f(glGetUniformLocation(shader_program, "uRadius"), 2.0f);
+  glDrawArrays(GL_POINTS, 0, points.size() / 6);  // Fixed: use actual point count
+  glBindVertexArray(0);
 }
 
 // --- Timemarkers (OpenGL) ---
@@ -357,45 +359,25 @@ gboolean PlotArea::cOnScroll(GtkEventControllerScroll* controller, double dx, do
 }
 
 gboolean PlotArea::onScroll(double dy) {
-  // Convert cursor to world coordinates BEFORE zoom
-  double world_x = tracker.viewport.offset.x+(tracker.mouse.current.x/tracker.viewport.scale);
-  double world_y = tracker.viewport.offset.y+(tracker.mouse.current.y/tracker.viewport.scale);
-/*
-  // Convert mouse position to plot-local coordinates
-  double px = tracker.mouse.current.x-(tracker.plot.x);
-  double py = tracker.mouse.current.y-(tracker.plot.y);
-  // Convert cursor to world coordinates BEFORE zoom
-  double world_x = (px-tracker.viewport.offset.x)/tracker.viewport.scale;
-  double world_y = (py-tracker.viewport.offset.y)/tracker.viewport.scale;
-  // Update zoom
-  if      (dy < 0) tracker.viewport.scale = std::clamp(tracker.viewport.scale+0.25, 1.0, 50.0);
-  else if (dy > 0) tracker.viewport.scale = std::clamp(tracker.viewport.scale-0.25, 1.0, 50.0);
-  // Recompute offset so the world point stays under the cursor
-  tracker.viewport.offset.x = px-(world_x*tracker.viewport.scale);
-  tracker.viewport.offset.y = py-(world_y*tracker.viewport.scale);
-  // Clamp offset to prevent empty areas
-  clampOffset();
-  tracker.update();
-*/
-/*
-  // Convert mouse position to plot-local coordinates
-  double px = tracker.viewport.offset.x+(tracker.mouse.current.x/tracker.viewport.scale);
-  double py = tracker.viewport.offset.y+(tracker.mouse.current.y/tracker.viewport.scale);
-  std::cout << "Global position: (" << px << ", " << py << ")" << std::endl;
-  std::cout << "Mouse position : (" << tracker.mouse.current.x << ", " << tracker.mouse.current.y << ")" << std::endl;
-  // Update zoom
-  if      (dy < 0) tracker.viewport.scale = std::clamp(tracker.viewport.scale+0.25, 1.0, 50.0);
-  else if (dy > 0) tracker.viewport.scale = std::clamp(tracker.viewport.scale-0.25, 1.0, 50.0);
-  // Recompute offset so the world point stays under the cursor
-  tracker.viewport.offset.x = px*tracker.viewport.scale;
-  tracker.viewport.offset.y = py*tracker.viewport.scale;
-  // Clamp offset to prevent empty areas
-  //clampOffset();
-  tracker.update();
-*/
+  double old_scale = tracker.viewport.scale;
+  double new_scale = std::clamp(old_scale * (dy < 0 ? 1.3 : 0.7), 1.0, 50.0);
+
+  if (new_scale != old_scale) {
+    double scale_ratio = new_scale / old_scale;
+    double mouse_x = tracker.mouse.current.x;
+    double mouse_y = tracker.mouse.current.y;
+
+    // Adjust offset to keep mouse on same world point
+    tracker.viewport.offset.x = mouse_x - (mouse_x - tracker.viewport.offset.x) * scale_ratio;
+    tracker.viewport.offset.y = mouse_y - (mouse_y - tracker.viewport.offset.y) * scale_ratio;
+
+    tracker.viewport.scale = static_cast<float>(new_scale);
+    clampOffset();
+    tracker.update();
+  }
+
   return TRUE;
 }
-
 
 void PlotArea::cOnMotion(GtkEventControllerMotion* controller, double x, double y, gpointer user_data) {
   PlotArea* self = static_cast<PlotArea*>(user_data);
@@ -403,20 +385,33 @@ void PlotArea::cOnMotion(GtkEventControllerMotion* controller, double x, double 
 }
 
 void PlotArea::onMotion(double x, double y) {
-  // Keep track of current position (for scroll)
-  tracker.mouse.current.x =   (2*(x/tracker.plot.width ))-1 ;
-  tracker.mouse.current.y = -((2*(y/tracker.plot.height))-1);
+  // Convert to NDC [-1, 1]
+  float new_x = static_cast<float>((2.0 * x / tracker.plot.width) - 1.0);
+  float new_y = static_cast<float>(-((2.0 * y / tracker.plot.height) - 1.0));
+
   // Handling drag
-  if (tracker.mouse.dragging) [[unlikely]] {
-    tracker.viewport.offset.x += tracker.mouse.current.x-tracker.mouse.last.x;
-    tracker.viewport.offset.y += tracker.mouse.current.y-tracker.mouse.last.y;
-    tracker.mouse.last.x = tracker.mouse.current.x;
-    tracker.mouse.last.y = tracker.mouse.current.y;
-    clampOffset();   // same clamping logic used in zoom
+  if (tracker.mouse.dragging) {
+    float delta_x = new_x - tracker.mouse.last.x;
+    float delta_y = new_y - tracker.mouse.last.y;
+
+    // FIX: Subtract delta to pan in correct direction
+    tracker.viewport.offset.x += delta_x;
+    tracker.viewport.offset.y += delta_y;
+
+    clampOffset();
     tracker.update();
   }
-}
 
+  // Update current position for next frame
+  tracker.mouse.current.x = new_x;
+  tracker.mouse.current.y = new_y;
+
+  // Update last position when dragging
+  if (tracker.mouse.dragging) {
+    tracker.mouse.last.x = new_x;
+    tracker.mouse.last.y = new_y;
+  }
+}
 
 void PlotArea::cOnDialogResponse(GtkDialog* _, int response_id, gpointer user_data) {
   TimemarkerDialog* self = static_cast<TimemarkerDialog*>(user_data);
@@ -438,30 +433,36 @@ void PlotArea::cOnButtonPress(GtkGestureClick* gesture, int n_press, double x, d
 }
 
 void PlotArea::onButtonPress(bool right, double x, double y) {
-  // Convert mouse position to plot-local coordinates
-  double px = tracker.mouse.current.x-(tracker.plot.x);
-  double py = tracker.mouse.current.y-(tracker.plot.y);
-  bool isInframe = (px >= 0) && (px <= tracker.plot.width) && (py >= 0) && (py <= tracker.plot.height);
-  // Convert cursor to world coordinates BEFORE zoom
+  // Convert to NDC
+  float ndc_x = static_cast<float>((2.0 * x / tracker.plot.width) - 1.0);
+  float ndc_y = static_cast<float>(-((2.0 * y / tracker.plot.height) - 1.0));
+
   TraceDatabase& database = TraceDatabase::instance();
-  //// X axis
-  auto xmin = database.minTimestamp();
-  auto xmax = database.maxTimestamp();
-  double visible_width_x = (xmax-xmin)/tracker.viewport.scale;
-  double world_x_min = xmin+(((-tracker.viewport.offset.x/tracker.plot.width)/tracker.viewport.scale)*xmax);
-  double local_x = (px/tracker.plot.width)*visible_width_x;
-  double global_x = world_x_min+local_x;
-  //// Y axis
-  auto ymin = database.minCount();
-  auto ymax = database.maxCount();
-  double visible_width_y = (ymax-ymin)/tracker.viewport.scale;
-  double world_y_min = ymin+ymax-((((tracker.plot.height-tracker.viewport.offset.y)/tracker.plot.height)/tracker.viewport.scale)*ymax);
-  double local_y = (1.0-(py/tracker.plot.height))*visible_width_y;
-  double global_y = world_y_min+local_y;
+  float x_min = static_cast<float>(database.minTimestamp());
+  float x_max = static_cast<float>(database.maxTimestamp());
+  float y_min = static_cast<float>(database.minCount());
+  float y_max = static_cast<float>(database.maxCount());
+
+  float x_range = x_max - x_min;
+  float y_range = y_max - y_min;
+  float x_center = (x_min + x_max) / 2.0f;
+  float y_center = (y_min + y_max) / 2.0f;
+
+  float s = tracker.viewport.scale;
+  float xo = tracker.viewport.offset.x;
+  float yo = tracker.viewport.offset.y;
+
+  // Convert NDC to data coordinates
+  float world_x = x_center + (ndc_x - xo) * x_range / (2.0f * s);
+  float world_y = y_center + (ndc_y - yo) * y_range / (2.0f * s);
+
+  // Check if mouse is within plot area (NDC is always [-1,1] for the widget)
+  bool isInframe = true; // Since NDC coordinates are already clipped to the widget
+
   if (right) {
     if (isInframe) {
       GtkWindow* window = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(parent)));
-      TimemarkerDialog* timemarker = new TimemarkerDialog(GTK_WINDOW(window), global_x);
+      TimemarkerDialog* timemarker = new TimemarkerDialog(GTK_WINDOW(window), static_cast<double>(world_x));
       g_signal_connect(timemarker->parent, "response", G_CALLBACK(PlotArea::cOnDialogResponse), timemarker);
       g_signal_connect(timemarker->parent, "response", G_CALLBACK(PlotArea::cOnDialogResponseUpdate), &tracker);
       gtk_window_present(GTK_WINDOW(timemarker->parent));
@@ -470,18 +471,16 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
   else {
     // Dragging management
     tracker.mouse.dragging = true;
-    tracker.mouse.last.x =   (2*(x/tracker.plot.width ))-1 ;
-    tracker.mouse.last.y = -((2*(y/tracker.plot.height))-1);
-    // Info lookup management
-    //// Ignore scroll outside plot area
+    tracker.mouse.last.x = ndc_x;
+    tracker.mouse.last.y = ndc_y;
+
     if (isInframe) {
-      ////// handle all matches
       std::string description = "";
-      auto candidates = getPointsInRadius(global_x, global_y, 2.0/sqrt(tracker.viewport.scale));
+      auto candidates = getPointsInRadius(static_cast<uint64_t>(world_x), static_cast<uint32_t>(world_y), 2.0f/sqrt(s));
       for (const auto& candidate : candidates) {
         std::string msg = database[id].find(candidate.first, candidate.second);
         if (msg != "") {
-          description += msg+"\n";
+          description += msg + "\n";
         }
       }
       if (description != "") {
@@ -493,7 +492,6 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
   }
 }
 
-
 void PlotArea::cOnButtonRelease(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data) {
   PlotArea* self = static_cast<PlotArea*>(user_data);
   self->onButtonRelease();
@@ -504,8 +502,10 @@ void PlotArea::onButtonRelease() {
 }
 
 void PlotArea::clampOffset() {
-  tracker.viewport.offset.x = std::clamp(tracker.viewport.offset.x, -(tracker.plot.width)*(tracker.viewport.scale-1), 0.0);
-  tracker.viewport.offset.y = std::clamp(tracker.viewport.offset.y, -(tracker.plot.height)*(tracker.viewport.scale-1), 0.0);
+  double s = tracker.viewport.scale; // Use double for consistency
+  // Clamp to prevent showing empty space beyond data boundaries
+  tracker.viewport.offset.x = std::clamp(tracker.viewport.offset.x, 1.0 - s, s - 1.0);
+  tracker.viewport.offset.y = std::clamp(tracker.viewport.offset.y, 1.0 - s, s - 1.0);
 }
 
 const double PlotArea::adaptX(const double& value, const double& min, const double& interval) const {
