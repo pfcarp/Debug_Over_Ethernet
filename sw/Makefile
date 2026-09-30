@@ -1,5 +1,5 @@
 CXXFLAGS=-lm -std=c++20 -Wall -Wextra
-GTK4FLAGS=`pkg-config --cflags --libs gtk4`
+GTK4FLAGS=`pkg-config --cflags --libs gtk4 epoxy gl`
 PCAPFLAGS=`pkg-config --cflags --libs libpcap`
 GRAPHVIZFLAGS=-lgvc -lcgraph
 OPT=-O2 -march=native

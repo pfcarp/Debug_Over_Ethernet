@@ -5,6 +5,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <algorithm>
+#include <iostream>
+#include <vector>
+#include <epoxy/gl.h>
 
 
 #include "Description.hpp"
@@ -14,22 +17,95 @@
 
 const char* xlabel = "Time (CC)";
 
+// --- Shader Sources ---
+static const char* vertex_shader_source = R"glsl(
+  #version 300 es
+  layout(location = 0) in vec2 aPos;
+  layout(location = 1) in vec4 aColor;
+  out vec4 vColor;
+  uniform mat4 uViewProjection;
+  uniform float uZoomScale;
+  void main() {
+    gl_Position = uViewProjection * vec4(aPos, 0.0, 1.0);
+    vColor = aColor;
+    gl_PointSize = 10.0; // * uZoomScale;
+  }
+)glsl";
 
+static const char* fragment_shader_source = R"glsl(
+  #version 300 es
+  precision highp float; // Required for OpenGL ES
+  in vec4 vColor;
+  out vec4 FragColor;
+  uniform float uRadius;
+  void main() {
+    vec2 coord = gl_PointCoord - vec2(0.5);
+    if (length(coord) > 0.5) discard;
+    if (length(coord) > uRadius) discard;
+    FragColor = vColor;
+  }
+)glsl";
+
+// --- Helper: Compile Shaders ---
+static GLuint compileShader(GLenum type, const char* source) {
+    GLuint shader = glCreateShader(type);
+    glShaderSource(shader, 1, &source, NULL);
+    glCompileShader(shader);
+    GLint success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetShaderInfoLog(shader, 512, NULL, infoLog);
+        g_warning("Shader compilation failed: %s", infoLog);
+        return 0;
+    }
+    return shader;
+}
+
+// --- Helper: Load Shaders ---
+static GLuint loadShaders() {
+    GLuint vertex_shader = compileShader(GL_VERTEX_SHADER, vertex_shader_source);
+    GLuint fragment_shader = compileShader(GL_FRAGMENT_SHADER, fragment_shader_source);
+    if (!vertex_shader || !fragment_shader) return 0;
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vertex_shader);
+    glAttachShader(program, fragment_shader);
+    glLinkProgram(program);
+    GLint success;
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success) {
+        GLchar infoLog[512];
+        glGetProgramInfoLog(program, 512, NULL, infoLog);
+        g_warning("Shader linking failed: %s", infoLog);
+        return 0;
+    }
+    glDeleteShader(vertex_shader);
+    glDeleteShader(fragment_shader);
+    return program;
+}
+
+// -----------
 PlotArea::PlotArea(uint32_t id, PlotAreaTracker& tracker): id(id), tracker(tracker) {
   tracker.link(this);
-  parent = gtk_drawing_area_new();
+  parent = gtk_gl_area_new();
   gtk_widget_set_hexpand(parent, TRUE);
   gtk_widget_set_vexpand(parent, TRUE);
-  gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(parent), cOnDraw, this, NULL);
-  // Scroll
+
+  // Connect OpenGL signals
+  g_signal_connect(parent, "realize", G_CALLBACK(cOnRealize), this);
+  g_signal_connect(parent, "render", G_CALLBACK(cOnRender), this);
+  g_signal_connect(parent, "unrealize", G_CALLBACK(cOnUnrealize), this);
+
+  // Keep existing event controllers
   GtkEventController* scroll = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_VERTICAL);
   g_signal_connect(scroll, "scroll", G_CALLBACK(PlotArea::cOnScroll), this);
   gtk_widget_add_controller(parent, scroll);
-  // Mouse
+
   GtkEventController* motion = gtk_event_controller_motion_new();
   g_signal_connect(motion, "motion", G_CALLBACK(cOnMotion), this);
   gtk_widget_add_controller(parent, motion);
-  // Click
+
   GtkGestureClick* click = GTK_GESTURE_CLICK(gtk_gesture_click_new());
   gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 0);
   gtk_widget_add_controller(parent, GTK_EVENT_CONTROLLER(click));
@@ -43,43 +119,237 @@ void PlotArea::update() {
 }
 
 
-void PlotArea::cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data) {
+// --- OpenGL Callbacks ---
+void PlotArea::cOnRealize(GtkGLArea* area, gpointer user_data) {
   PlotArea* self = static_cast<PlotArea*>(user_data);
-  self->onDraw(area, cr, width, height);
+  self->onRealize();
 }
 
-void PlotArea::onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height) {
-  // update geometries
-  cairo = cr;
-  tracker.dimensions.width = width;
-  tracker.dimensions.height = height;
-  tracker.plot.width = tracker.dimensions.width-(1.5*tracker.plot.x);
-  tracker.plot.height = tracker.dimensions.height-(2.0*tracker.plot.y);
-  // draw data
-  cairo_save(cairo);
-  setBackground();
-  ////
-  cairo_rectangle(cairo, tracker.plot.x, tracker.plot.y, tracker.plot.width, tracker.plot.height);
-  cairo_clip(cairo);
-  ////
-  cairo_translate(cairo, tracker.plot.x, tracker.plot.y);
-  cairo_translate(cairo, tracker.viewport.offset.x, tracker.viewport.offset.y);
-  cairo_scale(cairo, tracker.viewport.scale, tracker.viewport.scale);
-  ////
-  plotTimemarkers();
+void PlotArea::onRealize() {
+  gtk_gl_area_make_current(GTK_GL_AREA(parent));
+    if (gtk_gl_area_get_error(GTK_GL_AREA(parent)) != NULL) {
+        g_warning("Failed to initialize OpenGL");
+        return;
+    }
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Load shaders (see below)
+    shader_program = loadShaders();
+    if (!shader_program) {
+        g_warning("Failed to load shaders");
+        return;
+    }
+
+    // VAO/VBO for points (scatter)
+    glGenVertexArrays(1, &vao_points);
+    glGenBuffers(1, &vbo_points);
+    glBindVertexArray(vao_points);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_points);
+    glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    // VAO/VBO for lines (timemarkers/axes/curves)
+    glGenVertexArrays(1, &vao_lines);
+    glGenBuffers(1, &vbo_lines);
+    glBindVertexArray(vao_lines);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
+    glBufferData(GL_ARRAY_BUFFER, 0, NULL, GL_DYNAMIC_DRAW);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+}
+
+void PlotArea::cOnRender(GtkGLArea* area, GdkGLContext* context, gpointer user_data) {
+    PlotArea* self = static_cast<PlotArea*>(user_data);
+    int width = gtk_widget_get_allocated_width(GTK_WIDGET(area));
+    int height = gtk_widget_get_allocated_height(GTK_WIDGET(area));
+    self->onRender(width, height);
+}
+
+void PlotArea::onRender(int width, int height) {
+  tracker.plot.width = width;
+  tracker.plot.height = height;
+
+  glViewport(0, 0, width, height);
+  glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // Light gray background
+  glClear(GL_COLOR_BUFFER_BIT);
+
+  TraceDatabase& database = TraceDatabase::instance();
+  float xd = 2.0f/((database.maxTimestamp()-database.minTimestamp()));
+  float yd = 2.0f/((database.maxCount()-database.minCount()));
+  
+  //float xo = tracker.viewport.offset.x-tracker.viewport.scale;
+  //float yo = tracker.viewport.offset.y-tracker.viewport.scale;
+  float xo = tracker.viewport.offset.x;
+  float yo = tracker.viewport.offset.y;
+  
+  float  s = tracker.viewport.scale;
+
+  //std::cout << tracker.mouse.current.x   << " "  << tracker.mouse.current.y   << "\n";
+  //std::cout << tracker.viewport.offset.x << " "  << tracker.viewport.offset.y << "\n";
+  //std::cout << tracker.viewport.scale    << "\n------------------" << std::endl;
+  
+  float view_projection[16] = {
+     xd*s,  0.0f, 0.0f,  0.0f,
+     0.0f,  yd*s, 0.0f,  0.0f,
+     0.0f,  0.0f, 1.0f,  0.0f,
+     xo  ,  yo  , 0.0f,  1.0f
+  };
+
+  glUseProgram(shader_program);
+  glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, view_projection);
+  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), tracker.viewport.scale);
+
+  // Draw everything (no adaptX/adaptY needed!)
   const auto& variants = TraceDatabase::instance()[id].getVariants();
   for (const std::string& variant : variants) {
-    plotScatter(variant);
+    plotScatterGL(variant, width, height);
   }
-  ////
-  cairo_restore(cairo);
-  // axes
-  cairo_save(cairo);
-  drawAxes();
-  drawTimemarkerHeaders();
-  cairo_restore(cairo);
 }
 
+void PlotArea::cOnUnrealize(GtkGLArea* area, gpointer user_data) {
+    PlotArea* self = static_cast<PlotArea*>(user_data);
+    self->onUnrealize();
+}
+
+void PlotArea::onUnrealize() {
+    glDeleteVertexArrays(1, &vao_points);
+    glDeleteBuffers(1, &vbo_points);
+    glDeleteVertexArrays(1, &vao_lines);
+    glDeleteBuffers(1, &vbo_lines);
+    glDeleteProgram(shader_program);
+}
+
+// --- Scatter Plot (OpenGL) ---
+void PlotArea::plotScatterGL(const std::string& variant, int width, int height) {
+  Color color = Packet::ColorMap[variant];
+    if (color.alpha <= 0.0) return;
+
+    TraceDatabase& database = TraceDatabase::instance();
+    const auto& buffer = database[id].entries(variant);
+    if (buffer.empty()) return;
+
+    std::vector<float> points;
+    /*for (int i = 0; i < buffer.size(); i++) {
+      const auto& entry = buffer.at(i);
+      float x = static_cast<float>(entry.first);  // Raw x (timestamp)
+      float y = static_cast<float>(entry.second); // Raw y (count)
+      points.insert(points.end(), {x, y, static_cast<float>(color.red), static_cast<float>(color.green), static_cast<float>(color.blue), static_cast<float>(color.alpha)});
+    }*/
+    points.insert(points.end(), {20.0, 7.5, 1.0, 0.0, 0.0, 1.0});
+
+    glBindVertexArray(vao_points);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_points);
+    glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(float), points.data(), GL_DYNAMIC_DRAW);
+    glUniform1f(glGetUniformLocation(shader_program, "uRadius"), 2.0f); // Large radius
+    glDrawArrays(GL_POINTS, 0, buffer.size());
+    glBindVertexArray(0);
+}
+
+// --- Timemarkers (OpenGL) ---
+void PlotArea::plotTimemarkersGL() {
+  TimemarkerCollection& collection = TimemarkerCollection::instance();
+    TraceDatabase& database = TraceDatabase::instance();
+    double x_min = database.minTimestamp();
+    double x_max = database.maxTimestamp();
+    double x_interval = x_max - x_min;
+
+    std::vector<float> lines;
+    for (const auto& marker : collection) {
+        const Color& color = marker.getColor();
+        if (color.alpha <= 0.0) continue;
+
+        float x = adaptX(static_cast<double>(marker.getTime()), x_min, x_interval);
+        float y1 = 0.0f;
+        float y2 = tracker.plot.height;
+
+        lines.insert(lines.end(), {x, y1, color.red, color.green, color.blue, color.alpha});
+        lines.insert(lines.end(), {x, y2, color.red, color.green, color.blue, color.alpha});
+    }
+
+    glBindVertexArray(vao_lines);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
+    glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_LINES, 0, lines.size() / 6);
+    glBindVertexArray(0);
+}
+
+// --- Curves (OpenGL) ---
+void PlotArea::plotCurveGL(const std::string& variant) {
+    Color color = Packet::ColorMap[variant];
+    //if (color.alpha <= 0.0) return;
+
+    TraceDatabase& database = TraceDatabase::instance();
+    double x_min = database.minTimestamp();
+    double x_max = database.maxTimestamp();
+    double x_interval = x_max - x_min;
+    double y_min = database.minCount();
+    double y_max = database.maxCount();
+    double y_interval = y_max - y_min;
+
+    const auto& buffer = database[id].entries(variant);
+    if (buffer.size() <= 1) return; // Single point handled by scatter
+
+    std::vector<float> lines;
+    for (int i = 0; i < buffer.size(); i++) {
+        const auto& entry = buffer.at(i);
+        float x = (adaptX(entry.first, x_min, x_interval) - tracker.plot.width / 2.0f) / (tracker.plot.width / 2.0f);
+        float y = (adaptY(entry.second, y_min, y_interval) - tracker.plot.height / 2.0f) / (tracker.plot.height / 2.0f);
+        lines.insert(lines.end(), {x, y, color.red, color.green, color.blue, color.alpha});
+    }
+
+    glBindVertexArray(vao_lines);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
+    glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_LINE_STRIP, 0, lines.size() / 6);
+    glBindVertexArray(0);
+}
+
+// --- Axes (OpenGL) ---
+void PlotArea::drawAxesGL() {
+  const int nticks = 10;
+    const float tick_len = 5.0f;
+
+    std::vector<float> lines;
+
+    // X axis (horizontal line)
+    lines.insert(lines.end(), {0.0f, 0.0f, 0.2f, 0.2f, 0.2f, 1.0f});
+    lines.insert(lines.end(), {tracker.plot.width, 0.0f, 0.2f, 0.2f, 0.2f, 1.0f});
+
+    // Y axis (vertical line)
+    lines.insert(lines.end(), {0.0f, 0.0f, 0.2f, 0.2f, 0.2f, 1.0f});
+    lines.insert(lines.end(), {0.0f, tracker.plot.height, 0.2f, 0.2f, 0.2f, 1.0f});
+
+    // X ticks
+    for (int i = 0; i <= nticks; i++) {
+        float tx = (i * tracker.plot.width) / nticks;
+        lines.insert(lines.end(), {tx, 0.0f, 0.2f, 0.2f, 0.2f, 1.0f});
+        lines.insert(lines.end(), {tx, tick_len, 0.2f, 0.2f, 0.2f, 1.0f});
+    }
+
+    // Y ticks
+    for (int i = 0; i <= nticks; i++) {
+        float ty = (i * tracker.plot.height) / nticks;
+        lines.insert(lines.end(), {0.0f, ty, 0.2f, 0.2f, 0.2f, 1.0f});
+        lines.insert(lines.end(), {-tick_len, ty, 0.2f, 0.2f, 0.2f, 1.0f});
+    }
+
+    glBindVertexArray(vao_lines);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
+    glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_LINES, 0, lines.size() / 6);
+    glBindVertexArray(0);
+}
 
 gboolean PlotArea::cOnScroll(GtkEventControllerScroll* controller, double dx, double dy, gpointer user_data) {
   PlotArea* self = static_cast<PlotArea*>(user_data);
@@ -87,12 +357,13 @@ gboolean PlotArea::cOnScroll(GtkEventControllerScroll* controller, double dx, do
 }
 
 gboolean PlotArea::onScroll(double dy) {
+  // Convert cursor to world coordinates BEFORE zoom
+  double world_x = tracker.viewport.offset.x+(tracker.mouse.current.x/tracker.viewport.scale);
+  double world_y = tracker.viewport.offset.y+(tracker.mouse.current.y/tracker.viewport.scale);
+/*
   // Convert mouse position to plot-local coordinates
   double px = tracker.mouse.current.x-(tracker.plot.x);
   double py = tracker.mouse.current.y-(tracker.plot.y);
-  // Ignore scroll outside plot area
-  if (px < 0 || px > tracker.plot.width || py < 0 || py > tracker.plot.height)
-      return FALSE;
   // Convert cursor to world coordinates BEFORE zoom
   double world_x = (px-tracker.viewport.offset.x)/tracker.viewport.scale;
   double world_y = (py-tracker.viewport.offset.y)/tracker.viewport.scale;
@@ -105,6 +376,23 @@ gboolean PlotArea::onScroll(double dy) {
   // Clamp offset to prevent empty areas
   clampOffset();
   tracker.update();
+*/
+/*
+  // Convert mouse position to plot-local coordinates
+  double px = tracker.viewport.offset.x+(tracker.mouse.current.x/tracker.viewport.scale);
+  double py = tracker.viewport.offset.y+(tracker.mouse.current.y/tracker.viewport.scale);
+  std::cout << "Global position: (" << px << ", " << py << ")" << std::endl;
+  std::cout << "Mouse position : (" << tracker.mouse.current.x << ", " << tracker.mouse.current.y << ")" << std::endl;
+  // Update zoom
+  if      (dy < 0) tracker.viewport.scale = std::clamp(tracker.viewport.scale+0.25, 1.0, 50.0);
+  else if (dy > 0) tracker.viewport.scale = std::clamp(tracker.viewport.scale-0.25, 1.0, 50.0);
+  // Recompute offset so the world point stays under the cursor
+  tracker.viewport.offset.x = px*tracker.viewport.scale;
+  tracker.viewport.offset.y = py*tracker.viewport.scale;
+  // Clamp offset to prevent empty areas
+  //clampOffset();
+  tracker.update();
+*/
   return TRUE;
 }
 
@@ -116,14 +404,14 @@ void PlotArea::cOnMotion(GtkEventControllerMotion* controller, double x, double 
 
 void PlotArea::onMotion(double x, double y) {
   // Keep track of current position (for scroll)
-  tracker.mouse.current.x = x;
-  tracker.mouse.current.y = y;
+  tracker.mouse.current.x =   (2*(x/tracker.plot.width ))-1 ;
+  tracker.mouse.current.y = -((2*(y/tracker.plot.height))-1);
   // Handling drag
   if (tracker.mouse.dragging) [[unlikely]] {
-    tracker.viewport.offset.x += x-tracker.mouse.last.x;
-    tracker.viewport.offset.y += y-tracker.mouse.last.y;
-    tracker.mouse.last.x = x;
-    tracker.mouse.last.y = y;
+    tracker.viewport.offset.x += tracker.mouse.current.x-tracker.mouse.last.x;
+    tracker.viewport.offset.y += tracker.mouse.current.y-tracker.mouse.last.y;
+    tracker.mouse.last.x = tracker.mouse.current.x;
+    tracker.mouse.last.y = tracker.mouse.current.y;
     clampOffset();   // same clamping logic used in zoom
     tracker.update();
   }
@@ -182,8 +470,8 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
   else {
     // Dragging management
     tracker.mouse.dragging = true;
-    tracker.mouse.last.x = x;
-    tracker.mouse.last.y = y;
+    tracker.mouse.last.x =   (2*(x/tracker.plot.width ))-1 ;
+    tracker.mouse.last.y = -((2*(y/tracker.plot.height))-1);
     // Info lookup management
     //// Ignore scroll outside plot area
     if (isInframe) {
@@ -215,215 +503,10 @@ void PlotArea::onButtonRelease() {
   tracker.mouse.dragging = false;
 }
 
-
-void PlotArea::setBackground() {
-  cairo_set_source_rgb(cairo, 1, 1, 1);
-  cairo_paint(cairo);
-}
-
-
-void PlotArea::handleZoom() {
-  cairo_translate(cairo, tracker.viewport.offset.x, tracker.viewport.offset.y);
-  cairo_scale(cairo, tracker.viewport.scale, tracker.viewport.scale);
-}
-
-
 void PlotArea::clampOffset() {
   tracker.viewport.offset.x = std::clamp(tracker.viewport.offset.x, -(tracker.plot.width)*(tracker.viewport.scale-1), 0.0);
   tracker.viewport.offset.y = std::clamp(tracker.viewport.offset.y, -(tracker.plot.height)*(tracker.viewport.scale-1), 0.0);
 }
-
-
-void PlotArea::plotTimemarkers() {
-  TimemarkerCollection& collection = TimemarkerCollection::instance();
-  TraceDatabase& database = TraceDatabase::instance();
-  double x_min = database.minTimestamp();
-  double x_max = database.maxTimestamp();
-  double x_interval = x_max-x_min;
-  for (const auto& marker : collection) {
-    const Color& color = marker.getColor();
-    if (color.alpha > 0.0) {
-      // Define line setup
-      cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
-      cairo_set_line_width(cairo, 1.5/tracker.viewport.scale);
-      // Draw vertical line
-      double x = adaptX(static_cast<double>(marker.getTime()), x_min, x_interval);
-      cairo_move_to(cairo, x, 0.0);
-      cairo_line_to(cairo, x, tracker.plot.height);
-    }
-  }
-  // Actually draw
-  cairo_stroke(cairo);
-}
-
-
-void PlotArea::plotCurve(const std::string& variant) {
-  Color color = Packet::ColorMap[variant];
-  // Bother drawing iff the color is not completely transparent
-  if (color.alpha > 0.0) {
-    // parameter
-    TraceDatabase& database = TraceDatabase::instance();
-    double x_min = database.minTimestamp();
-    double x_max = database.maxTimestamp();
-    double x_interval = x_max-x_min;
-    double y_min = database.minCount();
-    double y_max = database.maxCount();
-    double y_interval = y_max-y_min;
-    // Define line setup
-    cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
-    cairo_set_line_width(cairo, 2.0/tracker.viewport.scale);
-    // Draw each curve
-    const auto& buffer = database[id].entries(variant);
-    if (buffer.size() == 1) {
-      const auto& entry = buffer.at(0);
-      cairo_arc(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval), 2.0/sqrt(tracker.viewport.scale), 0, 2*M_PI);
-      cairo_fill(cairo);
-    }
-    else if (buffer.size() > 1) {
-      const auto& entry = buffer.at(0);
-      cairo_move_to(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval));
-      for (int i = 1; i < buffer.size(); i++) {
-        const auto& entry = buffer.at(i);
-        cairo_line_to(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval));
-      }
-    }
-    // Actually draw
-    cairo_stroke(cairo);
-  }
-}
-
-void PlotArea::plotScatter(const std::string& variant) {
-  Color color = Packet::ColorMap[variant];
-  // Bother drawing iff the color is not completely transparent
-  if (color.alpha > 0.0) {
-    // parameter
-    TraceDatabase& database = TraceDatabase::instance();
-    double x_min = database.minTimestamp();
-    double x_max = database.maxTimestamp();
-    double x_interval = x_max-x_min;
-    double y_min = database.minCount();
-    double y_max = database.maxCount();
-    double y_interval = y_max-y_min;
-    // Define line setup
-    cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
-    // Draw each curve
-    const auto& buffer = database[id].entries(variant);
-    for (int i = 0; i < buffer.size(); i++) {
-      const auto& entry = buffer.at(i);
-      cairo_arc(cairo, adaptX(entry.first, x_min, x_interval), adaptY(entry.second, y_min, y_interval), 2.0/sqrt(tracker.viewport.scale), 0, 2*M_PI);
-      cairo_fill(cairo);
-    }
-    // Actually draw
-    cairo_stroke(cairo);
-  }
-}
-
-void PlotArea::drawTimemarkerHeaders() {
-  TraceDatabase& database = TraceDatabase::instance();
-  // Global parameters
-  const double padding = 8.0;
-  double x_min = database.minTimestamp();
-  double x_max = database.maxTimestamp();
-  double x_visible_range_min = x_min+(((-tracker.viewport.offset.x/tracker.plot.width)/tracker.viewport.scale)*x_max);
-  double x_visible_range_max = x_visible_range_min+((x_max-x_min)/tracker.viewport.scale);
-  // Loop over visible (i.e., in-range) time markers
-  TimemarkerCollection& collection = TimemarkerCollection::instance();
-  collection.setScope(x_visible_range_min, x_visible_range_max);
-  for (const auto& marker : collection) {
-    const Color& color = marker.getColor();
-    if (color.alpha > 0.0) {
-      double x = tracker.plot.x+adaptX(static_cast<double>(marker.getTime()), x_visible_range_min, x_visible_range_max-x_visible_range_min);
-      // Compute inscribed text dimensions
-      cairo_select_font_face(cairo, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-      cairo_set_font_size(cairo, 11);
-      cairo_text_extents_t ext;
-      cairo_text_extents(cairo, marker.getName().c_str(), &ext);
-      // Rectangle
-      //// Compute parameters
-      double rect_w = ext.width+(2*padding);
-      double rect_h = ext.height+(2*padding);
-      double rect_x = x-(rect_w/2.0);
-      double rect_y = tracker.plot.y-rect_h;
-      //// Draw
-      cairo_set_source_rgba(cairo, color.red, color.green, color.blue, color.alpha);
-      cairo_rectangle(cairo, rect_x, rect_y, rect_w, rect_h);
-      cairo_fill(cairo);
-      // Label
-      //// Compute text position
-      double text_x = x-(ext.width/2.0)-ext.x_bearing;
-      double text_y = rect_y+((padding+ext.height)/2.0)-ext.y_bearing;
-      //// Draw text
-      cairo_set_source_rgb(cairo, 1, 1, 1);
-      cairo_move_to(cairo, text_x, text_y);
-      cairo_show_text(cairo, marker.getName().c_str());
-    }
-  }
-  collection.resetScope();
-}
-
-void PlotArea::drawAxes() {
-  TraceDatabase& database = TraceDatabase::instance();
-  const int nticks = 10;
-  const double tick_len = 5.0;
-
-  cairo_set_source_rgb(cairo, 0.2, 0.2, 0.2);
-  cairo_set_line_width(cairo, 1.0);
-  cairo_select_font_face(cairo, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-  cairo_set_font_size(cairo, 10.0);
-
-  // --- X axis ---
-  cairo_move_to(cairo, tracker.plot.x, tracker.dimensions.height-tracker.plot.y);
-  cairo_line_to(cairo, tracker.plot.x+tracker.plot.width, tracker.dimensions.height-tracker.plot.y);
-  cairo_stroke(cairo);
-  // X-axis label (centered below)
-  cairo_set_font_size(cairo, 12.0);
-  cairo_text_extents_t extents;
-  cairo_text_extents(cairo, xlabel, &extents);
-  cairo_move_to(cairo, tracker.plot.x+(tracker.plot.width-extents.width)/2, tracker.dimensions.height-10);
-  cairo_show_text(cairo, xlabel);
-  // X ticks & labels (between edges)
-  auto xmin = database.minTimestamp();
-  auto xmax = database.maxTimestamp();
-  double visible_width_x = (xmax-xmin)/tracker.viewport.scale;
-  double world_x_min = xmin+(((-tracker.viewport.offset.x/tracker.plot.width)/tracker.viewport.scale)*xmax);
-  for (int i = 0; i <= nticks; i++) {
-    double t = (double)i/nticks;
-    double tx = tracker.plot.x+t*tracker.plot.width;
-    // Tick mark
-    cairo_move_to(cairo, tx, tracker.dimensions.height-tracker.plot.y);
-    cairo_line_to(cairo, tx, tracker.dimensions.height-tracker.plot.y+tick_len);
-    cairo_stroke(cairo);
-    // Label slightly below tick
-    char label[32];
-    snprintf(label, sizeof(label), "%.1f", world_x_min+t*visible_width_x);
-    cairo_move_to(cairo, tx-10, tracker.dimensions.height-tracker.plot.y+15);
-    cairo_show_text(cairo, label);
-  }
-
-  // --- Y axis ---
-  cairo_move_to(cairo, tracker.plot.x, tracker.dimensions.height-tracker.plot.y);
-  cairo_line_to(cairo, tracker.plot.x, tracker.dimensions.height-tracker.plot.y-tracker.plot.height);
-  cairo_stroke(cairo);
-  // Y ticks & labels
-  auto ymin = database.minCount();
-  auto ymax = database.maxCount();
-  double visible_width_y = (ymax-ymin)/tracker.viewport.scale;
-  double world_y_min = ymin+ymax-((((tracker.plot.height-tracker.viewport.offset.y)/tracker.plot.height)/tracker.viewport.scale)*ymax);
-  for (int i = 0; i <= nticks; i++) {
-    double t = ((double)(nticks-i))/nticks;
-    double ty = tracker.dimensions.height-tracker.plot.y-t*tracker.plot.height;
-    // Tick mark
-    cairo_move_to(cairo, tracker.plot.x, ty);
-    cairo_line_to(cairo, tracker.plot.x-tick_len, ty);
-    cairo_stroke(cairo);
-    // Label slightly below tick
-    char label[32];
-    snprintf(label, sizeof(label), "%.1f", world_y_min+t*visible_width_y);
-    cairo_move_to(cairo, tracker.plot.x-35, ty+3);
-    cairo_show_text(cairo, label);
-  }
-}
-
 
 const double PlotArea::adaptX(const double& value, const double& min, const double& interval) const {
   return (value-min)/interval*tracker.plot.width;
@@ -432,7 +515,6 @@ const double PlotArea::adaptX(const double& value, const double& min, const doub
 const double PlotArea::adaptY(const double& value, const double& min, const double& interval) const {
   return tracker.plot.height-((value-min)/interval*tracker.plot.height);
 }
-
 
 std::vector<std::pair<uint64_t,uint32_t>> PlotArea::getPointsInRadius(uint64_t x, uint32_t y, double r) {
   std::vector<std::pair<uint64_t, uint32_t>> result;

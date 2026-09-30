@@ -1,36 +1,24 @@
 #pragma once
 
-
-#include <cstdint>
 #include <gtk/gtk.h>
-#include <string>
+#include <epoxy/gl.h> // For OpenGL functions
 
+#include <vector>
+#include <cmath>
+#include <string>
 
 #include "PlotAreaTracker.hpp"
 #include "TraceDatabase.hpp"
 #include "Packet.hpp"
 #include "Color.hpp"
 
-
 /**
  * Forward declaration
  */
 class PlotAreaTracker;
 
-
 class PlotArea {
-
   private:
-    // Attributes
-    uint32_t id;
-    PlotAreaTracker& tracker;
-    cairo_t* cairo;
-    // Methods
-    const double adaptX(const double& value, const double& min, const double& interval) const;
-    const double adaptY(const double& value, const double& min, const double& interval) const;
-    std::vector<std::pair<uint64_t,uint32_t>> getPointsInRadius(uint64_t x, uint32_t y, double r);
-    void onDraw(GtkDrawingArea *area, cairo_t* cr, int width, int height);
-    static void cOnDraw(GtkDrawingArea* area, cairo_t* cr, int width, int height, gpointer user_data);
     gboolean onScroll(double dy);
     static gboolean cOnScroll(GtkEventControllerScroll* controller, double dx, double dy, gpointer user_data);
     void onMotion(double x, double y);
@@ -41,20 +29,35 @@ class PlotArea {
     static void cOnButtonRelease(GtkGestureClick* gesture, int n_press, double x, double y, gpointer user_data);
     static void cOnDialogResponse(GtkDialog* _, int response_id, gpointer user_data);
     static void cOnDialogResponseUpdate(GtkDialog* _, int _1, gpointer user_data);
-    void setBackground();
-    void handleZoom();
-    void clampOffset();
-    void drawAxes();
-    void plotTimemarkers();
-    void drawTimemarkerHeaders();
-    void plotCurve(const std::string& variant);
-    void plotScatter(const std::string& variant);
+    static void cOnRealize(GtkGLArea* area, gpointer user_data);
+    static void cOnRender(GtkGLArea* area, GdkGLContext* context, gpointer user_data);
+    static void cOnUnrealize(GtkGLArea* area, gpointer user_data);
+    void onRealize();
+    void onRender(int width, int height);
+    void onUnrealize();
 
+    void plotScatterGL(const std::string& variant, int width, int height);
+    void plotTimemarkersGL();
+    void plotCurveGL(const std::string& variant);
+    void drawAxesGL();
+
+    const double adaptX(const double& value, const double& min, const double& interval) const;
+    const double adaptY(const double& value, const double& min, const double& interval) const;
+    void clampOffset();
+    std::vector<std::pair<uint64_t,uint32_t>> getPointsInRadius(uint64_t x, uint32_t y, double r);
+
+    uint32_t id;
+    PlotAreaTracker& tracker;
+
+    // OpenGL state
+    GLuint shader_program;
+    GLuint vbo_points; // For scatter points
+    GLuint vao_points;
+    GLuint vbo_lines;  // For timemarkers/axes
+    GLuint vao_lines;
+  
   public:
-    // Attributes
-    GtkWidget* parent;
-    // Methods
     PlotArea(uint32_t id, PlotAreaTracker& tracker);
     void update();
-
+    GtkWidget* parent; // Now a GtkGLArea
 };
