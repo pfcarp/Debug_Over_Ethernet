@@ -13,77 +13,11 @@
 #include "Description.hpp"
 #include "TimemarkerDialog.hpp"
 #include "TimemarkerCollection.hpp"
+#include "opencl/ShaderManager.hpp"
 
 
 const char* xlabel = "Time (CC)";
 
-// --- Shader Sources ---
-static const char* vertex_shader_source = R"glsl(
-  #version 300 es
-  layout(location = 0) in vec2 aPos;
-  layout(location = 1) in vec4 aColor;
-  out vec4 vColor;
-  uniform mat4 uViewProjection;
-  uniform float uZoomScale;
-  void main() {
-    gl_Position = uViewProjection * vec4(aPos, 0.0, 1.0);
-    vColor = aColor;
-    gl_PointSize = 10.0; // * uZoomScale;
-  }
-)glsl";
-
-static const char* fragment_shader_source = R"glsl(
-  #version 300 es
-  precision highp float; // Required for OpenGL ES
-  in vec4 vColor;
-  out vec4 FragColor;
-  uniform float uRadius;
-  void main() {
-    vec2 coord = gl_PointCoord - vec2(0.5);
-    if (length(coord) > 0.5) discard;
-    if (length(coord) > uRadius) discard;
-    FragColor = vColor;
-  }
-)glsl";
-
-// --- Helper: Compile Shaders ---
-static GLuint compileShader(GLenum type, const char* source) {
-    GLuint shader = glCreateShader(type);
-    glShaderSource(shader, 1, &source, NULL);
-    glCompileShader(shader);
-    GLint success;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetShaderInfoLog(shader, 512, NULL, infoLog);
-        g_warning("Shader compilation failed: %s", infoLog);
-        return 0;
-    }
-    return shader;
-}
-
-// --- Helper: Load Shaders ---
-static GLuint loadShaders() {
-    GLuint vertex_shader = compileShader(GL_VERTEX_SHADER, vertex_shader_source);
-    GLuint fragment_shader = compileShader(GL_FRAGMENT_SHADER, fragment_shader_source);
-    if (!vertex_shader || !fragment_shader) return 0;
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-    glLinkProgram(program);
-    GLint success;
-    glGetProgramiv(program, GL_LINK_STATUS, &success);
-    if (!success) {
-        GLchar infoLog[512];
-        glGetProgramInfoLog(program, 512, NULL, infoLog);
-        g_warning("Shader linking failed: %s", infoLog);
-        return 0;
-    }
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
-    return program;
-}
 
 // -----------
 PlotArea::PlotArea(uint32_t id, PlotAreaTracker& tracker): id(id), tracker(tracker) {
@@ -136,7 +70,7 @@ void PlotArea::onRealize() {
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Load shaders (see below)
-    shader_program = loadShaders();
+    shader_program = ShaderManager::loadShaders();
     if (!shader_program) {
         g_warning("Failed to load shaders");
         return;
