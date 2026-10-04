@@ -22,29 +22,46 @@ const char* xlabel = "Time (CC)";
 // -----------
 PlotArea::PlotArea(uint32_t id, PlotAreaTracker& tracker): id(id), tracker(tracker) {
   tracker.link(this);
+  // GUI
   parent = gtk_gl_area_new();
   gtk_widget_set_hexpand(parent, TRUE);
   gtk_widget_set_vexpand(parent, TRUE);
-
-  // Connect OpenGL signals
+  //// Connect OpenGL signals
   g_signal_connect(parent, "realize", G_CALLBACK(cOnRealize), this);
   g_signal_connect(parent, "render", G_CALLBACK(cOnRender), this);
   g_signal_connect(parent, "unrealize", G_CALLBACK(cOnUnrealize), this);
-
-  // Keep existing event controllers
+  //// Keep existing event controllers
   GtkEventController* scroll = gtk_event_controller_scroll_new(GTK_EVENT_CONTROLLER_SCROLL_VERTICAL);
   g_signal_connect(scroll, "scroll", G_CALLBACK(PlotArea::cOnScroll), this);
   gtk_widget_add_controller(parent, scroll);
-
   GtkEventController* motion = gtk_event_controller_motion_new();
   g_signal_connect(motion, "motion", G_CALLBACK(cOnMotion), this);
   gtk_widget_add_controller(parent, motion);
-
   GtkGestureClick* click = GTK_GESTURE_CLICK(gtk_gesture_click_new());
   gtk_gesture_single_set_button(GTK_GESTURE_SINGLE(click), 0);
   gtk_widget_add_controller(parent, GTK_EVENT_CONTROLLER(click));
   g_signal_connect(click, "pressed", G_CALLBACK(cOnButtonPress), this);
   g_signal_connect(click, "released", G_CALLBACK(cOnButtonRelease), this);
+  // Fix data geometry
+  // Screen-space axes: bottom and left edges of viewport
+  // Horizontal axis (bottom)
+  lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
+  lines.insert(lines.end(), { 0.975f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
+  // Vertical axis (left)
+  lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
+  lines.insert(lines.end(), {-0.850f,  0.975f, 0.0f, 0.0f, 0.0f, 1.0f});
+  // Screen-space ticks (5% of viewport height/width)
+  const float tick_size = 0.05f;
+  for (int i = 0; i <= nticks; i++) {
+    // x-axis ticks
+    float x = -0.850f + (1.825f * i / nticks);
+    lines.insert(lines.end(), {x, -0.800f            , 0.0f, 0.0f, 0.0f, 1.0f});
+    lines.insert(lines.end(), {x, -0.800f - tick_size, 0.0f, 0.0f, 0.0f, 1.0f});
+    // y-axis ticks
+    float y = -0.800f + (1.775f * i / nticks);
+    lines.insert(lines.end(), {-0.850f            , y, 0.0f, 0.0f, 0.0f, 1.0f});
+    lines.insert(lines.end(), {-0.850f - tick_size, y, 0.0f, 0.0f, 0.0f, 1.0f});
+  }
 }
 
 
@@ -129,8 +146,8 @@ void PlotArea::onRender(int width, int height) {
   float y_max = static_cast<float>(database.maxCount());
   float x_range = x_max - x_min;
   float y_range = y_max - y_min;
-  float xd = 2.0f / x_range;
-  float yd = 2.0f / y_range;
+  float xd = 1.825f / x_range;
+  float yd = 1.775f / y_range;
   float xo = tracker.viewport.offset.x;
   float yo = tracker.viewport.offset.y;
   float s = tracker.viewport.scale;
@@ -138,10 +155,10 @@ void PlotArea::onRender(int width, int height) {
   // Data-space projection: maps (x_min, y_min) to (-1, -1) and (x_max, y_max) to (1, 1)
   // then applies scale and offset for panning/zooming
   float view_projection[16] = {
-    xd * s, 0.0f, 0.0f, 0.0f,
-    0.0f, yd * s, 0.0f, 0.0f,
-    0.0f, 0.0f, 1.0f, 0.0f,
-    -xd * s * x_min - s + xo, -yd * s * y_min - s + yo, 0.0f, 1.0f
+    xd * s,         0.0f, 0.0f, 0.0f,
+      0.0f, yd * s, 0.0f, 0.0f,
+      0.0f,         0.0f, 1.0f, 0.0f,
+    - xd * s * x_min - 0.850f * s + xo, - yd * s * y_min - 0.800f * s + yo, 0.0f, 1.0f
   };
 
   // --- Draw data (points) ---
@@ -154,11 +171,6 @@ void PlotArea::onRender(int width, int height) {
   }
 
   // --- Draw axes (lines) ---
-  // Use the same data-space projection for axes so they align with data
-  glUseProgram(shader_program);
-  glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, view_projection);
-  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), s);
-  glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false); // Disable point mode
   drawAxesGL();
 }
 
@@ -253,45 +265,10 @@ void PlotArea::plotCurveGL(const std::string& variant) {
 
 // --- Axes (OpenGL) ---
 void PlotArea::drawAxesGL() {
-    const int nticks = 10;
-
-    // Switch to identity matrix for screen-space rendering
-    float identity[16] = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    };
-
     glUseProgram(shader_program);
     glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, identity);
     glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), 1.0f);  // Bypass zoom
     glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false);
-
-    std::vector<float> lines;
-
-    // Screen-space axes: bottom and left edges of viewport
-    // Horizontal axis (bottom)
-    lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
-    lines.insert(lines.end(), { 0.975f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
-
-    // Vertical axis (left)
-    lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
-    lines.insert(lines.end(), {-0.850f,  0.975f, 0.0f, 0.0f, 0.0f, 1.0f});
-
-    // Screen-space ticks (5% of viewport height/width)
-    const float tick_size = 0.05f;
-    for (int i = 0; i <= nticks; i++) {
-        // x-axis ticks
-        float x = -0.850f + (1.825f * i / nticks);
-        lines.insert(lines.end(), {x, -0.800f            , 0.0f, 0.0f, 0.0f, 1.0f});
-        lines.insert(lines.end(), {x, -0.800f - tick_size, 0.0f, 0.0f, 0.0f, 1.0f});
-        // y-axis ticks
-        float y = -0.800f + (1.775f * i / nticks);
-        lines.insert(lines.end(), {-0.850f            , y, 0.0f, 0.0f, 0.0f, 1.0f});
-        lines.insert(lines.end(), {-0.850f - tick_size, y, 0.0f, 0.0f, 0.0f, 1.0f});
-    }
-
     glBindVertexArray(vao_lines);
     glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
     glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
@@ -403,8 +380,8 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
   // Convert NDC to data coordinates (inverse of the projection matrix)
   // From: clip_x = xd * s * (x_data - x_min) - s + xo
   // Solving: x_data = (clip_x + s - xo) / (xd * s) + x_min
-  float world_x = (ndc_x + s - xo) * x_range / (2.0f * s) + x_min;
-  float world_y = (ndc_y + s - yo) * y_range / (2.0f * s) + y_min;
+  float world_x = (ndc_x + -0.850f * s - xo) * x_range / (1.825f * s) + x_min;
+  float world_y = (ndc_y + -0.800f * s - yo) * y_range / (1.775f * s) + y_min;
 
   // Check if mouse is within plot area (NDC is always [-1,1] for the widget)
   bool isInframe = true; // Since NDC coordinates are already clipped to the widget
@@ -454,8 +431,8 @@ void PlotArea::onButtonRelease() {
 void PlotArea::clampOffset() {
   double s = tracker.viewport.scale; // Use double for consistency
   // Clamp to prevent showing empty space beyond data boundaries
-  tracker.viewport.offset.x = std::clamp(tracker.viewport.offset.x, 1.0 - s, s - 1.0);
-  tracker.viewport.offset.y = std::clamp(tracker.viewport.offset.y, 1.0 - s, s - 1.0);
+  tracker.viewport.offset.x = std::clamp(tracker.viewport.offset.x, 1.000f - s, s - 1.000f);
+  tracker.viewport.offset.y = std::clamp(tracker.viewport.offset.y, 1.000f - s, s - 1.000f);
 }
 
 const double PlotArea::adaptX(const double& value, const double& min, const double& interval) const {

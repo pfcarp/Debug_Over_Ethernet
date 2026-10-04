@@ -48,6 +48,15 @@ class PlotArea {
 
     uint32_t id;
     PlotAreaTracker& tracker;
+    const int nticks = 10;
+    // Switch to identity matrix for screen-space rendering
+    const float identity[16] = {
+      1.0f, 0.0f, 0.0f, 0.0f,
+      0.0f, 1.0f, 0.0f, 0.0f,
+      0.0f, 0.0f, 1.0f, 0.0f,
+      0.0f, 0.0f, 0.0f, 1.0f
+    };
+    std::vector<float> lines;
 
     // OpenGL state
     GLuint shader_program;
