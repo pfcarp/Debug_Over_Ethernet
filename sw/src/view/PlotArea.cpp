@@ -113,45 +113,53 @@ void PlotArea::cOnRender(GtkGLArea* area, GdkGLContext* context, gpointer user_d
 void PlotArea::onRender(int width, int height) {
   tracker.plot.width = width;
   tracker.plot.height = height;
+  tracker.plot.x = 0;          // Add these
+  tracker.plot.y = 0;          // Add these
+  tracker.dimensions.width = width;
+  tracker.dimensions.height = height;
 
   glViewport(0, 0, width, height);
   glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
   TraceDatabase& database = TraceDatabase::instance();
-  double x_min = database.minTimestamp();
-  double x_max = database.maxTimestamp();
-  double y_min = database.minCount();
-  double y_max = database.maxCount();
+  float x_min = static_cast<float>(database.minTimestamp());
+  float x_max = static_cast<float>(database.maxTimestamp());
+  float y_min = static_cast<float>(database.minCount());
+  float y_max = static_cast<float>(database.maxCount());
+  float x_range = x_max - x_min;
+  float y_range = y_max - y_min;
+  float xd = 2.0f / x_range;
+  float yd = 2.0f / y_range;
+  float xo = tracker.viewport.offset.x;
+  float yo = tracker.viewport.offset.y;
+  float s = tracker.viewport.scale;
 
-  double x_range = x_max - x_min;
-  double y_range = y_max - y_min;
-  double x_center = (x_min + x_max) / 2.0;
-  double y_center = (y_min + y_max) / 2.0;
-
-  double s = tracker.viewport.scale;
-  double xo = tracker.viewport.offset.x;
-  double yo = tracker.viewport.offset.y;
-
-  // Corrected view projection matrix that centers data properly
+  // Data-space projection: maps (x_min, y_min) to (-1, -1) and (x_max, y_max) to (1, 1)
+  // then applies scale and offset for panning/zooming
   float view_projection[16] = {
-    static_cast<float>(2.0 * s / x_range),  0.0f, 0.0f, 0.0f,
-    0.0f, static_cast<float>(2.0 * s / y_range), 0.0f, 0.0f,
+    xd * s, 0.0f, 0.0f, 0.0f,
+    0.0f, yd * s, 0.0f, 0.0f,
     0.0f, 0.0f, 1.0f, 0.0f,
-    static_cast<float>(-2.0 * s * x_center / x_range + xo),
-    static_cast<float>(-2.0 * s * y_center / y_range + yo),
-    0.0f, 1.0f
+    -xd * s * x_min - s + xo, -yd * s * y_min - s + yo, 0.0f, 1.0f
   };
 
+  // --- Draw data (points) ---
   glUseProgram(shader_program);
   glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, view_projection);
-  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), static_cast<float>(s));
-
-  // Draw everything
-  const auto& variants = TraceDatabase::instance()[id].getVariants();
-  for (const std::string& variant : variants) {
+  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), s);
+  glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), true); // Enable point mode
+  for (const std::string& variant : TraceDatabase::instance()[id].getVariants()) {
     plotScatterGL(variant, width, height);
   }
+
+  // --- Draw axes (lines) ---
+  // Use the same data-space projection for axes so they align with data
+  glUseProgram(shader_program);
+  glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, view_projection);
+  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), s);
+  glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false); // Disable point mode
+  drawAxesGL();
 }
 
 void PlotArea::cOnUnrealize(GtkGLArea* area, gpointer user_data) {
@@ -196,18 +204,17 @@ void PlotArea::plotScatterGL(const std::string& variant, int width, int height) 
 void PlotArea::plotTimemarkersGL() {
   TimemarkerCollection& collection = TimemarkerCollection::instance();
     TraceDatabase& database = TraceDatabase::instance();
-    double x_min = database.minTimestamp();
-    double x_max = database.maxTimestamp();
-    double x_interval = x_max - x_min;
+    double y_min = database.minCount();
+    double y_max = database.maxCount();
 
     std::vector<float> lines;
     for (const auto& marker : collection) {
         const Color& color = marker.getColor();
         if (color.alpha <= 0.0) continue;
 
-        float x = adaptX(static_cast<double>(marker.getTime()), x_min, x_interval);
-        float y1 = 0.0f;
-        float y2 = tracker.plot.height;
+        float x = static_cast<float>(marker.getTime());
+        float y1 = static_cast<float>(y_min);
+        float y2 = static_cast<float>(y_max);
 
         lines.insert(lines.end(), {x, y1, color.red, color.green, color.blue, color.alpha});
         lines.insert(lines.end(), {x, y2, color.red, color.green, color.blue, color.alpha});
@@ -226,21 +233,14 @@ void PlotArea::plotCurveGL(const std::string& variant) {
     //if (color.alpha <= 0.0) return;
 
     TraceDatabase& database = TraceDatabase::instance();
-    double x_min = database.minTimestamp();
-    double x_max = database.maxTimestamp();
-    double x_interval = x_max - x_min;
-    double y_min = database.minCount();
-    double y_max = database.maxCount();
-    double y_interval = y_max - y_min;
-
     const auto& buffer = database[id].entries(variant);
     if (buffer.size() <= 1) return; // Single point handled by scatter
 
     std::vector<float> lines;
     for (int i = 0; i < buffer.size(); i++) {
         const auto& entry = buffer.at(i);
-        float x = (adaptX(entry.first, x_min, x_interval) - tracker.plot.width / 2.0f) / (tracker.plot.width / 2.0f);
-        float y = (adaptY(entry.second, y_min, y_interval) - tracker.plot.height / 2.0f) / (tracker.plot.height / 2.0f);
+        float x = static_cast<float>(entry.first);
+        float y = static_cast<float>(entry.second);
         lines.insert(lines.end(), {x, y, color.red, color.green, color.blue, color.alpha});
     }
 
@@ -253,31 +253,43 @@ void PlotArea::plotCurveGL(const std::string& variant) {
 
 // --- Axes (OpenGL) ---
 void PlotArea::drawAxesGL() {
-  const int nticks = 10;
-    const float tick_len = 5.0f;
+    const int nticks = 10;
+
+    // Switch to identity matrix for screen-space rendering
+    float identity[16] = {
+        1.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    };
+
+    glUseProgram(shader_program);
+    glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, identity);
+    glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), 1.0f);  // Bypass zoom
+    glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false);
 
     std::vector<float> lines;
 
-    // X axis (horizontal line)
-    lines.insert(lines.end(), {0.0f, 0.0f, 0.2f, 0.2f, 0.2f, 1.0f});
-    lines.insert(lines.end(), {tracker.plot.width, 0.0f, 0.2f, 0.2f, 0.2f, 1.0f});
+    // Screen-space axes: bottom and left edges of viewport
+    // Horizontal axis (bottom)
+    lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
+    lines.insert(lines.end(), { 0.975f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
 
-    // Y axis (vertical line)
-    lines.insert(lines.end(), {0.0f, 0.0f, 0.2f, 0.2f, 0.2f, 1.0f});
-    lines.insert(lines.end(), {0.0f, tracker.plot.height, 0.2f, 0.2f, 0.2f, 1.0f});
+    // Vertical axis (left)
+    lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
+    lines.insert(lines.end(), {-0.850f,  0.975f, 0.0f, 0.0f, 0.0f, 1.0f});
 
-    // X ticks
+    // Screen-space ticks (5% of viewport height/width)
+    const float tick_size = 0.05f;
     for (int i = 0; i <= nticks; i++) {
-        float tx = (i * tracker.plot.width) / nticks;
-        lines.insert(lines.end(), {tx, 0.0f, 0.2f, 0.2f, 0.2f, 1.0f});
-        lines.insert(lines.end(), {tx, tick_len, 0.2f, 0.2f, 0.2f, 1.0f});
-    }
-
-    // Y ticks
-    for (int i = 0; i <= nticks; i++) {
-        float ty = (i * tracker.plot.height) / nticks;
-        lines.insert(lines.end(), {0.0f, ty, 0.2f, 0.2f, 0.2f, 1.0f});
-        lines.insert(lines.end(), {-tick_len, ty, 0.2f, 0.2f, 0.2f, 1.0f});
+        // x-axis ticks
+        float x = -0.850f + (1.825f * i / nticks);
+        lines.insert(lines.end(), {x, -0.800f            , 0.0f, 0.0f, 0.0f, 1.0f});
+        lines.insert(lines.end(), {x, -0.800f - tick_size, 0.0f, 0.0f, 0.0f, 1.0f});
+        // y-axis ticks
+        float y = -0.800f + (1.775f * i / nticks);
+        lines.insert(lines.end(), {-0.850f            , y, 0.0f, 0.0f, 0.0f, 1.0f});
+        lines.insert(lines.end(), {-0.850f - tick_size, y, 0.0f, 0.0f, 0.0f, 1.0f});
     }
 
     glBindVertexArray(vao_lines);
@@ -385,10 +397,14 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
   float s = tracker.viewport.scale;
   float xo = tracker.viewport.offset.x;
   float yo = tracker.viewport.offset.y;
+  float xd = 2.0f / x_range;
+  float yd = 2.0f / y_range;
 
-  // Convert NDC to data coordinates
-  float world_x = x_center + (ndc_x - xo) * x_range / (2.0f * s);
-  float world_y = y_center + (ndc_y - yo) * y_range / (2.0f * s);
+  // Convert NDC to data coordinates (inverse of the projection matrix)
+  // From: clip_x = xd * s * (x_data - x_min) - s + xo
+  // Solving: x_data = (clip_x + s - xo) / (xd * s) + x_min
+  float world_x = (ndc_x + s - xo) * x_range / (2.0f * s) + x_min;
+  float world_y = (ndc_y + s - yo) * y_range / (2.0f * s) + y_min;
 
   // Check if mouse is within plot area (NDC is always [-1,1] for the widget)
   bool isInframe = true; // Since NDC coordinates are already clipped to the widget

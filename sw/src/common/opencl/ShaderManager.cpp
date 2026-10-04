@@ -67,10 +67,14 @@ precision highp float;
 in vec4 vColor;
 out vec4 FragColor;
 uniform float uRadius;
+uniform bool uIsPoint; // Add this
+
 void main() {
-    vec2 coord = gl_PointCoord - vec2(0.5);
-    if (length(coord) > 0.5) discard;
-    if (length(coord) > uRadius) discard;
+    if (uIsPoint) {
+        vec2 coord = gl_PointCoord - vec2(0.5);
+        if (length(coord) > 0.5) discard;
+        if (length(coord) > uRadius) discard;
+    }
     FragColor = vColor;
 }
 )glsl";
@@ -80,10 +84,14 @@ void main() {
 in vec4 vColor;
 out vec4 FragColor;
 uniform float uRadius;
+uniform bool uIsPoint; // Add this
+
 void main() {
-    vec2 coord = gl_PointCoord - vec2(0.5);
-    if (length(coord) > 0.5) discard;
-    if (length(coord) > uRadius) discard;
+    if (uIsPoint) {
+        vec2 coord = gl_PointCoord - vec2(0.5);
+        if (length(coord) > 0.5) discard;
+        if (length(coord) > uRadius) discard;
+    }
     FragColor = vColor;
 }
 )glsl";
