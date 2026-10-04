@@ -36,7 +36,7 @@ class PlotArea {
     void onRender(int width, int height);
     void onUnrealize();
 
-    void plotScatterGL(const std::string& variant, int width, int height);
+    void plotScatterGL();
     void plotTimemarkersGL();
     void plotCurveGL(const std::string& variant);
     void drawAxesGL();
@@ -45,6 +45,7 @@ class PlotArea {
     const double adaptY(const double& value, const double& min, const double& interval) const;
     void clampOffset();
     std::vector<std::pair<uint64_t,uint32_t>> getPointsInRadius(uint64_t x, uint32_t y, double r);
+    void rechargePointsBuffer();
 
     uint32_t id;
     PlotAreaTracker& tracker;
@@ -57,6 +58,7 @@ class PlotArea {
       0.0f, 0.0f, 0.0f, 1.0f
     };
     std::vector<float> lines;
+    std::vector<float> points;
 
     // OpenGL state
     GLuint shader_program;

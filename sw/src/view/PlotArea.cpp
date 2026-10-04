@@ -43,21 +43,21 @@ PlotArea::PlotArea(uint32_t id, PlotAreaTracker& tracker): id(id), tracker(track
   g_signal_connect(click, "pressed", G_CALLBACK(cOnButtonPress), this);
   g_signal_connect(click, "released", G_CALLBACK(cOnButtonRelease), this);
   // Fix data geometry
-  // Screen-space axes: bottom and left edges of viewport
-  // Horizontal axis (bottom)
+  //// Lines
+  ////// Horizontal axis (bottom)
   lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
   lines.insert(lines.end(), { 0.975f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
-  // Vertical axis (left)
+  ////// Vertical axis (left)
   lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
   lines.insert(lines.end(), {-0.850f,  0.975f, 0.0f, 0.0f, 0.0f, 1.0f});
-  // Screen-space ticks (5% of viewport height/width)
+  ////// Screen-space ticks (5% of viewport height/width)
   const float tick_size = 0.05f;
   for (int i = 0; i <= nticks; i++) {
-    // x-axis ticks
+    ////// x-axis ticks
     float x = -0.850f + (1.825f * i / nticks);
     lines.insert(lines.end(), {x, -0.800f            , 0.0f, 0.0f, 0.0f, 1.0f});
     lines.insert(lines.end(), {x, -0.800f - tick_size, 0.0f, 0.0f, 0.0f, 1.0f});
-    // y-axis ticks
+    ////// y-axis ticks
     float y = -0.800f + (1.775f * i / nticks);
     lines.insert(lines.end(), {-0.850f            , y, 0.0f, 0.0f, 0.0f, 1.0f});
     lines.insert(lines.end(), {-0.850f - tick_size, y, 0.0f, 0.0f, 0.0f, 1.0f});
@@ -66,6 +66,7 @@ PlotArea::PlotArea(uint32_t id, PlotAreaTracker& tracker): id(id), tracker(track
 
 
 void PlotArea::update() {
+  points.clear();
   gtk_widget_queue_draw(parent);
 }
 
@@ -139,37 +140,9 @@ void PlotArea::onRender(int width, int height) {
   glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT);
 
-  TraceDatabase& database = TraceDatabase::instance();
-  float x_min = static_cast<float>(database.minTimestamp());
-  float x_max = static_cast<float>(database.maxTimestamp());
-  float y_min = static_cast<float>(database.minCount());
-  float y_max = static_cast<float>(database.maxCount());
-  float x_range = x_max - x_min;
-  float y_range = y_max - y_min;
-  float xd = 1.825f / x_range;
-  float yd = 1.775f / y_range;
-  float xo = tracker.viewport.offset.x;
-  float yo = tracker.viewport.offset.y;
-  float s = tracker.viewport.scale;
-
-  // Data-space projection: maps (x_min, y_min) to (-1, -1) and (x_max, y_max) to (1, 1)
-  // then applies scale and offset for panning/zooming
-  float view_projection[16] = {
-    xd * s,         0.0f, 0.0f, 0.0f,
-      0.0f, yd * s, 0.0f, 0.0f,
-      0.0f,         0.0f, 1.0f, 0.0f,
-    - xd * s * x_min - 0.850f * s + xo, - yd * s * y_min - 0.800f * s + yo, 0.0f, 1.0f
-  };
-
+  if (points.size() == 0) rechargePointsBuffer();
   // --- Draw data (points) ---
-  glUseProgram(shader_program);
-  glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, view_projection);
-  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), s);
-  glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), true); // Enable point mode
-  for (const std::string& variant : TraceDatabase::instance()[id].getVariants()) {
-    plotScatterGL(variant, width, height);
-  }
-
+  plotScatterGL();
   // --- Draw axes (lines) ---
   drawAxesGL();
 }
@@ -187,23 +160,52 @@ void PlotArea::onUnrealize() {
     glDeleteProgram(shader_program);
 }
 
-// --- Scatter Plot (OpenGL) ---
-void PlotArea::plotScatterGL(const std::string& variant, int width, int height) {
-  Color color = Packet::ColorMap[variant];
-  if (color.alpha <= 0.0) return;
+void PlotArea::rechargePointsBuffer() {
+  for (const std::string& variant : TraceDatabase::instance()[id].getVariants()) {
+    Color color = Packet::ColorMap[variant];
+    if (color.alpha <= 0.0) continue;
 
-  TraceDatabase& database = TraceDatabase::instance();
-  const auto& buffer = database[id].entries(variant);
-  if (buffer.empty()) return;
+    TraceDatabase& database = TraceDatabase::instance();
+    const auto& buffer = database[id].entries(variant);
+    if (buffer.empty()) continue;
 
-  std::vector<float> points;
-  for (int i = 0; i < buffer.size(); i++) {
-    const auto& entry = buffer.at(i);
-    float x = static_cast<float>(entry.first);  // Raw x (timestamp)
-    float y = static_cast<float>(entry.second); // Raw y (count)
-    points.insert(points.end(), {x, y, static_cast<float>(color.red), static_cast<float>(color.green), static_cast<float>(color.blue), static_cast<float>(color.alpha)});
+    for (int i = 0; i < buffer.size(); i++) {
+      const auto& entry = buffer.at(i);
+      float x = static_cast<float>(entry.first);  // Raw x (timestamp)
+      float y = static_cast<float>(entry.second); // Raw y (count)
+      points.insert(points.end(), {x, y, static_cast<float>(color.red), static_cast<float>(color.green), static_cast<float>(color.blue), static_cast<float>(color.alpha)});
+    }
   }
+}
 
+// --- Scatter Plot (OpenGL) ---
+void PlotArea::plotScatterGL() {
+  TraceDatabase& database = TraceDatabase::instance();
+  float x_min = static_cast<float>(database.minTimestamp());
+  float x_max = static_cast<float>(database.maxTimestamp());
+  float y_min = static_cast<float>(database.minCount());
+  float y_max = static_cast<float>(database.maxCount());
+  float x_range = x_max - x_min;
+  float y_range = y_max - y_min;
+  float xd = 1.825f / x_range;
+  float yd = 1.775f / y_range;
+  float xo = tracker.viewport.offset.x;
+  float yo = tracker.viewport.offset.y;
+  float s = tracker.viewport.scale;
+
+  // Data-space projection: maps (x_min, y_min) to (-1, -1) and (x_max, y_max) to (1, 1)
+  // then applies scale and offset for panning/zooming
+  float view_projection[16] = {
+    xd * s,   0.0f, 0.0f, 0.0f,
+      0.0f, yd * s, 0.0f, 0.0f,
+      0.0f,   0.0f, 1.0f, 0.0f,
+    - xd * s * x_min - 0.850f * s + xo, - yd * s * y_min - 0.800f * s + yo, 0.0f, 1.0f
+  };
+
+  glUseProgram(shader_program);
+  glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, view_projection);
+  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), tracker.viewport.scale);
+  glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), true); // Enable point mode
   glBindVertexArray(vao_points);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_points);
   glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(float), points.data(), GL_DYNAMIC_DRAW);
