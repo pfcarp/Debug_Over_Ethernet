@@ -141,10 +141,9 @@ void PlotArea::onRender(int width, int height) {
   glClear(GL_COLOR_BUFFER_BIT);
 
   if (points.size() == 0) rechargePointsBuffer();
-  // --- Draw data (points) ---
   plotScatterGL();
-  // --- Draw axes (lines) ---
   drawAxesGL();
+  plotTimemarkersGL();
 }
 
 void PlotArea::cOnUnrealize(GtkGLArea* area, gpointer user_data) {
@@ -153,11 +152,11 @@ void PlotArea::cOnUnrealize(GtkGLArea* area, gpointer user_data) {
 }
 
 void PlotArea::onUnrealize() {
-    glDeleteVertexArrays(1, &vao_points);
-    glDeleteBuffers(1, &vbo_points);
-    glDeleteVertexArrays(1, &vao_lines);
-    glDeleteBuffers(1, &vbo_lines);
-    glDeleteProgram(shader_program);
+  glDeleteVertexArrays(1, &vao_points);
+  glDeleteBuffers(1, &vbo_points);
+  glDeleteVertexArrays(1, &vao_lines);
+  glDeleteBuffers(1, &vbo_lines);
+  glDeleteProgram(shader_program);
 }
 
 void PlotArea::rechargePointsBuffer() {
@@ -217,65 +216,87 @@ void PlotArea::plotScatterGL() {
 // --- Timemarkers (OpenGL) ---
 void PlotArea::plotTimemarkersGL() {
   TimemarkerCollection& collection = TimemarkerCollection::instance();
-    TraceDatabase& database = TraceDatabase::instance();
-    double y_min = database.minCount();
-    double y_max = database.maxCount();
+  TraceDatabase& database = TraceDatabase::instance();
+  float x_min = static_cast<float>(database.minTimestamp());
+  float x_max = static_cast<float>(database.maxTimestamp());
+  float y_min = static_cast<float>(database.minCount());
+  float y_max = static_cast<float>(database.maxCount());
+  float x_range = x_max - x_min;
+  float y_range = y_max - y_min;
+  float xd = 1.825f / x_range;
+  float yd = 1.775f / y_range;
+  float xo = tracker.viewport.offset.x;
+  float yo = tracker.viewport.offset.y;
+  float s = tracker.viewport.scale;
 
-    std::vector<float> lines;
-    for (const auto& marker : collection) {
-        const Color& color = marker.getColor();
-        if (color.alpha <= 0.0) continue;
+  float view_projection[16] = {
+    xd * s,   0.0f, 0.0f, 0.0f,
+      0.0f, yd * s, 0.0f, 0.0f,
+      0.0f,   0.0f, 1.0f, 0.0f,
+    - xd * s * x_min - 0.850f * s + xo, - yd * s * y_min - 0.800f * s + yo, 0.0f, 1.0f
+  };
 
-        float x = static_cast<float>(marker.getTime());
-        float y1 = static_cast<float>(y_min);
-        float y2 = static_cast<float>(y_max);
+  std::vector<float> lines;
+  for (const auto& marker : collection) {
+    const Color& color = marker.getColor();
+    if (color.alpha <= 0.0) continue;
 
-        lines.insert(lines.end(), {x, y1, color.red, color.green, color.blue, color.alpha});
-        lines.insert(lines.end(), {x, y2, color.red, color.green, color.blue, color.alpha});
-    }
+    float x = static_cast<float>(marker.getTime());  // DATA coordinate
+    float y1 = static_cast<float>(y_min);             // DATA coordinate
+    float y2 = static_cast<float>(y_max);             // DATA coordinate
 
-    glBindVertexArray(vao_lines);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
-    glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_LINES, 0, lines.size() / 6);
-    glBindVertexArray(0);
+    lines.insert(lines.end(), {x, y1, color.red, color.green, color.blue, color.alpha});
+    lines.insert(lines.end(), {x, y2, color.red, color.green, color.blue, color.alpha});
+  }
+
+  if (lines.empty()) return;
+
+  glUseProgram(shader_program);
+  glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, view_projection);
+  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), s);
+  glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false);
+  glBindVertexArray(vao_lines);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
+  glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
+  glDrawArrays(GL_LINES, 0, lines.size() / 6);
+  glBindVertexArray(0);
 }
 
 // --- Curves (OpenGL) ---
 void PlotArea::plotCurveGL(const std::string& variant) {
-    Color color = Packet::ColorMap[variant];
-    //if (color.alpha <= 0.0) return;
+  Color color = Packet::ColorMap[variant];
+  //if (color.alpha <= 0.0) return;
 
-    TraceDatabase& database = TraceDatabase::instance();
-    const auto& buffer = database[id].entries(variant);
-    if (buffer.size() <= 1) return; // Single point handled by scatter
+  TraceDatabase& database = TraceDatabase::instance();
+  const auto& buffer = database[id].entries(variant);
+  if (buffer.size() <= 1) return; // Single point handled by scatter
 
-    std::vector<float> lines;
-    for (int i = 0; i < buffer.size(); i++) {
-        const auto& entry = buffer.at(i);
-        float x = static_cast<float>(entry.first);
-        float y = static_cast<float>(entry.second);
-        lines.insert(lines.end(), {x, y, color.red, color.green, color.blue, color.alpha});
-    }
+  std::vector<float> lines;
+  for (int i = 0; i < buffer.size(); i++) {
+    const auto& entry = buffer.at(i);
+    float x = static_cast<float>(entry.first);
+    float y = static_cast<float>(entry.second);
+    lines.insert(lines.end(), {x, y, color.red, color.green, color.blue, color.alpha});
+  }
 
-    glBindVertexArray(vao_lines);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
-    glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_LINE_STRIP, 0, lines.size() / 6);
-    glBindVertexArray(0);
+  glBindVertexArray(vao_lines);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
+  glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
+  glDrawArrays(GL_LINE_STRIP, 0, lines.size() / 6);
+  glBindVertexArray(0);
 }
 
 // --- Axes (OpenGL) ---
 void PlotArea::drawAxesGL() {
-    glUseProgram(shader_program);
-    glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, identity);
-    glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), 1.0f);  // Bypass zoom
-    glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false);
-    glBindVertexArray(vao_lines);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
-    glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_LINES, 0, lines.size() / 6);
-    glBindVertexArray(0);
+  glUseProgram(shader_program);
+  glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, identity);
+  glUniform1f(glGetUniformLocation(shader_program, "uZoomScale"), 1.0f);  // Bypass zoom
+  glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false);
+  glBindVertexArray(vao_lines);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
+  glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
+  glDrawArrays(GL_LINES, 0, lines.size() / 6);
+  glBindVertexArray(0);
 }
 
 gboolean PlotArea::cOnScroll(GtkEventControllerScroll* controller, double dx, double dy, gpointer user_data) {
@@ -367,26 +388,19 @@ void PlotArea::onButtonPress(bool right, double x, double y) {
   float x_max = static_cast<float>(database.maxTimestamp());
   float y_min = static_cast<float>(database.minCount());
   float y_max = static_cast<float>(database.maxCount());
-
   float x_range = x_max - x_min;
   float y_range = y_max - y_min;
-  float x_center = (x_min + x_max) / 2.0f;
-  float y_center = (y_min + y_max) / 2.0f;
-
   float s = tracker.viewport.scale;
   float xo = tracker.viewport.offset.x;
   float yo = tracker.viewport.offset.y;
-  float xd = 2.0f / x_range;
-  float yd = 2.0f / y_range;
-
-  // Convert NDC to data coordinates (inverse of the projection matrix)
-  // From: clip_x = xd * s * (x_data - x_min) - s + xo
-  // Solving: x_data = (clip_x + s - xo) / (xd * s) + x_min
-  float world_x = (ndc_x + -0.850f * s - xo) * x_range / (1.825f * s) + x_min;
-  float world_y = (ndc_y + -0.800f * s - yo) * y_range / (1.775f * s) + y_min;
+  // In onButtonPress:
+  float xd = 1.825f / x_range;  // scatter_width = 0.975 - (-0.850) = 1.825
+  float yd = 1.775f / y_range; // scatter_height = 0.975 - (-0.800) = 1.775
+  float world_x = x_min + (ndc_x + 0.850f * s - xo) * x_range / (1.825f * s);
+  float world_y = y_min + (ndc_y + 0.800f * s - yo) * y_range / (1.775f * s);
 
   // Check if mouse is within plot area (NDC is always [-1,1] for the widget)
-  bool isInframe = true; // Since NDC coordinates are already clipped to the widget
+  bool isInframe = ((-0.850f <= ndc_x) && (ndc_x < 0.975f)) && ((-0.800f <= ndc_y) && (ndc_y < 0.975f)); // Since NDC coordinates are already clipped to the widget
 
   if (right) {
     if (isInframe) {
