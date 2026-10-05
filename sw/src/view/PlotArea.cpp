@@ -43,29 +43,30 @@ PlotArea::PlotArea(uint32_t id, PlotAreaTracker& tracker): id(id), tracker(track
   g_signal_connect(click, "pressed", G_CALLBACK(cOnButtonPress), this);
   g_signal_connect(click, "released", G_CALLBACK(cOnButtonRelease), this);
   // Fix data geometry
-  //// Lines
+  //// Axes lines
   ////// Horizontal axis (bottom)
-  lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
-  lines.insert(lines.end(), { 0.975f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
+  axes.insert(axes.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
+  axes.insert(axes.end(), { 0.975f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
   ////// Vertical axis (left)
-  lines.insert(lines.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
-  lines.insert(lines.end(), {-0.850f,  0.975f, 0.0f, 0.0f, 0.0f, 1.0f});
+  axes.insert(axes.end(), {-0.850f, -0.800f, 0.0f, 0.0f, 0.0f, 1.0f});
+  axes.insert(axes.end(), {-0.850f,  0.975f, 0.0f, 0.0f, 0.0f, 1.0f});
   ////// Screen-space ticks (5% of viewport height/width)
   const float tick_size = 0.05f;
   for (int i = 0; i <= nticks; i++) {
     ////// x-axis ticks
     float x = -0.850f + (1.825f * i / nticks);
-    lines.insert(lines.end(), {x, -0.800f            , 0.0f, 0.0f, 0.0f, 1.0f});
-    lines.insert(lines.end(), {x, -0.800f - tick_size, 0.0f, 0.0f, 0.0f, 1.0f});
+    axes.insert(axes.end(), {x, -0.800f            , 0.0f, 0.0f, 0.0f, 1.0f});
+    axes.insert(axes.end(), {x, -0.800f - tick_size, 0.0f, 0.0f, 0.0f, 1.0f});
     ////// y-axis ticks
     float y = -0.800f + (1.775f * i / nticks);
-    lines.insert(lines.end(), {-0.850f            , y, 0.0f, 0.0f, 0.0f, 1.0f});
-    lines.insert(lines.end(), {-0.850f - tick_size, y, 0.0f, 0.0f, 0.0f, 1.0f});
+    axes.insert(axes.end(), {-0.850f            , y, 0.0f, 0.0f, 0.0f, 1.0f});
+    axes.insert(axes.end(), {-0.850f - tick_size, y, 0.0f, 0.0f, 0.0f, 1.0f});
   }
 }
 
 
 void PlotArea::update() {
+  lines.clear();
   points.clear();
   gtk_widget_queue_draw(parent);
 }
@@ -160,7 +161,10 @@ void PlotArea::onUnrealize() {
 }
 
 void PlotArea::rechargePointsBuffer() {
-  for (const std::string& variant : TraceDatabase::instance()[id].getVariants()) {
+  TimemarkerCollection& collection = TimemarkerCollection::instance();
+  TraceDatabase& database = TraceDatabase::instance();
+  // Data point for scatter part
+  for (const std::string& variant : database[id].getVariants()) {
     Color color = Packet::ColorMap[variant];
     if (color.alpha <= 0.0) continue;
 
@@ -175,6 +179,19 @@ void PlotArea::rechargePointsBuffer() {
       points.insert(points.end(), {x, y, static_cast<float>(color.red), static_cast<float>(color.green), static_cast<float>(color.blue), static_cast<float>(color.alpha)});
     }
   }
+  // Time markers' line
+  float y1 = static_cast<float>(database.minCount());
+  float y2 = static_cast<float>(database.maxCount());
+  for (const auto& marker : collection) {
+    const Color& color = marker.getColor();
+    if (color.alpha <= 0.0) continue;
+
+    float x = static_cast<float>(marker.getTime());  // DATA coordinate
+
+    lines.insert(lines.end(), {x, y1, color.red, color.green, color.blue, color.alpha});
+    lines.insert(lines.end(), {x, y2, color.red, color.green, color.blue, color.alpha});
+  }
+
 }
 
 // --- Scatter Plot (OpenGL) ---
@@ -215,7 +232,6 @@ void PlotArea::plotScatterGL() {
 
 // --- Timemarkers (OpenGL) ---
 void PlotArea::plotTimemarkersGL() {
-  TimemarkerCollection& collection = TimemarkerCollection::instance();
   TraceDatabase& database = TraceDatabase::instance();
   float x_min = static_cast<float>(database.minTimestamp());
   float x_max = static_cast<float>(database.maxTimestamp());
@@ -236,19 +252,6 @@ void PlotArea::plotTimemarkersGL() {
     - xd * s * x_min - 0.850f * s + xo, - yd * s * y_min - 0.800f * s + yo, 0.0f, 1.0f
   };
 
-  std::vector<float> lines;
-  for (const auto& marker : collection) {
-    const Color& color = marker.getColor();
-    if (color.alpha <= 0.0) continue;
-
-    float x = static_cast<float>(marker.getTime());  // DATA coordinate
-    float y1 = static_cast<float>(y_min);             // DATA coordinate
-    float y2 = static_cast<float>(y_max);             // DATA coordinate
-
-    lines.insert(lines.end(), {x, y1, color.red, color.green, color.blue, color.alpha});
-    lines.insert(lines.end(), {x, y2, color.red, color.green, color.blue, color.alpha});
-  }
-
   if (lines.empty()) return;
 
   glUseProgram(shader_program);
@@ -262,30 +265,6 @@ void PlotArea::plotTimemarkersGL() {
   glBindVertexArray(0);
 }
 
-// --- Curves (OpenGL) ---
-void PlotArea::plotCurveGL(const std::string& variant) {
-  Color color = Packet::ColorMap[variant];
-  //if (color.alpha <= 0.0) return;
-
-  TraceDatabase& database = TraceDatabase::instance();
-  const auto& buffer = database[id].entries(variant);
-  if (buffer.size() <= 1) return; // Single point handled by scatter
-
-  std::vector<float> lines;
-  for (int i = 0; i < buffer.size(); i++) {
-    const auto& entry = buffer.at(i);
-    float x = static_cast<float>(entry.first);
-    float y = static_cast<float>(entry.second);
-    lines.insert(lines.end(), {x, y, color.red, color.green, color.blue, color.alpha});
-  }
-
-  glBindVertexArray(vao_lines);
-  glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
-  glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
-  glDrawArrays(GL_LINE_STRIP, 0, lines.size() / 6);
-  glBindVertexArray(0);
-}
-
 // --- Axes (OpenGL) ---
 void PlotArea::drawAxesGL() {
   glUseProgram(shader_program);
@@ -294,8 +273,8 @@ void PlotArea::drawAxesGL() {
   glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false);
   glBindVertexArray(vao_lines);
   glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
-  glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
-  glDrawArrays(GL_LINES, 0, lines.size() / 6);
+  glBufferData(GL_ARRAY_BUFFER, axes.size() * sizeof(float), axes.data(), GL_DYNAMIC_DRAW);
+  glDrawArrays(GL_LINES, 0, axes.size() / 6);
   glBindVertexArray(0);
 }
 

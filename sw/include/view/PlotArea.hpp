@@ -38,7 +38,6 @@ class PlotArea {
 
     void plotScatterGL();
     void plotTimemarkersGL();
-    void plotCurveGL(const std::string& variant);
     void drawAxesGL();
 
     const double adaptX(const double& value, const double& min, const double& interval) const;
@@ -57,6 +56,7 @@ class PlotArea {
       0.0f, 0.0f, 1.0f, 0.0f,
       0.0f, 0.0f, 0.0f, 1.0f
     };
+    std::vector<float> axes;
     std::vector<float> lines;
     std::vector<float> points;
 
