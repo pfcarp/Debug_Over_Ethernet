@@ -62,6 +62,35 @@ PlotArea::PlotArea(uint32_t id, PlotAreaTracker& tracker): id(id), tracker(track
     axes.insert(axes.end(), {-0.850f            , y, 0.0f, 0.0f, 0.0f, 1.0f});
     axes.insert(axes.end(), {-0.850f - tick_size, y, 0.0f, 0.0f, 0.0f, 1.0f});
   }
+  //// Triangles
+  ////// Left border rectangle
+  triangles.insert(triangles.end(), {-1.000f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-0.850f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-1.000f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-0.850f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-1.000f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-0.850f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  ////// Right border rectangle
+  triangles.insert(triangles.end(), { 0.975f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 1.000f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 1.000f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 1.000f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 0.975f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 0.975f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  ////// Bottom border rectangle
+  triangles.insert(triangles.end(), {-0.850f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-0.850f, -0.800f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 0.975f, -0.800f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 0.975f, -0.800f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 0.975f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-0.850f, -1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  ////// Top border rectangle
+  triangles.insert(triangles.end(), {-0.850f,  0.975f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-0.850f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 0.975f,  0.975f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), {-0.850f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 0.975f,  1.000f, 1.0f, 1.0f, 1.0f, 1.0f});
+  triangles.insert(triangles.end(), { 0.975f,  0.975f, 1.0f, 1.0f, 1.0f, 1.0f});
 }
 
 
@@ -143,6 +172,7 @@ void PlotArea::onRender(int width, int height) {
 
   if (points.size() == 0) rechargePointsBuffer();
   plotScatterGL();
+  drawPlotAreaOutline();
   drawAxesGL();
   plotTimemarkersGL();
 }
@@ -262,6 +292,17 @@ void PlotArea::plotTimemarkersGL() {
   glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
   glBufferData(GL_ARRAY_BUFFER, lines.size() * sizeof(float), lines.data(), GL_DYNAMIC_DRAW);
   glDrawArrays(GL_LINES, 0, lines.size() / 6);
+  glBindVertexArray(0);
+}
+
+void PlotArea::drawPlotAreaOutline() {
+  glUseProgram(shader_program);
+  glUniformMatrix4fv(glGetUniformLocation(shader_program, "uViewProjection"), 1, GL_FALSE, identity);
+  glUniform1i(glGetUniformLocation(shader_program, "uIsPoint"), false);
+  glBindVertexArray(vao_lines);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo_lines);
+  glBufferData(GL_ARRAY_BUFFER, triangles.size() * sizeof(float), triangles.data(), GL_DYNAMIC_DRAW);
+  glDrawArrays(GL_TRIANGLES, 0, triangles.size() / 6);
   glBindVertexArray(0);
 }
 

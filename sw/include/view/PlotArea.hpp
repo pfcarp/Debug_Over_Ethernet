@@ -37,8 +37,9 @@ class PlotArea {
     void onUnrealize();
 
     void plotScatterGL();
-    void plotTimemarkersGL();
     void drawAxesGL();
+    void drawPlotAreaOutline();
+    void plotTimemarkersGL();
 
     const double adaptX(const double& value, const double& min, const double& interval) const;
     const double adaptY(const double& value, const double& min, const double& interval) const;
@@ -58,6 +59,7 @@ class PlotArea {
     };
     std::vector<float> axes;
     std::vector<float> lines;
+    std::vector<float> triangles;
     std::vector<float> points;
 
     // OpenGL state
