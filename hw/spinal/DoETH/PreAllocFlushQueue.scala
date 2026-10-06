@@ -49,6 +49,7 @@ case class PreAllocFlushQueue(dataWidth: Int, depth: Int, timeout: Int) extends 
   // Registers
   val head  = Counter(2, depth-1, io.push.fire)
   val tail  = Counter(0, depth-1 , io.pop.fire )
+  val timeInsertCounter  = Counter(0, 2, io.push.fire )
   
   // Memory buffer
   val buffer = Mem(Bits(dataWidth bits), depth)
@@ -62,12 +63,22 @@ case class PreAllocFlushQueue(dataWidth: Int, depth: Int, timeout: Int) extends 
 
   debug.head := head.value.resized
 
-
+  //quick math (depth-3)%3===0 for complete packet
+  
   // Finite State Machine
   val fsm = new StateMachine {
-    val insert: State = new State with EntryPoint {
+    val TimeInsert: State = new State with EntryPoint {
+      whenIsActive {//16 bytes per coresight frame\
+      head.increment()//increment manually due to heirarchal conservation
+      timeInsertCounter.increment()
+      goto(insert)
+      }                         
+    }
+    val insert: State = new State {
       whenIsActive {
-        when (timer || (io.push.fire && (head === depth-2))) {
+        when(timeInsertCounter===0){//16 bytes per coresight frame then add 64 bits of timestamp
+          goto(TimeInsert)
+        }elsewhen (timer || (io.push.fire && (head === depth-2))) {
           goto(flush)
         }
       }                         
@@ -87,8 +98,8 @@ case class PreAllocFlushQueue(dataWidth: Int, depth: Int, timeout: Int) extends 
   timer.clearWhen((!io.enable) || (io.enable && (head === 2) && fsm.isActive(fsm.insert)) || (io.enable && fsm.isActive(fsm.flush)))
 
   // Push
-  io.push.ready  := fsm.isActive(fsm.insert)
-  buffer.write(head.resized, io.push.payload, io.push.fire)
+  io.push.ready  := fsm.isActive(fsm.insert) && timeInsertCounter=/=0
+  buffer.write(head.resized, Mux(fsm.isActive(fsm.TimeInsert),timer.counter.value.asBits.resized,io.push.payload), Mux(fsm.isActive(fsm.TimeInsert),True,io.push.fire))
 
   // Pop
   io.pop.valid   := fsm.isActive(fsm.flush)
