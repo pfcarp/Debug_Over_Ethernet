@@ -2,6 +2,7 @@
 
 
 #include <cstdint>
+#include <span>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -628,5 +629,6 @@ namespace Packet {
   bool isDone(const Variant& packet);
   void insert(Variant& packet, const uint8_t& byte);
   std::string asString(const Variant& packet);
+  void record(const uint8_t& header, std::span<const uint8_t> data, const uint64_t& timestamp, const uint32_t& stream);
 
 }

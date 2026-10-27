@@ -1,4 +1,5 @@
-CXXFLAGS=-lm -std=c++20 -Wall -Wextra
+SQLITEFLAGS=`pkg-config --cflags --libs sqlite3`
+CXXFLAGS=-lm -std=c++20 -Wall -Wextra $(SQLITEFLAGS)
 GTK4FLAGS=`pkg-config --cflags --libs gtk4 epoxy gl`
 PCAPFLAGS=`pkg-config --cflags --libs libpcap`
 GRAPHVIZFLAGS=-lgvc -lcgraph
@@ -80,7 +81,10 @@ WatchPoints.o:
 Events.o:
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Events.cpp -o $(OBJ)/Events.o $(CXXFLAGS)
 
-Packet.o:
+PacketDatabase.o:
+	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/PacketDatabase.cpp -o $(OBJ)/PacketDatabase.o $(CXXFLAGS)
+
+Packet.o: PacketDatabase.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) -c $(MODEL)/Packet.cpp -o $(OBJ)/Packet.o $(CXXFLAGS)
 
 Trace.o:
@@ -132,16 +136,16 @@ ShaderManager.o:
 parser/offline: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) parser/offline.cpp $(OBJ)/*.o -o $(BIN)/offline-parser.out $(CXXFLAGS)
 
-parser/online: PacketFactory.o Packet.o Stream.o Deformatter.o Sniffer.o Dispatcher.o
+parser/online: PacketFactory.o Packet.o Stream.o Deformatter.o Sniffer.o Dispatcher.o PacketDatabase.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) parser/online.cpp $(OBJ)/*.o -o $(BIN)/online-parser.out $(CXXFLAGS) $(PCAPFLAGS)
 
 tests: Dispatcher.o Packet.o Deformatter.o Stream.o PacketFactory.o
 	g++ $(OPT) $(INCLUDE) test/tests.cpp $(wildcard test/packet/*.cpp) $(wildcard test/deformatter/*.cpp) $(OBJ)/*.o -o $(BIN)/tests.out $(CXXFLAGS)
 
-gui/online: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o
+gui/online: WatchPoint.o WatchPoints.o Events.o Dispatcher.o DataBuffer.o HistogramBuffer.o Controls.o Sniffer.o InterfaceSelector.o Color.o PlotArea.o Stream.o Deformatter.o Collection.o Inserter.o Points.o Point.o GraphArea.o Graph.o GraphNode.o GraphEdge.o Event.o Packet.o PacketFactory.o PacketFactory.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/online.cpp $(wildcard object/*.o) -o $(BIN)/online-gui.out $(GTK4FLAGS) $(PCAPFLAGS) $(GRAPHVIZFLAGS) $(CXXFLAGS)
 
-gui/live: ShaderManager.o Deformatter.o PacketFactory.o Packet.o PlotAreaTracker.o PlotArea.o Color.o Trace.o TraceCollection.o TraceDatabase.o SourcePanel.o SourcePanels.o Description.o TimemarkerDialog.o TimemarkerCollection.o Timemarker.o RooflinePanel.o Sniffer.o
+gui/live: ShaderManager.o Deformatter.o PacketFactory.o Packet.o PlotAreaTracker.o PlotArea.o Color.o Trace.o TraceCollection.o TraceDatabase.o SourcePanel.o SourcePanels.o Description.o TimemarkerDialog.o TimemarkerCollection.o Timemarker.o RooflinePanel.o Sniffer.o PacketFactory.o
 	g++ $(DEBUG) $(OPT) $(INCLUDE) gui/live.cpp $(wildcard object/*.o) -o $(BIN)/live-gui.out $(GTK4FLAGS) $(CXXFLAGS) $(PCAPFLAGS)
 
 benchmark/packet: PacketFactory.o Packet.o Stream.o Deformatter.o Dispatcher.o

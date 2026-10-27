@@ -1,5 +1,6 @@
 #include <cstdint>
 #include <gtk/gtk.h>
+#include <iomanip>
 #include <ostream>
 #include <vector>
 #include <string>

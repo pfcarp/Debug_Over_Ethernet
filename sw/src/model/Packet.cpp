@@ -1,4 +1,5 @@
 #include "Packet.hpp"
+#include "PacketDatabase.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <format>
@@ -21,6 +22,10 @@ std::string Packet::asString(const Packet::Variant& packet) {
   return std::visit([](const auto& p) {
     return p.asString();
   }, packet);
+}
+
+void Packet::record(const uint8_t& header, std::span<const uint8_t> data, const uint64_t& timestamp, const uint32_t& stream) {
+  PacketDatabase::instance().addPacket(header, data, timestamp, stream);
 }
 
 

@@ -22,50 +22,57 @@ class PacketFactory {
   private:
     // Attibutes
     Packet::Variant* current = nullptr;
+    uint32_t stream;
+    uint64_t start = 0;
+    uint8_t length = 0;
+    std::array<uint8_t, Packet::bytesize> bytes{};
     // Methods
+	//maybe I should combine the definitions with the static array below?
+    #define PACKET_TYPES(X) \
+      X(Extension) \
+      X(TraceInfo) \
+      X(Timestamp) \
+      X(TraceOn) \
+      X(FunctionReturn) \
+      X(Exception) \
+      X(ExceptionReturn) \
+      X(Resynchronization) \
+      X(Reserved) \
+      X(CycleCountFormat1) \
+      X(CycleCountFormat2) \
+      X(CycleCountFormat3) \
+      X(NumberedDataSyncMark) \
+      X(UnnumberedDataSyncMark) \
+      X(Commit) \
+      X(Mispredict) \
+      X(CancelFormat1) \
+      X(CancelFormat2) \
+      X(CancelFormat3) \
+      X(ConditionalFlush) \
+      X(ConditionalResultFormat1) \
+      X(ConditionalResultFormat2) \
+      X(ConditionalResultFormat3) \
+      X(ConditionalResultFormat4) \
+      X(ConditionalInstructionFormat1) \
+      X(ConditionalInstructionFormat2) \
+      X(ConditionalInstructionFormat3) \
+      X(Ignore) \
+      X(Event) \
+      X(Context) \
+      X(AddressWithContext) \
+      X(TimestampMarker) \
+      X(ExactMatchAddress) \
+      X(ShortAddress) \
+      X(LongAddress) \
+      X(Q) \
+      X(AtomFormat1) \
+      X(AtomFormat2) \
+      X(AtomFormat3) \
+      X(AtomFormat4) \
+      X(AtomFormat5) \
+      X(AtomFormat6)
     #define MAKE_FACTORY(T) static Packet::Variant* make##T(PacketFactory& self, const uint8_t& id, const uint64_t& timestamp) { return self.map.add(#T, timestamp, Packet::T(id)); }
-    MAKE_FACTORY(Extension)
-    MAKE_FACTORY(TraceInfo)
-    MAKE_FACTORY(Timestamp)
-    MAKE_FACTORY(TraceOn)
-    MAKE_FACTORY(FunctionReturn)
-    MAKE_FACTORY(Exception)
-    MAKE_FACTORY(ExceptionReturn)
-    MAKE_FACTORY(Resynchronization)
-    MAKE_FACTORY(Reserved)
-    MAKE_FACTORY(CycleCountFormat1)
-    MAKE_FACTORY(CycleCountFormat2)
-    MAKE_FACTORY(CycleCountFormat3)
-    MAKE_FACTORY(NumberedDataSyncMark)
-    MAKE_FACTORY(UnnumberedDataSyncMark)
-    MAKE_FACTORY(Commit)
-    MAKE_FACTORY(Mispredict)
-    MAKE_FACTORY(CancelFormat1)
-    MAKE_FACTORY(CancelFormat2)
-    MAKE_FACTORY(CancelFormat3)
-    MAKE_FACTORY(ConditionalFlush)
-    MAKE_FACTORY(ConditionalResultFormat1)
-    MAKE_FACTORY(ConditionalResultFormat2)
-    MAKE_FACTORY(ConditionalResultFormat3)
-    MAKE_FACTORY(ConditionalResultFormat4)
-    MAKE_FACTORY(ConditionalInstructionFormat1)
-    MAKE_FACTORY(ConditionalInstructionFormat2)
-    MAKE_FACTORY(ConditionalInstructionFormat3)
-    MAKE_FACTORY(Ignore)
-    MAKE_FACTORY(Event)
-    MAKE_FACTORY(Context)
-    MAKE_FACTORY(AddressWithContext)
-    MAKE_FACTORY(TimestampMarker)
-    MAKE_FACTORY(ExactMatchAddress)
-    MAKE_FACTORY(ShortAddress)
-    MAKE_FACTORY(LongAddress)
-    MAKE_FACTORY(Q)
-    MAKE_FACTORY(AtomFormat1)
-    MAKE_FACTORY(AtomFormat2)
-    MAKE_FACTORY(AtomFormat3)
-    MAKE_FACTORY(AtomFormat4)
-    MAKE_FACTORY(AtomFormat5)
-    MAKE_FACTORY(AtomFormat6)
+    PACKET_TYPES(MAKE_FACTORY)
     #undef MAKE_FACTORY
     // Attributes
     uint64_t timestamp = 0;
@@ -329,6 +336,16 @@ class PacketFactory {
     	t[0xFF] = &PacketFactory::makeAtomFormat3;
       return t;
     }();
+    static constexpr std::array<const char*, 256> names = [] {
+      std::array<const char*, 256> t{};
+      for (size_t i = 0; i < t.size(); i++) {
+        #define MATCH_NAME(T) if (factory[i] == &PacketFactory::make##T) t[i] = #T;
+        PACKET_TYPES(MATCH_NAME)
+        #undef MATCH_NAME
+      }
+      return t;
+    }();
+    #undef PACKET_TYPES
 
   public:
     // Attributes
