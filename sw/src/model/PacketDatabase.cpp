@@ -112,8 +112,9 @@ void PacketDatabase::addPacket(uint8_t header, std::span<const uint8_t> data, ui
   //remember that things are hexadecimal so I can either save it as an int val or keep it as text.
   std::string hexHeader = std::format("0x{:02X}", header);
   std::string hexData = "0x";
-  for (const auto& byte : data)
-    std::format_to(std::back_inserter(hexData), "{:02X}", byte);
+  // Last byte first, e.g. bytes {0x01, 0x02, 0x03} are stored as "0x030201"
+  for (auto it = data.rbegin(); it != data.rend(); it++)
+    std::format_to(std::back_inserter(hexData), "{:02X}", *it);
   std::string hexTimestamp = std::format("0x{:016X}", timestamp);
   sqlite3_bind_text(insertPacket, 1, hexHeader.c_str(), -1, SQLITE_TRANSIENT);
   sqlite3_bind_text(insertPacket, 2, hexData.c_str(), -1, SQLITE_TRANSIENT);

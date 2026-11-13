@@ -60,7 +60,11 @@ uint32_t Trace::minCount() const {
 }
 
 uint32_t Trace::maxCount(bool cumulative) const {
-  return (cumulative)? accumulated.back().second : max;
+  // return (cumulative)? accumulated.back().second : max;
+
+  if (cumulative)
+    return accumulated.empty() ? 0 : accumulated.back().second;
+  return max;
 }
 
 const std::vector<std::pair<uint64_t, uint32_t>>& Trace::entries(bool cumulative) const {

@@ -42,11 +42,14 @@ bool PacketFactory::insert(const uint8_t& byte) {
   //keep accumulating the data
   // this logic needs to be double checked for a possible edge case 
   // Also why not combine insert and record?
+
+  //major problem is that the (pressumably) the last whole message is lumped together with the last bytes that are the filler data of the coresight transaction
+  //but this should already be dealt by the deformatter?
   if (length < bytes.size())
     bytes[length++] = byte;
   // Separate if for cases where no payload is present
   if (Packet::isDone(*current)) {
-    Packet::record(bytes[0], std::span(bytes.data(), length), start, stream);
+    Packet::record(bytes[0], std::span(bytes.data()+1, length-1), start, stream);
     current = nullptr;
     return true;
   }

@@ -326,7 +326,7 @@ gboolean PlotArea::cOnScroll(GtkEventControllerScroll* controller, double dx, do
 
 gboolean PlotArea::onScroll(double dy) {
   double old_scale = tracker.viewport.scale;
-  double new_scale = std::clamp(old_scale * (dy < 0 ? 1.3 : 0.7), 1.0, 50.0);
+  double new_scale = std::clamp(old_scale * (dy < 0 ? 1.3 : 0.7), 1.0, 10000000.0);
 
   if (new_scale != old_scale) {
     double scale_ratio = new_scale / old_scale;
