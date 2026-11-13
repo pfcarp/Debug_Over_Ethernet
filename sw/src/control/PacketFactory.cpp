@@ -5,6 +5,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <utility>
 
 #include "Packet.hpp"
 #include "PacketDatabase.hpp"
@@ -15,6 +16,9 @@ PacketFactory::PacketFactory(uint32_t id): map(TraceDatabase::instance()[id]), s
   // Every factory shares the same database, only register the packet types once
   static std::once_flag registered;
   std::call_once(registered, [] {
+    constexpr auto names = []<size_t... I>(std::index_sequence<I...>) {
+      return std::array<const char*, 256>{ nameOf(Tag<factory[I]>{})... };
+    }(std::make_index_sequence<256>{});
     for (size_t header = 0; header < names.size(); header++)
       PacketDatabase::instance().addType(header, names[header]);
   });
